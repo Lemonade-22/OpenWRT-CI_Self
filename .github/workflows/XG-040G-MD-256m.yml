@@ -4,9 +4,9 @@
 name: XG-040G-MD 256m
 
 on:
+  # Daily at 05:00 Singapore time (21:00 UTC previous day)
   schedule:
-    # Daily at 10:00 Singapore time (02:00 UTC)
-    - cron: '0 2 * * *'
+    - cron: '0 21 * * *'
   workflow_dispatch:
     inputs:
       PACKAGE:
