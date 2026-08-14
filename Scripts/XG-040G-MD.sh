@@ -1,58 +1,38 @@
 #!/bin/bash
-# XG-040G-MD 256M customization
-# Applied only when WRT_CONFIG is XG-040G-MD-256M.
+# XG-040G/140G hardware support overlay.
+# Base OS remains VIKINGYFY/immortalwrt (owrt).
+# Hardware definitions are taken from bingoguo93/immortalwrt 6.18,
+# which is the known-good XG-040G-MD family implementation.
 
 set -e
 
-if [[ "${WRT_CONFIG:-}" != "XG-040G-MD-256M" ]]; then
+if [[ "${WRT_CONFIG:-}" != "AIROHA-WIFI-NO" ]]; then
     exit 0
 fi
 
-ROOT="$GITHUB_WORKSPACE"
-WRT="$ROOT/wrt"
-PKG="$WRT/package"
+WRT="$GITHUB_WORKSPACE/wrt"
 DTS="$WRT/target/linux/airoha/dts"
 IMAGE="$WRT/target/linux/airoha/image/an7581.mk"
+PREINIT="$WRT/target/linux/airoha/base-files/lib/preinit"
+BINGO_RAW="https://raw.githubusercontent.com/bingoguo93/immortalwrt/6.18/target/linux/airoha"
 
-mkdir -p "$DTS"
+mkdir -p "$DTS" "$(dirname "$IMAGE")" "$PREINIT"
 
-# XG-040G-MD DTS used by bingoguo93, with the upstream AN7581 NPU dtsi.
-cp -f "$ROOT/XG-040G-MD/an7581-xg-040g-series.dtsi" "$DTS/an7581-xg-040g-series-256m.dtsi"
-cp -f "$ROOT/XG-040G-MD/an7581-nokia_xg-040g-md-256m.dts" "$DTS/"
+# Use bingo's verified XG-040G/140G hardware layer.
+curl -fsSL "$BINGO_RAW/dts/an7581-xg-040g-series.dtsi" -o "$DTS/an7581-xg-040g-series.dtsi"
+for DEVICE in 040g-md 140g-md 040g-tf 140g-tf; do
+    curl -fsSL "$BINGO_RAW/dts/an7581-xg-${DEVICE}.dts" -o "$DTS/an7581-xg-${DEVICE}.dts"
+done
 
-# Add a separate 256M device definition.  The normal VIKING XG-040G-MD
-# device is intentionally left untouched, including its bootloader artifacts.
-if ! grep -q 'TARGET_DEVICES += nokia_xg-040g-md-256m' "$IMAGE"; then
-cat >> "$IMAGE" <<'EOF'
+# Keep bingo's complete AN7581 image definitions so the four device images
+# are generated together. This replaces the older VIKING-only Nokia definition.
+curl -fsSL "$BINGO_RAW/image/an7581.mk" -o "$IMAGE"
 
-define Device/nokia_xg-040g-md-256m
-  $(call Device/nokia_xg-040g-md-common)
-  DEVICE_MODEL := XG-040G-MD
-  DEVICE_VARIANT := 256M
-  DEVICE_DTS := an7581-nokia_xg-040g-md-256m
-  DEVICE_DTS_CONFIG := config@1
-  KERNEL_LOADADDR := 0x80088000
-  KERNEL_IN_UBI := 1
-  KERNEL_SIZE := 5120k
-  UBINIZE_OPTS := -s 2048
-  IMAGE_SIZE := 261120k
-  IMAGES := factory.bin sysupgrade.bin
-  IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi
-  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-  SOC := an7581
-endef
-TARGET_DEVICES += nokia_xg-040g-md-256m
-EOF
-fi
+# Network device labels used by bingo are also present in the upstream tree;
+# install the known-good copy explicitly for deterministic builds.
+curl -fsSL "$BINGO_RAW/base-files/lib/preinit/04_set_netdev_label" -o "$PREINIT/04_set_netdev_label"
 
-# Airoha NPU LuCI app based on luanmuc's translated fork.
-rm -rf "$PKG/luci-app-airoha-npu" "$PKG/luci-app-airoha-npu.tmp"
-git clone --depth=1 --single-branch https://github.com/luanmuc/luci-app-airoha-npu.git "$PKG/luci-app-airoha-npu.tmp"
-if [ -d "$PKG/luci-app-airoha-npu.tmp/luci-app-airoha-npu" ]; then
-    cp -a "$PKG/luci-app-airoha-npu.tmp/luci-app-airoha-npu" "$PKG/luci-app-airoha-npu"
-else
-    cp -a "$PKG/luci-app-airoha-npu.tmp/." "$PKG/luci-app-airoha-npu"
-fi
-rm -rf "$PKG/luci-app-airoha-npu.tmp"
+# The bingo configuration uses these four device symbols in one build.
+# NPU firmware is selected in Config/AIROHA-WIFI-NO.txt.
 
-echo "XG-040G-MD 256M customization installed."
+echo "Applied bingo XG-040G/140G hardware support on top of VIKING owrt."
