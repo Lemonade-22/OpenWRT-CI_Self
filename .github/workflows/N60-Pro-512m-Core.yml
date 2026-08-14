@@ -30,8 +30,6 @@ env:
   WRT_TEST: ${{ inputs.TEST || false }}
   UBI_LABEL: UBI-506M
 
-auto: false
-
 jobs:
   build:
     name: N60 Pro 512m UBI-506M WIFI-NO + WIFI-YES
