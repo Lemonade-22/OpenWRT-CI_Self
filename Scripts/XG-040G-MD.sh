@@ -3,8 +3,8 @@
 # XG-040G / XG-140G hardware support.
 #
 # VIKINGYFY/immortalwrt (owrt) remains the firmware base.
-# Only the XG-040G-family hardware-specific layer from bingo is injected here.
-# Do NOT replace VIKING's generic AN7581 DTS/NPU definitions.
+# XG-040G hardware and NPU integration are taken from bingo's verified 6.18 tree.
+# Generic VIKING AN7581 support remains untouched unless explicitly replaced below.
 
 set -e
 
@@ -19,16 +19,17 @@ BINGO_RAW="https://raw.githubusercontent.com/bingoguo93/immortalwrt/6.18/target/
 
 mkdir -p "$DTS" "$(dirname "$IMAGE")"
 
-# The bingo series DTS contains the XG-040G-specific hardware description:
-# PON, GDM/switch/PHY, LEDs, NAND partitioning and the non-fixed-RAM layout.
-# It includes VIKING's local an7581.dtsi and an7581-npu-mt7992.dtsi by filename;
-# therefore those VIKING files remain untouched.
+# Use bingo's complete XG-040G hardware/NPU DTS layer.
+# In particular, the NPU DTS is intentionally taken from bingo rather than
+# VIKING: the user's requirement is to reproduce bingo's known-working NPU
+# integration. Do not retain VIKING's an7581-npu-mt7992.dtsi here.
 for FILE in \
     an7581-xg-040g-series.dtsi \
     an7581-xg-040g-md.dts \
     an7581-xg-140g-md.dts \
     an7581-xg-040g-tf.dts \
-    an7581-xg-140g-tf.dts; do
+    an7581-xg-140g-tf.dts \
+    an7581-npu-mt7992.dtsi; do
     curl -fsSL "$BINGO_RAW/dts/$FILE" -o "$DTS/$FILE"
 done
 
@@ -58,6 +59,7 @@ for DEVICE in bell_xg-040g-md bell_xg-140g-md bell_xg-040g-tf bell_xg-140g-tf; d
     ' "$TMP_CLEAN" >> "$IMAGE"
 done
 
-echo "Applied bingo XG-040G/140G hardware layer on top of VIKING owrt."
-echo "Preserved VIKING AN7581 base DTS, NPU DTS, network scripts and image definitions."
+echo "Applied bingo XG-040G/140G hardware and NPU layer on top of VIKING owrt."
+echo "Preserved VIKING generic AN7581 DTS, network scripts and image definitions."
+echo "Replaced the VIKING AN7581 MT7992 NPU DTS with bingo's verified NPU DTS."
 echo "Removed unavailable kmod-i2c-an7581 from imported bingo device package lists."
