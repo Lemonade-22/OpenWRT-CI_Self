@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Lemonade-22
+
+name: N60 Pro 512m
+
+on:
+  # Daily at 10:30 Singapore time (02:30 UTC)
+  - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: '额外调整插件包，多个请用换行分隔。'
+        required: false
+        type: string
+      TEST:
+        description: '仅输出配置文件，不编译固件。'
+        default: false
+        required: false
+        type: boolean
+
+permissions: write-all
+
+jobs:
+  build:
+    name: N60 Pro 512m
+    uses: ./.github/workflows/WRT-CORE.yml
+    with:
+      WRT_CONFIG: N60-Pro-512M
+      WRT_THEME: aurora
+      WRT_NAME: N60-Pro
+      WRT_SSID: N60-Pro
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
+      WRT_TEST: ${{ inputs.TEST || false }}
