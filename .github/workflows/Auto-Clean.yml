@@ -33,8 +33,9 @@ jobs:
         uses: ophub/delete-releases-workflows@main
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
+          # 今日应保留 3 个设备版本：N60 WIFI-NO、N60 WIFI-YES、XG-040G-MD
+          releases_keep_latest: 3
           delete_releases: true
-          releases_keep_latest: 2
           delete_tags: true
           delete_workflows: true
           workflows_keep_day: 1
