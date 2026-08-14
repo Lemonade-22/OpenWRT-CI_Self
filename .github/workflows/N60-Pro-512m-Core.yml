@@ -71,6 +71,13 @@ jobs:
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
 
+      - name: Apply N60 Pro 506.5MiB UBI Patch
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd ./wrt
+          patch -p1 --forward < "$GITHUB_WORKSPACE/patches/n60pro-512m-ubi-5065m.patch"
+          echo "N60 Pro 512M: UBI partition patched to 506.5MiB."
+
       - name: Check Scripts
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
