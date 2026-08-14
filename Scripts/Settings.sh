@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 VIKINGYFY
 
+# 040G/140G Airoha hardware layer: VIKING owrt base + bingo known-good support.
+if [[ "${WRT_CONFIG:-}" == "AIROHA-WIFI-NO" ]]; then
+	$GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh
+fi
+
 #移除luci-app-attendedsysupgrade
 sed -i "/attendedsysupgrade/d" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 #修改默认主题
