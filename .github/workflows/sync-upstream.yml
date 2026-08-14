@@ -32,17 +32,17 @@ jobs:
           git remote add upstream https://github.com/VIKINGYFY/OpenWRT-CI.git
           git fetch upstream main
 
+          # Root README is an upstream-owned file: always mirror it first.
+          git restore --source=upstream/main -- README.md
+          if ! git diff --quiet -- README.md; then
+            git add README.md
+            git commit -m "chore: sync root README from upstream"
+          fi
+
           if git merge-base --is-ancestor upstream/main HEAD; then
             echo "Already up to date with upstream/main."
           else
             git merge --no-edit upstream/main
-          fi
-
-          # Keep the repository root README identical to upstream.
-          git checkout upstream/main -- README.md
-          git add README.md
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: sync root README from upstream"
           fi
 
           git push origin HEAD:main
