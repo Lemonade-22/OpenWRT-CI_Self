@@ -108,6 +108,10 @@ jobs:
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
 
+      - name: Apply XG-040G Hardware Layer
+        run: |
+          $GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh
+
       - name: Check Scripts
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
