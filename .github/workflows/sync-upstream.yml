@@ -1,13 +1,20 @@
-name: Sync upstream
+name: Sync upstream and build firmware
 
 on:
   workflow_dispatch:
+    inputs:
+      BUILD:
+        description: '同步完成后立即启动 N60 Pro / 040G 固件编译。'
+        required: false
+        default: true
+        type: boolean
   schedule:
     # 04:00 Singapore time (UTC+8) every day.
     - cron: '0 20 * * *'
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: sync-upstream-main
@@ -47,3 +54,17 @@ jobs:
           fi
 
           git push origin HEAD:main
+
+      - name: Start N60 Pro build after sync
+        if: github.event_name == 'schedule' || inputs.BUILD == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run N60-Pro-512m.yml --repo "$GITHUB_REPOSITORY" --ref main
+
+      - name: Start 040G build after sync
+        if: github.event_name == 'schedule' || inputs.BUILD == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run XG-040G-MD-256m.yml --repo "$GITHUB_REPOSITORY" --ref main
