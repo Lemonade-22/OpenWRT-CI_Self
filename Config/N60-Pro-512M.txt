@@ -1,0 +1,10 @@
+# Netcore N60 Pro 512MB NAND
+# 使用 VIKINGYFY 当前 netcore_n60-pro profile；由 Scripts/Settings.sh
+# 在编译阶段将 N60 Pro UBI 分区扩展到约 506.5MiB。
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_netcore_n60-pro=y
+
+# 额外内核组件
+CONFIG_PACKAGE_kmod-cryptodev=y
+CONFIG_PACKAGE_kmod-tls=y
