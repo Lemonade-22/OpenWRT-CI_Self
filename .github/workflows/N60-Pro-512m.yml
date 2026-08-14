@@ -4,9 +4,7 @@
 name: N60 Pro 512m
 
 on:
-  # Daily at 05:00 Singapore time (21:00 UTC previous day)
-  schedule:
-    - cron: '0 21 * * *'
+  workflow_call:
   workflow_dispatch:
     inputs:
       PACKAGE:
@@ -50,7 +48,6 @@ jobs:
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      WRT_IP: 192.168.10.1
       WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
       WRT_BRANCH: owrt
       WRT_SOURCE: VIKINGYFY/immortalwrt
