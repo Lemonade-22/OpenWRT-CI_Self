@@ -1,0 +1,9 @@
+--- a/target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts
++++ b/target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts
+@@ -1,7 +1,7 @@
+ 		partition@580000 {
+ 			label = "ubi";
+ 			reg = <0x0580000 0x7a80000>;
+ 		};
++
++		/* N60 Pro 512MB NAND: UBI = 0x1FA80000 (506.5 MiB) */
