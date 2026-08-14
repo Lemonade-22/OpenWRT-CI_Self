@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Lemonade-22
+
+name: XG-040G Series
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: '额外调整插件包，多个请用换行分隔。'
+        required: false
+        type: string
+      TEST:
+        description: '仅输出配置文件，不编译固件。'
+        default: false
+        required: false
+        type: boolean
+
+permissions: write-all
+
+jobs:
+  build:
+    name: XG-040G / 140G (MD / TF)
+    uses: ./.github/workflows/WRT-CORE.yml
+    with:
+      WRT_CONFIG: AIROHA-WIFI-NO
+      WRT_THEME: aurora
+      WRT_NAME: XG-040G-Series
+      WRT_SSID: XG-040G-Series
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
+      WRT_TEST: ${{ inputs.TEST || false }}
