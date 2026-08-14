@@ -22,13 +22,30 @@ on:
 permissions: write-all
 
 jobs:
-  build:
-    name: N60 Pro 512m
+  wifi-no:
+    name: N60 Pro 512m WIFI-NO
     uses: ./.github/workflows/WRT-CORE.yml
     with:
-      WRT_CONFIG: N60-Pro-512M
+      WRT_CONFIG: N60-Pro-512M-WIFI-NO
       WRT_THEME: aurora
-      WRT_NAME: N60-Pro
+      WRT_NAME: N60-Pro-WIFI-NO
+      WRT_SSID: N60-Pro
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
+      WRT_TEST: ${{ inputs.TEST || false }}
+
+  wifi-yes:
+    name: N60 Pro 512m WIFI-YES
+    uses: ./.github/workflows/WRT-CORE.yml
+    with:
+      WRT_CONFIG: N60-Pro-512M-WIFI-YES
+      WRT_THEME: aurora
+      WRT_NAME: N60-Pro-WIFI-YES
       WRT_SSID: N60-Pro
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
