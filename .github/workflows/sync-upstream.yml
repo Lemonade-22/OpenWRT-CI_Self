@@ -3,7 +3,8 @@ name: Sync upstream
 on:
   workflow_dispatch:
   schedule:
-    - cron: '23 * * * *'
+    # 04:00 Singapore time (UTC+8) every day.
+    - cron: '0 20 * * *'
 
 permissions:
   contents: write
