@@ -106,7 +106,7 @@ jobs:
 
       - name: Apply bingo XG-040G Hardware Layer
         run: |
-          $GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh
+          bash "$GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh"
 
       - name: Check Scripts
         run: |
