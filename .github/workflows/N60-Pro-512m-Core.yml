@@ -23,9 +23,9 @@ env:
   WRT_WORD: 12345678
   WRT_IP: 192.168.10.1
   WRT_PW: 无
-  WRT_REPO: https://github.com/Lemonade-22/immortalwrt.git
-  WRT_BRANCH: main
-  WRT_SOURCE: Lemonade-22/immortalwrt
+  WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+  WRT_BRANCH: owrt
+  WRT_SOURCE: VIKINGYFY/immortalwrt
   WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
   WRT_TEST: ${{ inputs.TEST || false }}
 
@@ -121,11 +121,7 @@ jobs:
             echo "========================================"
 
             rm -f .config
-            if [[ "$CFG" == *"test"* ]]; then
-              cat "$GITHUB_WORKSPACE/Config/$CFG.txt" > .config
-            else
-              cat "$GITHUB_WORKSPACE/Config/$CFG.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
-            fi
+            cat "$GITHUB_WORKSPACE/Config/$CFG.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
 
             export WRT_CONFIG="$CFG"
             export WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$GITHUB_WORKSPACE/Config/$CFG.txt")"
