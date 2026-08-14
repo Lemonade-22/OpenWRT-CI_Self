@@ -22,7 +22,7 @@ permissions: write-all
 jobs:
   build:
     name: XG-040G / 140G (MD / TF)
-    uses: ./.github/workflows/WRT-CORE.yml
+    uses: ./.github/workflows/AIR-CORE.yml
     with:
       WRT_CONFIG: AIROHA-WIFI-NO
       WRT_THEME: aurora
