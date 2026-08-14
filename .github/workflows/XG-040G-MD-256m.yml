@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 Lemonade-22
 
-name: XG-040G-MD 256m
+name: XG-040G Series
 
 on:
   workflow_call:
@@ -21,13 +21,13 @@ permissions: write-all
 
 jobs:
   build:
-    name: XG-040G-MD 256m
+    name: XG-040G / 140G (MD / TF)
     uses: ./.github/workflows/WRT-CORE.yml
     with:
-      WRT_CONFIG: XG-040G-MD-256M
+      WRT_CONFIG: AIROHA-WIFI-NO
       WRT_THEME: aurora
-      WRT_NAME: XG-040G-MD
-      WRT_SSID: XG-040G-MD
+      WRT_NAME: XG-040G-Series
+      WRT_SSID: XG-040G-Series
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
