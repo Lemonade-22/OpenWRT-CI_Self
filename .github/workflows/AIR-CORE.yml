@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 Lemonade-22
 
-# Airoha 专用云编译核心：VIKINGYFY/immortalwrt owrt + bingo XG-040G hardware layer
+# Airoha 专用云编译核心：VIKINGYFY/immortalwrt owrt + bingo XG-040G-MD hardware layer
 name: AIR-CORE
 
 on:
@@ -61,7 +61,7 @@ env:
 
 jobs:
   core:
-    name: ${{inputs.WRT_SOURCE}} / Airoha
+    name: ${{inputs.WRT_SOURCE}} / XG-040G-MD
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Projects
@@ -91,7 +91,7 @@ jobs:
           echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
           echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
           echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
-          echo "WRT_WIFI=wifi-yes" >> $GITHUB_ENV
+          echo "WRT_WIFI=wifi-no" >> $GITHUB_ENV
           echo "WRT_KVER=none" >> $GITHUB_ENV
           echo "WRT_LIST=none" >> $GITHUB_ENV
 
@@ -104,7 +104,7 @@ jobs:
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
 
-      - name: Apply bingo XG-040G Hardware Layer
+      - name: Apply bingo XG-040G-MD Hardware Layer
         run: |
           bash "$GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh"
 
@@ -214,8 +214,8 @@ jobs:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
-            这是 Airoha XG-040G / XG-140G 平台固件包，内含多个设备！
-            请注意选择你需要的设备固件！
+            这是 XG-040G-MD 单设备验证固件。
+            本阶段暂不处理 XG-140G、TF 版本以及 LAN4 → WAN 映射。
 
             底层源码：${{env.WRT_REPO}}
             分支：${{env.WRT_BRANCH}}
