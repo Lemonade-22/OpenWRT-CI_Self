@@ -31,9 +31,9 @@ jobs:
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
-      WRT_BRANCH: owrt
-      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_REPO: https://github.com/Lemonade-22/immortalwrt.git
+      WRT_BRANCH: main
+      WRT_SOURCE: Lemonade-22/immortalwrt
       WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
       WRT_TEST: ${{ inputs.TEST || false }}
 
@@ -46,10 +46,11 @@ jobs:
       WRT_NAME: N60-Pro-WIFI-YES
       WRT_SSID: N60-Pro
       WRT_WORD: 12345678
+      WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
-      WRT_BRANCH: owrt
-      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_REPO: https://github.com/Lemonade-22/immortalwrt.git
+      WRT_BRANCH: main
+      WRT_SOURCE: Lemonade-22/immortalwrt
       WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
       WRT_TEST: ${{ inputs.TEST || false }}
