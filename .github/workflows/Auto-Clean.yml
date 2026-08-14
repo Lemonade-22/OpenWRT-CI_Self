@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: MIT
-# Copyright (C) 2026 VIKINGYFY
+# Copyright (C) 2026 Lemonade-22
 
 name: Auto-Clean
 
 on:
-  # 每日 05:00（GMT+8）先构建两个设备，再清理前一天及更早的旧版本
+  # 每日 05:00（GMT+8）先构建 N60 Pro 512m 和 XG-040G 系列，再清理旧版本
   schedule:
     - cron: '0 21 * * *'
   workflow_dispatch:
@@ -18,8 +18,8 @@ jobs:
     secrets: inherit
 
   build-xg:
-    name: Build XG-040G-MD 256m
-    uses: ./.github/workflows/XG-040G-MD-256m.yml
+    name: Build XG-040G Series
+    uses: ./.github/workflows/XG-040G-Series.yml
     secrets: inherit
 
   cleanup:
@@ -33,7 +33,7 @@ jobs:
         uses: ophub/delete-releases-workflows@main
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          # 今日应保留 3 个设备版本：N60 WIFI-NO、N60 WIFI-YES、XG-040G-MD
+          # 今日保留 3 个 Release：N60 WIFI-NO、N60 WIFI-YES、XG-040G 系列四设备
           releases_keep_latest: 3
           delete_releases: true
           delete_tags: true
