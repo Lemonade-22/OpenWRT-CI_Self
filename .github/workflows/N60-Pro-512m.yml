@@ -20,36 +20,9 @@ on:
 permissions: write-all
 
 jobs:
-  wifi-no:
-    name: N60 Pro 512m WIFI-NO
-    uses: ./.github/workflows/WRT-CORE.yml
+  build:
+    name: N60 Pro 512m WIFI-NO + WIFI-YES
+    uses: ./.github/workflows/N60-Pro-512m-Core.yml
     with:
-      WRT_CONFIG: N60-Pro-512M-WIFI-NO
-      WRT_THEME: aurora
-      WRT_NAME: N60-Pro-WIFI-NO
-      WRT_SSID: N60-Pro
-      WRT_WORD: 12345678
-      WRT_IP: 192.168.10.1
-      WRT_PW: 无
-      WRT_REPO: https://github.com/Lemonade-22/immortalwrt.git
-      WRT_BRANCH: main
-      WRT_SOURCE: Lemonade-22/immortalwrt
-      WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
-      WRT_TEST: ${{ inputs.TEST || false }}
-
-  wifi-yes:
-    name: N60 Pro 512m WIFI-YES
-    uses: ./.github/workflows/WRT-CORE.yml
-    with:
-      WRT_CONFIG: N60-Pro-512M-WIFI-YES
-      WRT_THEME: aurora
-      WRT_NAME: N60-Pro-WIFI-YES
-      WRT_SSID: N60-Pro
-      WRT_WORD: 12345678
-      WRT_IP: 192.168.10.1
-      WRT_PW: 无
-      WRT_REPO: https://github.com/Lemonade-22/immortalwrt.git
-      WRT_BRANCH: main
-      WRT_SOURCE: Lemonade-22/immortalwrt
-      WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
-      WRT_TEST: ${{ inputs.TEST || false }}
+      PACKAGE: ${{ inputs.PACKAGE || '' }}
+      TEST: ${{ inputs.TEST || false }}
