@@ -28,10 +28,13 @@ env:
   WRT_SOURCE: VIKINGYFY/immortalwrt
   WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
   WRT_TEST: ${{ inputs.TEST || false }}
+  UBI_LABEL: UBI-506M
+
+auto: false
 
 jobs:
   build:
-    name: N60 Pro 512m WIFI-NO + WIFI-YES
+    name: N60 Pro 512m UBI-506M WIFI-NO + WIFI-YES
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Projects
@@ -117,7 +120,7 @@ jobs:
           cd ./wrt
           for CFG in N60-Pro-512M-WIFI-NO N60-Pro-512M-WIFI-YES; do
             echo "========================================"
-            echo "Building $CFG"
+            echo "Building $CFG (${UBI_LABEL})"
             echo "========================================"
 
             rm -f .config
@@ -141,7 +144,7 @@ jobs:
             make -j$(nproc) || make -j1 V=s
 
             mkdir -p ./upload
-            cp -f ./.config "./upload/Config-${CFG}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt"
+            cp -f ./.config "./upload/Config-${CFG}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt"
             export WRT_KVER="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \; | head -1)"
             export WRT_LIST="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')"
 
@@ -149,13 +152,13 @@ jobs:
             for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*"); do
               EXT=$(basename "$FILE" | cut -d '.' -f 2-)
               NAME=$(basename "$FILE" | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
-              NEW_FILE="${NAME}-${WRT_INFO}-${WRT_BRANCH}-${WRT_WIFI}-${WRT_DATE}.${EXT}"
+              NEW_FILE="${NAME}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_WIFI}-${WRT_DATE}.${EXT}"
               mv -f "$FILE" "./upload/$NEW_FILE"
             done
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
 
-            TAG="${CFG}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
-            gh release create "$TAG" ./upload/*.* --title "$TAG" --notes "源码：$WRT_REPO\n分支：$WRT_BRANCH\n提交：$WRT_HASH\n配置：$CFG\n平台：$WRT_TARGET\n登录地址：$WRT_IP\n登录密码：$WRT_PW\nWIFI名称：$WRT_SSID\nWIFI密码：$WRT_WORD\n内核版本：$WRT_KVER\n插件列表：$WRT_LIST"
+            TAG="${CFG}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
+            gh release create "$TAG" ./upload/*.* --title "$TAG" --notes "N60 Pro 512M / ${UBI_LABEL}\n\nUBI 分区：506.5MiB\n源码：$WRT_REPO\n分支：$WRT_BRANCH\n提交：$WRT_HASH\n配置：$CFG\n平台：$WRT_TARGET\n登录地址：$WRT_IP\n登录密码：$WRT_PW\nWIFI名称：$WRT_SSID\nWIFI密码：$WRT_WORD\n内核版本：$WRT_KVER\n插件列表：$WRT_LIST"
 
             rm -rf ./upload
             make clean -j$(nproc)
@@ -167,5 +170,5 @@ jobs:
           cd ./wrt
           for CFG in N60-Pro-512M-WIFI-NO N60-Pro-512M-WIFI-YES; do
             cat "$GITHUB_WORKSPACE/Config/$CFG.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > "/tmp/$CFG.config"
-            echo "Generated /tmp/$CFG.config"
+            echo "Generated /tmp/$CFG.config (${UBI_LABEL})"
           done
