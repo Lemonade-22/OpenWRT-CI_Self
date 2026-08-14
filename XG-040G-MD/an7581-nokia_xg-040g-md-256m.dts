@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+
+#include "an7581-xg-040g-series-256m.dtsi"
+
+/ {
+    model = "Nokia XG-040G-MD 256M";
+    compatible = "nokia,xg-040g-md-256m", "nokia,xg-040g-md", "airoha,an7581", "airoha,en7581";
+};
