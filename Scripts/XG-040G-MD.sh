@@ -13,9 +13,8 @@ WRT="$ROOT/wrt"
 PKG="$WRT/package"
 DTS="$WRT/target/linux/airoha/dts"
 IMAGE="$WRT/target/linux/airoha/image/an7581.mk"
-PATCH_DIR="$WRT/target/linux/airoha/patches-6.18"
 
-mkdir -p "$DTS" "$PATCH_DIR"
+mkdir -p "$DTS"
 
 # XG-040G-MD DTS used by bingoguo93, with the upstream AN7581 NPU dtsi.
 cp -f "$ROOT/XG-040G-MD/an7581-xg-040g-series.dtsi" "$DTS/an7581-xg-040g-series-256m.dtsi"
@@ -46,13 +45,7 @@ TARGET_DEVICES += nokia_xg-040g-md-256m
 EOF
 fi
 
-# SkyHigh robust-read workaround.  Skip it if the current upstream already
-# contains the workaround.
-if ! grep -Rqs 'spinand_read_page_wait' "$WRT/target/linux"; then
-    cp -f "$ROOT/XG-040G-MD/600-mtd-spinand-add-skyhigh-robust-read-workaround.patch" "$PATCH_DIR/600-mtd-spinand-add-skyhigh-robust-read-workaround.patch"
-fi
-
-# luanmuc's translated Airoha NPU LuCI app.
+# Airoha NPU LuCI app based on luanmuc's translated fork.
 rm -rf "$PKG/luci-app-airoha-npu" "$PKG/luci-app-airoha-npu.tmp"
 git clone --depth=1 --single-branch https://github.com/luanmuc/luci-app-airoha-npu.git "$PKG/luci-app-airoha-npu.tmp"
 if [ -d "$PKG/luci-app-airoha-npu.tmp/luci-app-airoha-npu" ]; then
