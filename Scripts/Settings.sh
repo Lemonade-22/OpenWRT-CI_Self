@@ -63,11 +63,13 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 fi
 
 # N60 Pro 512MB NAND：506.5MiB UBI
-# 仅扩大N60 Pro的ubi分区，保持VIKINGYFY原有Device/Profile及其它编译内容不变。
-N60PRO_DTS="./target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts"
-if [ -f "$N60PRO_DTS" ]; then
-	sed -i 's/0x0580000 0x7a80000/0x0580000 0x1fa80000/' "$N60PRO_DTS"
-	echo "N60 Pro 512MB NAND: UBI partition set to 506.5MiB."
-else
-	echo "N60 Pro DTS not found: $N60PRO_DTS"
+# 仅对 N60 Pro 512M 配置生效，避免影响其它平台（例如 XG-040G-MD）。
+if [[ "${WRT_CONFIG:-}" == N60-Pro-512M* ]]; then
+	N60PRO_DTS="./target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts"
+	if [ -f "$N60PRO_DTS" ]; then
+		sed -i 's/0x0580000 0x7a80000/0x0580000 0x1fa80000/' "$N60PRO_DTS"
+		echo "N60 Pro 512MB NAND: UBI partition set to 506.5MiB."
+	else
+		echo "N60 Pro DTS not found: $N60PRO_DTS"
+	fi
 fi
