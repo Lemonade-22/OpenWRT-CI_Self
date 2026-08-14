@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 VIKINGYFY
 
-# N60 Pro 512M 专用 CI
-name: N60 Pro 512M UBI-506M
+# MTK ALL
+name: MTK ALL
 
 on:
-  # 手动编译
+  #手动编译
   workflow_dispatch:
     inputs:
       PACKAGE:
@@ -22,8 +22,12 @@ permissions: write-all
 
 jobs:
   build:
-    name: N60 Pro 512M UBI-506M
-    uses: ./.github/workflows/N60-Pro-512m.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        CONFIG: [MEDIATEK-WIFI-YES, MEDIATEK-WIFI-NO]
+    uses: ./.github/workflows/WRT-CORE.yml
     with:
+      CONFIG: ${{ matrix.CONFIG }}
       PACKAGE: ${{ inputs.PACKAGE }}
       TEST: ${{ inputs.TEST }}
