@@ -1,15 +1,9 @@
-# XG-040G / XG-140G family
-# Four images are generated from one common configuration.
-# XG-040G-MD: USB, default network
-# XG-140G-MD: USB, LAN4 used as WAN
-# XG-040G-TF: no USB, default network
-# XG-140G-TF: no USB, LAN4 used as WAN
+# XG-040G-MD only
+# 256MB NAND hardware; RAM is not hard-coded and may be auto-detected.
+# Network layout remains the default XG-040G layout for the first validation build.
 CONFIG_TARGET_airoha=y
 CONFIG_TARGET_airoha_an7581=y
-CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_bell_xg-040g-tf=y
 CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_bell_xg-040g-md=y
-CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_bell_xg-140g-md=y
-CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_bell_xg-140g-tf=y
 CONFIG_KERNEL_DEVMEM=y
 CONFIG_BUSYBOX_CUSTOM=y
 CONFIG_BUSYBOX_CONFIG_DEVMEM=y
