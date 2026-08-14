@@ -21,7 +21,6 @@ if [ -f "$WIFI_SH" ]; then
 elif [ -f "$WIFI_UC" ]; then
 	#修改WIFI名称
 	sed -i "s/ssid='.*'/ssid='$WRT_SSID'/g" $WIFI_UC
-	#修改WIFI密码
 	sed -i "s/key='.*'/key='$WRT_WORD'/g" $WIFI_UC
 fi
 
@@ -61,4 +60,14 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 		find $DTS_PATH -type f ! -iname '*nowifi*' -exec sed -i 's/ipq\(6018\|8074\).dtsi/ipq\1-nowifi.dtsi/g' {} +
 		echo "qualcommax set up nowifi successfully!"
 	fi
+fi
+
+# N60 Pro 512MB NAND：506.5MiB UBI
+# 仅扩大N60 Pro的ubi分区，保持VIKINGYFY原有Device/Profile及其它编译内容不变。
+N60PRO_DTS="./target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts"
+if [ -f "$N60PRO_DTS" ]; then
+	sed -i 's/0x0580000 0x7a80000/0x0580000 0x1fa80000/' "$N60PRO_DTS"
+	echo "N60 Pro 512MB NAND: UBI partition set to 506.5MiB."
+else
+	echo "N60 Pro DTS not found: $N60PRO_DTS"
 fi
