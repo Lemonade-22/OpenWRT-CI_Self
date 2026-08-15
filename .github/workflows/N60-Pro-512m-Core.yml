@@ -123,18 +123,18 @@ jobs:
         run: |
           set -e
           cd ./wrt
-          for CFG in N60-Pro-512M-WIFI-NO N60-Pro-512M-WIFI-YES; do
+          for WIFI in WIFI-NO WIFI-YES; do
             echo "========================================"
-            echo "Building $CFG (${UBI_LABEL})"
+            echo "Building N60-Pro-512M-$WIFI (${UBI_LABEL})"
             echo "========================================"
 
             rm -f .config
-            cat "$GITHUB_WORKSPACE/Config/$CFG.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
+            cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
 
-            export WRT_CONFIG="$CFG"
-            export WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$GITHUB_WORKSPACE/Config/$CFG.txt")"
+            export WRT_CONFIG="N60-Pro-512M-$WIFI"
+            export WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt")"
             export WRT_WIFI="wifi-yes"
-            if [[ "${CFG,,}" == *"wifi"* && "${CFG,,}" == *"no"* ]]; then
+            if [[ "$WIFI" == "WIFI-NO" ]]; then
               export WRT_WIFI="wifi-no"
             fi
             export WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
@@ -149,7 +149,7 @@ jobs:
             make -j$(nproc) || make -j1 V=s
 
             mkdir -p ./upload
-            cp -f ./.config "./upload/Config-${CFG}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt"
+            cp -f ./.config "./upload/Config-N60-Pro-512M-${WIFI}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt"
             export WRT_KVER="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \; | head -1)"
             export WRT_LIST="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')"
 
@@ -162,8 +162,8 @@ jobs:
             done
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
 
-            TAG="${CFG}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
-            gh release create "$TAG" ./upload/*.* --title "$TAG" --notes "N60 Pro 512M / ${UBI_LABEL}\n\nUBI 分区：506.5MiB\n源码：$WRT_REPO\n分支：$WRT_BRANCH\n提交：$WRT_HASH\n配置：$CFG\n平台：$WRT_TARGET\n登录地址：$WRT_IP\n登录密码：$WRT_PW\nWIFI名称：$WRT_SSID\nWIFI密码：$WRT_WORD\n内核版本：$WRT_KVER\n插件列表：$WRT_LIST"
+            TAG="N60-Pro-512M-${WIFI}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
+            gh release create "$TAG" ./upload/*.* --title "$TAG" --notes "N60 Pro 512M / ${UBI_LABEL}\n\nUBI 分区：506.5MiB\n源码：$WRT_REPO\n分支：$WRT_BRANCH\n提交：$WRT_HASH\n配置：N60-Pro-512M-${WIFI}\n平台：$WRT_TARGET\n登录地址：$WRT_IP\n登录密码：$WRT_PW\nWIFI名称：$WRT_SSID\nWIFI密码：$WRT_WORD\n内核版本：$WRT_KVER\n插件列表：$WRT_LIST"
 
             rm -rf ./upload
             make clean -j$(nproc)
@@ -173,7 +173,7 @@ jobs:
         if: env.WRT_TEST == 'true'
         run: |
           cd ./wrt
-          for CFG in N60-Pro-512M-WIFI-NO N60-Pro-512M-WIFI-YES; do
-            cat "$GITHUB_WORKSPACE/Config/$CFG.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > "/tmp/$CFG.config"
-            echo "Generated /tmp/$CFG.config (${UBI_LABEL})"
+          for WIFI in WIFI-NO WIFI-YES; do
+            cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > "/tmp/N60-Pro-512M-$WIFI.config"
+            echo "Generated /tmp/N60-Pro-512M-$WIFI.config (${UBI_LABEL})"
           done
