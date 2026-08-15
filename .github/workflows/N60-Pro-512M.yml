@@ -27,5 +27,5 @@ jobs:
     name: N60 Pro 512M UBI-506M
     uses: ./.github/workflows/N60-Pro-512m-Core.yml
     with:
-      PACKAGE: ${{ inputs.PACKAGE }}
-      TEST: ${{ inputs.TEST }}
+      PACKAGE: ${{ github.event.inputs.PACKAGE || '' }}
+      TEST: ${{ github.event.inputs.TEST == 'true' }}
