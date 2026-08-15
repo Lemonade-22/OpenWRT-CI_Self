@@ -164,8 +164,34 @@ jobs:
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
 
             TAG="N60-Pro-512M-${WIFI}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" ./upload/*.* --title "$TAG" --notes "N60 Pro 512M / ${UBI_LABEL}\n\nUBI 分区：506.5MiB\n源码：$WRT_REPO\n分支：$WRT_BRANCH\n提交：$WRT_HASH\n配置：N60-Pro-512M-${WIFI}\n平台：$WRT_TARGET\n登录地址：$WRT_IP\n登录密码：$WRT_PW\nWIFI名称：$WRT_SSID\nWIFI密码：$WRT_WORD\n内核版本：$WRT_KVER\n插件列表：$WRT_LIST"
+            cat > release-notes.md <<EOF
+# N60 Pro 512M / ${UBI_LABEL}
 
+## 固件信息
+
+- **UBI 分区：** 506.5MiB
+- **源码：** ${WRT_REPO}
+- **分支：** ${WRT_BRANCH}
+- **提交：** ${WRT_HASH}
+- **配置：** N60-Pro-512M-${WIFI}
+- **平台：** ${WRT_TARGET}
+- **内核版本：** ${WRT_KVER}
+
+## 网络信息
+
+- **登录地址：** ${WRT_IP}
+- **登录密码：** ${WRT_PW}
+- **Wi-Fi 名称：** ${WRT_SSID}
+- **Wi-Fi 密码：** ${WRT_WORD}
+
+## 插件
+
+${WRT_LIST}
+EOF
+
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" ./upload/*.* --title "$TAG" --notes-file release-notes.md
+
+            rm -f release-notes.md
             rm -rf ./upload
             make clean -j$(nproc)
           done
