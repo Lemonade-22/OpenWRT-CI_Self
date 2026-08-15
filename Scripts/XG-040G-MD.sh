@@ -35,6 +35,22 @@ for FILE in \
     curl -fsSL "$BINGO_RAW/dts/$FILE" -o "$DTS/$FILE"
 done
 
+# VIKING's generic AN7581 DTS is retained, but its CPUFreq node needs the
+# chip-scu and mcucfg register resources used by the Airoha CPUFreq driver.
+# Import only those two resources from bingo's verified AN7581 DTS.
+VIKING_AN7581="$DTS/an7581.dtsi"
+if [[ -f "$VIKING_AN7581" ]] && grep -q 'compatible = "airoha,en7581-cpufreq"' "$VIKING_AN7581"; then
+    if grep -q 'reg = <0x0 0x1fa20000 0x0 0x2c0>' "$VIKING_AN7581"; then
+        echo "Airoha CPUFreq register resources already present."
+    else
+        sed -i '/compatible = "airoha,en7581-cpufreq";/i\		reg = <0x0 0x1fa20000 0x0 0x2c0>,\n\t\t      <0x0 0x1efbe000 0x0 0x800>;\n\t\treg-names = "chip-scu", "mcucfg";' "$VIKING_AN7581"
+        echo "Added Airoha CPUFreq chip-scu/mcucfg register resources."
+    fi
+else
+    echo "ERROR: VIKING AN7581 DTS or CPUFreq node not found."
+    exit 1
+fi
+
 # Do not overwrite VIKING's complete an7581.mk. Import only the
 # XG-040G-MD device definition and preserve the VIKING/upstream image tree.
 TMP="$(mktemp)"
@@ -91,6 +107,7 @@ else
 fi
 
 echo "Applied bingo XG-040G-MD hardware/NPU layer on top of VIKING owrt."
+echo "Applied Airoha CPUFreq chip-scu/mcucfg register resources."
 echo "Applied Kwrt XG-040G-MD network mapping and NAND upgrade support."
 echo "Preserved VIKING generic AN7581 DTS and image definitions."
 echo "NPU DTS is bingo's verified version; VIKING WLAN NPU reserved-memory is not imported."
