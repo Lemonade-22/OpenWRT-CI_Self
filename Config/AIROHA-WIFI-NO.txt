@@ -4,6 +4,14 @@
 CONFIG_TARGET_airoha=y
 CONFIG_TARGET_airoha_an7581=y
 CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_bell_xg-040g-md=y
+
+# EN7581 CPU frequency / power-domain support.
+# The Airoha driver reads the current CPU frequency through the ATF/PSCI SMC AVS interface.
+CONFIG_AIROHA_CPU_PM_DOMAIN=y
+CONFIG_PM_GENERIC_DOMAINS=y
+CONFIG_CPU_FREQ=y
+CONFIG_CPU_FREQ_DT=n
+
 CONFIG_KERNEL_DEVMEM=y
 CONFIG_BUSYBOX_CUSTOM=y
 CONFIG_BUSYBOX_CONFIG_DEVMEM=y
