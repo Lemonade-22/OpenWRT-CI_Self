@@ -4,7 +4,8 @@
 #
 # VIKINGYFY/immortalwrt (owrt) remains the firmware base.
 # XG-040G-MD hardware, NAND and NPU integration are taken from bingo's
-# verified 6.18 tree.
+# verified 6.18 tree. Kwrt's verified 040G network/NAND initialization is
+# added separately.
 #
 # First validation build intentionally targets XG-040G-MD only. 040G/140G
 # WAN-layout differences and TF variants are deferred until the base MD
@@ -19,9 +20,11 @@ fi
 WRT="$GITHUB_WORKSPACE/wrt"
 DTS="$WRT/target/linux/airoha/dts"
 IMAGE="$WRT/target/linux/airoha/image/an7581.mk"
+NETWORK="$WRT/target/linux/airoha/an7581/base-files/etc/board.d/02_network"
+PLATFORM="$WRT/target/linux/airoha/an7581/base-files/lib/upgrade/platform.sh"
 BINGO_RAW="https://raw.githubusercontent.com/bingoguo93/immortalwrt/6.18/target/linux/airoha"
 
-mkdir -p "$DTS" "$(dirname "$IMAGE")"
+mkdir -p "$DTS" "$(dirname "$IMAGE")" "$(dirname "$NETWORK")" "$(dirname "$PLATFORM")"
 
 # Use bingo's complete XG-040G hardware/NPU DTS layer.
 # The NPU DTS is intentionally taken from bingo rather than VIKING.
@@ -54,7 +57,41 @@ else
     ' "$TMP_CLEAN" >> "$IMAGE"
 fi
 
+# Import Kwrt's verified XG-040G-MD network mapping without replacing the
+# rest of VIKING's generic AN7581 network definitions.
+if grep -q 'bell,xg-040g-md)' "$NETWORK"; then
+    echo "XG-040G-MD network mapping already exists."
+else
+    sed -i '/^[[:space:]]*\*)/i\	bell,xg-040g-md)\n\t\tucidef_set_interfaces_lan_wan "lan2 lan3 lan4" "eth1"\n\t\t;;' "$NETWORK"
+fi
+
+# Import Kwrt's NAND upgrade handling for the AN7581 target.
+# Do not overwrite it if the base already provides an equivalent platform file.
+if [[ ! -f "$PLATFORM" ]]; then
+    cat > "$PLATFORM" <<'EOF'
+REQUIRE_IMAGE_METADATA=1
+
+platform_do_upgrade() {
+    local board=$(board_name)
+
+    case "$board" in
+    *)
+        nand_do_upgrade "$1"
+        ;;
+    esac
+}
+
+platform_check_image() {
+    return 0
+}
+EOF
+    echo "Installed Kwrt AN7581 NAND platform upgrade support."
+else
+    echo "Existing AN7581 platform.sh preserved."
+fi
+
 echo "Applied bingo XG-040G-MD hardware/NPU layer on top of VIKING owrt."
-echo "Preserved VIKING generic AN7581 DTS, network scripts and image definitions."
+echo "Applied Kwrt XG-040G-MD network mapping and NAND upgrade support."
+echo "Preserved VIKING generic AN7581 DTS and image definitions."
 echo "NPU DTS is bingo's verified version; VIKING WLAN NPU reserved-memory is not imported."
 echo "Initial build target: XG-040G-MD only."
