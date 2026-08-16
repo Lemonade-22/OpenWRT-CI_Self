@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 Lemonade-22
 
-# Airoha 专用云编译核心：VIKINGYFY/immortalwrt owrt + bingo XG-040G-MD hardware layer
+# Airoha 通用云编译核心：VIKINGYFY/immortalwrt owrt
+# XG-040G-MD 专用硬件层仅允许 XG-040G-Series 使用
 name: AIR-CORE
 
 on:
@@ -61,7 +62,7 @@ env:
 
 jobs:
   core:
-    name: ${{inputs.WRT_SOURCE}} / XG-040G-MD
+    name: ${{inputs.WRT_SOURCE}} / ${{inputs.WRT_NAME}}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Projects
@@ -105,6 +106,7 @@ jobs:
           fi
 
       - name: Apply bingo XG-040G-MD Hardware Layer
+        if: inputs.WRT_NAME == 'XG-040G-Series'
         run: |
           bash "$GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh"
 
@@ -214,8 +216,7 @@ jobs:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
-            这是 XG-040G-MD 单设备验证固件。
-            本阶段暂不处理 XG-140G、TF 版本以及 LAN4 → WAN 映射。
+            这是 ${{env.WRT_NAME}} 单设备验证固件。
 
             底层源码：${{env.WRT_REPO}}
             分支：${{env.WRT_BRANCH}}
