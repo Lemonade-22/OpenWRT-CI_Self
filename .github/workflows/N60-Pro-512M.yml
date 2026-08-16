@@ -4,8 +4,6 @@
 name: N60 Pro 512M UBI-506M
 
 on:
-  # 每天北京时间 06:00 自动编译
-  # GitHub Actions cron 使用 UTC：前一天 22:00 UTC = 北京时间 06:00
   schedule:
     - cron: '0 22 * * *'
   workflow_dispatch:
@@ -22,10 +20,138 @@ on:
 
 permissions: write-all
 
+env:
+  GH_TOKEN: ${{ github.token }}
+  WRT_THEME: aurora
+  WRT_NAME: N60-Pro
+  WRT_SSID: N60-Pro
+  WRT_WORD: 12345678
+  WRT_IP: 192.168.10.1
+  WRT_PW: 无
+  WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+  WRT_BRANCH: owrt
+  WRT_SOURCE: VIKINGYFY/immortalwrt
+  WRT_PACKAGE: ${{ inputs.PACKAGE }}
+  WRT_TEST: ${{ inputs.TEST }}
+  UBI_LABEL: UBI-506M
+
 jobs:
   build:
-    name: N60 Pro 512M UBI-506M
-    uses: ./.github/workflows/N60-Pro-512m-Core.yml
-    with:
-      PACKAGE: ${{ inputs.PACKAGE || '' }}
-      TEST: ${{ inputs.TEST || false }}
+    name: N60 Pro 512M UBI-506M WIFI-YES
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Projects
+        uses: actions/checkout@main
+
+      - name: Initialization Environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt -yqq purge firefox
+          sudo -E apt -yqq update
+          sudo -E apt -yqq full-upgrade
+          sudo -E apt -yqq autoremove --purge
+          sudo -E apt -yqq autoclean
+          sudo -E apt -yqq clean
+          sudo -E apt -yqq install dos2unix libfuse-dev
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo -E systemctl daemon-reload
+          sudo -E timedatectl set-timezone "Asia/Shanghai"
+          sudo mkdir -p /mnt/build_wrt
+          sudo chown "$USER:$USER" /mnt/build_wrt
+          sudo ln -s /mnt/build_wrt "$GITHUB_WORKSPACE/wrt"
+
+      - name: Initialization Values
+        run: |
+          echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> "$GITHUB_ENV"
+          echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> "$GITHUB_ENV"
+          echo "WRT_INFO=${WRT_SOURCE%%/*}" >> "$GITHUB_ENV"
+
+      - name: Clone Code
+        run: |
+          git clone --depth=1 --single-branch --branch "$WRT_BRANCH" "$WRT_REPO" ./wrt/
+          cd ./wrt/
+          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> "$GITHUB_ENV"
+          PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+          if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+            sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+          fi
+
+      - name: Apply N60 Pro 506.5MiB UBI Patch
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd ./wrt
+          patch -p1 --forward < "$GITHUB_WORKSPACE/patches/n60pro-512m-ubi-5065m.patch"
+
+      - name: Check Scripts
+        run: |
+          find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+
+      - name: Check Caches
+        if: env.WRT_TEST != 'true'
+        uses: actions/cache@main
+        with:
+          key: N60-Pro-512M-${{ env.WRT_INFO }}-${{ env.WRT_HASH }}
+          restore-keys: N60-Pro-512M-${{ env.WRT_INFO }}-
+          path: |
+            ./wrt/.ccache
+            ./wrt/staging_dir/host*
+            ./wrt/staging_dir/tool*
+
+      - name: Update Feeds
+        run: |
+          cd ./wrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Custom Packages
+        run: |
+          cd ./wrt/package
+          "$GITHUB_WORKSPACE/Scripts/Packages.sh"
+          "$GITHUB_WORKSPACE/Scripts/Handles.sh"
+
+      - name: Build N60 Pro
+        if: env.WRT_TEST != 'true'
+        shell: bash
+        run: |
+          set -e
+          cd ./wrt
+          WIFI="WIFI-YES"
+          export WRT_CONFIG="N60-Pro-512M-${WIFI}"
+          export WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt")"
+          export WRT_WIFI="wifi-yes"
+          export WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
+          export WRT_MARK="${GITHUB_REPOSITORY%%/*}"
+          export WRT_INFO="${WRT_SOURCE%%/*}"
+          export WRT_PACKAGE="${{ inputs.PACKAGE }}"
+
+          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
+          "$GITHUB_WORKSPACE/Scripts/Settings.sh"
+          make defconfig -j$(nproc)
+          make clean -j$(nproc)
+          make download -j$(nproc)
+          make -j$(nproc) || make -j1 V=s
+
+          mkdir -p ./upload
+          cp -f .config "./upload/Config-${WRT_CONFIG}-UBI-506M-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt"
+          export WRT_KVER="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \; | head -1)"
+          export WRT_LIST="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')"
+          find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+          for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*"); do
+            EXT=$(basename "$FILE" | cut -d '.' -f 2-)
+            NAME=$(basename "$FILE" | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+            mv -f "$FILE" "./upload/${NAME}-UBI-506M-${WRT_INFO}-${WRT_BRANCH}-${WRT_WIFI}-${WRT_DATE}.${EXT}"
+          done
+          find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+
+          TAG="N60-Pro-512M-${WIFI}-UBI-506M-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" ./upload/*.* --title "$TAG" --notes "N60 Pro 512M / UBI 506.5MiB\n\n源码：${WRT_REPO}\n分支：${WRT_BRANCH}\n提交：${WRT_HASH}\n配置：${WRT_CONFIG}\n平台：${WRT_TARGET}\n内核：${WRT_KVER}\n插件：${WRT_LIST}"
+
+          rm -rf ./upload
+          make clean -j$(nproc)
+
+      - name: Output Configuration Files
+        if: env.WRT_TEST == 'true'
+        run: |
+          cd ./wrt
+          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > N60-Pro-512M-WIFI-YES.config
