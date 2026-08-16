@@ -16,7 +16,6 @@ on:
 permissions: write-all
 
 env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GH_TOKEN: ${{ github.token }}
   WRT_THEME: aurora
   WRT_NAME: N60-Pro
