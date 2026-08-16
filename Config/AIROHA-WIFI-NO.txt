@@ -1,12 +1,11 @@
 # XG-040G-MD only
 # 256MB NAND hardware; RAM is not hard-coded and may be auto-detected.
-# Network layout remains the default XG-040G layout for the first validation build.
+# Network layout remains the verified XG-040G layout.
 CONFIG_TARGET_airoha=y
 CONFIG_TARGET_airoha_an7581=y
-CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_bell_xg-040g-md=y
+CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md=y
 
 # EN7581 CPU frequency / power-domain support.
-# Keep the Airoha CPUFreq + PM-domain path enabled so cpufreq-dt can create policy0.
 CONFIG_AIROHA_CPU_PM_DOMAIN=y
 CONFIG_PM_GENERIC_DOMAINS=y
 CONFIG_PM_GENERIC_DOMAINS_OF=y
@@ -24,7 +23,6 @@ CONFIG_CPU_FREQ_GOV_POWERSAVE=y
 CONFIG_CPU_FREQ_GOV_USERSPACE=y
 CONFIG_CPU_FREQ_STAT=y
 CONFIG_HOTPLUG_CPU=y
-# Remove the incorrect/nonexistent CONFIG_CPU_FREQ_DT=n override.
 
 CONFIG_KERNEL_DEVMEM=y
 CONFIG_BUSYBOX_CUSTOM=y
