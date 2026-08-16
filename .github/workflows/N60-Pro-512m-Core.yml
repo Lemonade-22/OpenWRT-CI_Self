@@ -12,17 +12,6 @@ on:
       TEST:
         required: false
         type: boolean
-  workflow_dispatch:
-    inputs:
-      PACKAGE:
-        description: '手动调整插件包，多个请用换行符分隔。'
-        required: false
-        type: string
-      TEST:
-        description: '仅输出配置文件，不编译固件。'
-        default: false
-        required: false
-        type: boolean
 
 permissions: write-all
 
@@ -137,13 +126,13 @@ jobs:
           cd ./wrt
           WIFI="WIFI-YES"
           echo "========================================"
-          echo "Building N60-Pro-512M-${WIFI} (${UBI_LABEL})"
+          echo "Building N60-Pro-512M-$WIFI (${UBI_LABEL})"
           echo "========================================"
 
           rm -f .config
           cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
 
-          export WRT_CONFIG="N60-Pro-512M-${WIFI}"
+          export WRT_CONFIG="N60-Pro-512M-$WIFI"
           export WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt")"
           export WRT_WIFI="wifi-yes"
           export WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
