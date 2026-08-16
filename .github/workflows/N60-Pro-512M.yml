@@ -25,7 +25,7 @@ permissions: write-all
 jobs:
   build:
     name: N60 Pro 512M UBI-506M
-    uses: ./.github/workflows/N60-Pro-512m-Core.yml
+    uses: ./.github/workflows/N60-Pro-512M-Core.yml
     with:
       PACKAGE: ${{ inputs.PACKAGE || '' }}
       TEST: ${{ inputs.TEST || false }}
