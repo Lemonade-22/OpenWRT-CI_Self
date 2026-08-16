@@ -4,19 +4,14 @@
 name: Auto-Clean
 
 on:
-  # 每日 05:00（GMT+8）先构建 N60 Pro 512m 和 XG-040G 系列，再清理旧版本
+  # 每日 07:00（GMT+8）清理旧版本；N60 Pro 已独立于 06:00 编译
   schedule:
-    - cron: '0 21 * * *'
+    - cron: '0 23 * * *'
   workflow_dispatch:
 
 permissions: write-all
 
 jobs:
-  build-n60:
-    name: Build N60 Pro 512m
-    uses: ./.github/workflows/N60-Pro-512m.yml
-    secrets: inherit
-
   build-xg:
     name: Build XG-040G Series
     uses: ./.github/workflows/XG-040G-Series.yml
@@ -25,7 +20,6 @@ jobs:
   cleanup:
     name: Clean previous releases and workflow runs
     needs:
-      - build-n60
       - build-xg
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +27,7 @@ jobs:
         uses: ophub/delete-releases-workflows@main
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          # 今日保留 3 个 Release：N60 WIFI-NO、N60 WIFI-YES、XG-040G 系列四设备
+          # 保留最近 3 个 Release
           releases_keep_latest: 3
           delete_releases: true
           delete_tags: true
