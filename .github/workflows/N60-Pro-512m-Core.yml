@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 Lemonade-22
 
+# N60 Pro 512M 专用云编译核心
 name: N60 Pro 512m Core
 
 on:
@@ -11,12 +12,10 @@ on:
         type: string
       TEST:
         required: false
-        type: boolean
-
-permissions: write-all
+        type: string
 
 env:
-  GH_TOKEN: ${{ github.token }}
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
   WRT_THEME: aurora
   WRT_NAME: N60-Pro
   WRT_SSID: N60-Pro
@@ -26,13 +25,13 @@ env:
   WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
   WRT_BRANCH: owrt
   WRT_SOURCE: VIKINGYFY/immortalwrt
-  WRT_PACKAGE: ${{ inputs.PACKAGE || '' }}
-  WRT_TEST: ${{ inputs.TEST || false }}
+  WRT_PACKAGE: ${{inputs.PACKAGE}}
+  WRT_TEST: ${{inputs.TEST}}
   UBI_LABEL: UBI-506M
 
 jobs:
-  build:
-    name: N60 Pro 512m UBI-506M WIFI-YES
+  core:
+    name: N60 Pro 512M UBI-506M WIFI-YES
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Projects
@@ -61,10 +60,12 @@ jobs:
           echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
           echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
           echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
+          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/N60-Pro-512M.txt)" >> $GITHUB_ENV
+          echo "WRT_WIFI=wifi-yes" >> $GITHUB_ENV
 
       - name: Clone Code
         run: |
-          git clone --depth=1 --single-branch --branch "$WRT_BRANCH" "$WRT_REPO" ./wrt/
+          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
           cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
           PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
           if [ -f "$PROJECT_MIRRORS_FILE" ]; then
@@ -76,7 +77,6 @@ jobs:
         run: |
           cd ./wrt
           patch -p1 --forward < "$GITHUB_WORKSPACE/patches/n60pro-512m-ubi-5065m.patch"
-          echo "N60 Pro 512M: UBI partition patched to 506.5MiB."
 
       - name: Check Scripts
         run: |
@@ -98,11 +98,8 @@ jobs:
         if: env.WRT_TEST != 'true'
         run: |
           if [ -d "./wrt/staging_dir" ]; then
-            find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
-              find "$DIR" -type f -exec touch {} +
-            done
-            mkdir -p ./wrt/tmp && echo "1" > ./wrt/tmp/.build
-            echo "toolchain cache prepared"
+            find ./wrt/staging_dir -type d -name stamp -not -path "*target*" -exec sh -c 'find "$1" -type f -exec touch {} +' _ {} \;
+            mkdir -p ./wrt/tmp && echo 1 > ./wrt/tmp/.build
           fi
 
       - name: Update Feeds
@@ -117,84 +114,74 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Build WIFI-YES
-        if: env.WRT_TEST != 'true'
-        shell: bash
+      - name: Custom Settings
         run: |
-          set -e
-          cd ./wrt
-          WIFI="WIFI-YES"
-          echo "========================================"
-          echo "Building N60-Pro-512M-$WIFI (${UBI_LABEL})"
-          echo "========================================"
-
-          rm -f .config
-          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
-
-          export WRT_CONFIG="N60-Pro-512M-$WIFI"
-          export WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt")"
-          export WRT_WIFI="wifi-yes"
-          export WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
-          export WRT_MARK="${GITHUB_REPOSITORY%%/*}"
-          export WRT_INFO="${WRT_SOURCE%%/*}"
-          export WRT_PACKAGE="${{ inputs.PACKAGE || '' }}"
-
-          "$GITHUB_WORKSPACE/Scripts/Settings.sh"
+          cd ./wrt/
+          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
+          $GITHUB_WORKSPACE/Scripts/Settings.sh
           make defconfig -j$(nproc)
           make clean -j$(nproc)
+
+      - name: Download Packages
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd ./wrt/
           make download -j$(nproc)
+
+      - name: Compile Firmware
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd ./wrt/
           make -j$(nproc) || make -j1 V=s
 
+      - name: Machine Information
+        run: |
+          cd ./wrt/
+          lscpu | grep -E "name|Core|Thread" || true
+          df -h
+
+      - name: Package Firmware
+        run: |
+          cd ./wrt
           mkdir -p ./upload
-          cp -f ./.config "./upload/Config-N60-Pro-512M-${WIFI}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt"
-          export WRT_KVER="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \; | head -1)"
-          export WRT_LIST="$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')"
+          cp -f ./.config ./upload/Config-N60-Pro-512M-WIFI-YES-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt
+          if [[ "$WRT_TEST" != "true" ]]; then
+            echo "WRT_KVER=$(find ./bin/targets/ -type f -name '*.manifest' -exec grep -oP '^kernel - \K[\d.]+' {} \; | head -1)" >> $GITHUB_ENV
+            echo "WRT_LIST=$(find ./bin/targets/ -type f -name '*.manifest' -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
+            find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+            for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*"); do
+              EXT=$(basename "$FILE" | cut -d '.' -f 2-)
+              NAME=$(basename "$FILE" | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+              NEW_FILE="${NAME}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_WIFI}-${WRT_DATE}.${EXT}"
+              mv -f "$FILE" "./upload/$NEW_FILE"
+            done
+            find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+          fi
 
-          find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
-          for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*"); do
-            EXT=$(basename "$FILE" | cut -d '.' -f 2-)
-            NAME=$(basename "$FILE" | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
-            NEW_FILE="${NAME}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_WIFI}-${WRT_DATE}.${EXT}"
-            mv -f "$FILE" "./upload/$NEW_FILE"
-          done
-          find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
-
-          TAG="N60-Pro-512M-${WIFI}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}"
-          cat > release-notes.md <<EOF
-# N60 Pro 512M / ${UBI_LABEL}
-
-## 固件信息
-
-- **UBI 分区：** 506.5MiB
-- **源码：** ${WRT_REPO}
-- **分支：** ${WRT_BRANCH}
-- **提交：** ${WRT_HASH}
-- **配置：** N60-Pro-512M-${WIFI}
-- **平台：** ${WRT_TARGET}
-- **内核版本：** ${WRT_KVER}
-
-## 网络信息
-
-- **登录地址：** ${WRT_IP}
-- **登录密码：** ${WRT_PW}
-- **Wi-Fi 名称：** ${WRT_SSID}
-- **Wi-Fi 密码：** ${WRT_WORD}
-
-## 插件
-
-${WRT_LIST}
-EOF
-
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" ./upload/*.* --title "$TAG" --notes-file release-notes.md
-
-          rm -f release-notes.md
-          rm -rf ./upload
-          make clean -j$(nproc)
+      - name: Release Firmware
+        if: env.WRT_TEST != 'true'
+        uses: softprops/action-gh-release@master
+        with:
+          tag_name: N60-Pro-512M-WIFI-YES-${{env.UBI_LABEL}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+          files: ./wrt/upload/*.*
+          body: |
+            N60 Pro 512M / UBI-506M
+            源码：${{env.WRT_REPO}}
+            分支：${{env.WRT_BRANCH}}
+            提交：${{env.WRT_HASH}}
+            配置：N60-Pro-512M-WIFI-YES
+            平台：${{env.WRT_TARGET}}
+            UBI：506.5MiB
+            登录地址：${{env.WRT_IP}}
+            登录密码：${{env.WRT_PW}}
+            WIFI名称：${{env.WRT_SSID}}
+            WIFI密码：${{env.WRT_WORD}}
+            内核版本：${{env.WRT_KVER}}
+            插件列表：${{env.WRT_LIST}}
 
       - name: Output Configuration Files
         if: env.WRT_TEST == 'true'
         run: |
           cd ./wrt
-          WIFI="WIFI-YES"
-          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > "/tmp/N60-Pro-512M-$WIFI.config"
-          echo "Generated /tmp/N60-Pro-512M-$WIFI.config (${UBI_LABEL})"
+          mkdir -p ./upload
+          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > ./upload/Config-N60-Pro-512M-WIFI-YES.txt
