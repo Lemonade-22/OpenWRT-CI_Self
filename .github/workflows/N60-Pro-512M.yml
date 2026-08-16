@@ -29,3 +29,4 @@ jobs:
     with:
       PACKAGE: ${{ inputs.PACKAGE || '' }}
       TEST: ${{ inputs.TEST || false }}
+    secrets: inherit
