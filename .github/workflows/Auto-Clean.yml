@@ -4,7 +4,7 @@
 name: Auto-Clean
 
 on:
-  # 每日 07:00（GMT+8）清理旧版本；N60 Pro 已独立于 06:00 编译
+  # 每日 07:00（GMT+8）清理旧版本；等待 N60 Pro 06:00 和 XG-040G 编译完成后再清理
   schedule:
     - cron: '0 23 * * *'
   workflow_dispatch:
@@ -23,6 +23,26 @@ jobs:
       - build-xg
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for N60 Pro 512M workflow to finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          echo "Waiting for today's N60 Pro 512M workflow to finish..."
+          for i in {1..60}; do
+            RUN=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow N60-Pro-512M.yml --limit 20 --json databaseId,status,conclusion,createdAt --jq '[.[] | select(.createdAt >= (now - 86400 | todateiso8601))] | sort_by(.createdAt) | last')
+            STATUS=$(echo "$RUN" | jq -r '.status // empty')
+            CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // empty')
+
+            if [ "$STATUS" = "completed" ]; then
+              echo "N60 Pro workflow completed: $CONCLUSION"
+              break
+            fi
+
+            echo "N60 Pro workflow is still running; waiting 60 seconds..."
+            sleep 60
+          done
+
       - name: Delete old Releases and Workflows
         uses: ophub/delete-releases-workflows@main
         with:
