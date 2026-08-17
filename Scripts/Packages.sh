@@ -68,7 +68,12 @@ UPDATE_PACKAGE "timecontrol" "sirpdboy/luci-app-timecontrol" "main"
 UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "axonhub gecoosac sing-box luci-app-homeproxy luci-app-timewol luci-app-wolplus luci-app-wolultra"
 UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main"
 
-# XG-040G/140G: use the translated NPU LuCI fork selected for this project.
+# XG-040G/140G: replace the NWRT/bingo luci-app-airoha-npu with luanmuc's fork.
+if [[ "${WRT_CONFIG:-}" == "AIROHA-NWRT" ]]; then
+	UPDATE_PACKAGE "luci-app-airoha-npu" "luanmuc/luci-app-airoha-npu" "main"
+fi
+
+# Keep the existing no-WiFi Airoha workflow on the same NPU LuCI fork.
 if [[ "${WRT_CONFIG:-}" == "AIROHA-WIFI-NO" ]]; then
 	UPDATE_PACKAGE "luci-app-airoha-npu" "luanmuc/luci-app-airoha-npu" "main"
 fi
