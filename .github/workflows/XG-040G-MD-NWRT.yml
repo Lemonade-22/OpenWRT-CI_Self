@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Lemonade-22
+
+# Nokia XG-040G-MD
+# Hardware: bingo NWRT / immortalwrt 6.18
+# Software: VIKINGYFY immortalwrt owrt
+name: XG-040G-MD-NWRT
+
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: '手动调整插件包，多个请用换行符隔开。'
+        required: false
+        type: string
+      TEST:
+        description: '仅输出配置文件，不编译固件。'
+        default: 'false'
+        required: false
+        type: boolean
+
+permissions: write-all
+
+jobs:
+  config:
+    name: XG-040G-MD / VIKING owrt / bingo NWRT
+    uses: ./.github/workflows/AIR-CORE.yml
+    with:
+      WRT_CONFIG: AIROHA-NWRT
+      WRT_THEME: aurora
+      WRT_NAME: XG-040G-Series
+      WRT_SSID: XG-040G
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.1.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_PACKAGE: ${{inputs.PACKAGE}}
+      WRT_TEST: ${{inputs.TEST}}
