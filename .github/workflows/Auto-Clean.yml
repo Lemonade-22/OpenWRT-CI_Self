@@ -4,7 +4,7 @@
 name: Auto-Clean
 
 on:
-  # 每日 07:00（GMT+8）清理旧版本；等待 N60 Pro 06:00 和 XG-040G 编译完成后再清理
+  # 每日 07:00（GMT+8）清理旧版本；等待 N60 Pro 06:00 编译完成后再清理
   schedule:
     - cron: '0 23 * * *'
   workflow_dispatch:
@@ -12,15 +12,8 @@ on:
 permissions: write-all
 
 jobs:
-  build-xg:
-    name: Build XG-040G Series
-    uses: ./.github/workflows/XG-040G-Series.yml
-    secrets: inherit
-
   cleanup:
     name: Clean previous releases and workflow runs
-    needs:
-      - build-xg
     runs-on: ubuntu-latest
     steps:
       - name: Wait for N60 Pro 512M workflow to finish
@@ -28,11 +21,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          echo "Waiting for today's N60 Pro 512M workflow to finish..."
+          echo "Checking today's N60 Pro 512M workflow..."
           for i in {1..60}; do
             RUN=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow N60-Pro-512M.yml --limit 20 --json databaseId,status,conclusion,createdAt --jq '[.[] | select(.createdAt >= (now - 86400 | todateiso8601))] | sort_by(.createdAt) | last')
             STATUS=$(echo "$RUN" | jq -r '.status // empty')
             CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // empty')
+
+            if [ -z "$STATUS" ]; then
+              echo "No N60 Pro workflow run found in the last 24 hours; continuing cleanup."
+              break
+            fi
 
             if [ "$STATUS" = "completed" ]; then
               echo "N60 Pro workflow completed: $CONCLUSION"
