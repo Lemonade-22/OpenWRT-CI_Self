@@ -216,7 +216,7 @@ jobs:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
-            这是 ${{env.WRT_NAME}} 单设备验证固件。
+            xg-040G-MD 固件，带加速 （2.5G WAN）
 
             底层源码：${{env.WRT_REPO}}
             分支：${{env.WRT_BRANCH}}
