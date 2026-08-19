@@ -7,9 +7,6 @@
 name: XG-040G-MD-NWRT
 
 on:
-  # Daily automatic build: 02:00 UTC / 10:00 Singapore time
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       PACKAGE:
