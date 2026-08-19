@@ -4,9 +4,11 @@ CONFIG_TARGET_ramips=y
 CONFIG_TARGET_ramips_mt7621=y
 CONFIG_TARGET_DEVICE_ramips_mt7621_DEVICE_xiaoyu_xy-c5=y
 
-# XY-C5 has no onboard Wi-Fi
+# XiaoYu XY-C5 has no onboard Wi-Fi
 # Keep the official device package set: SATA/AHCI + USB3, no wpad/uboot-envtools.
-# Hardware crypto acceleration (EIP93) is provided by the mt7621 target defaults.
+
+# MT7621 hardware crypto acceleration (EIP93)
+CONFIG_PACKAGE_kmod-crypto-hw-eip93=y
 
 # Useful kernel modules for proxy/network acceleration
 CONFIG_PACKAGE_kmod-cryptodev=y
