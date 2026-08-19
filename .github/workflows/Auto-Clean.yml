@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Lemonade-22
+
+name: Auto-Clean
+
+aon:
+  # Disabled: keep this workflow for future use, but do not run automatically.
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+  cleanup:
+    name: Clean previous releases and workflow runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disabled
+        run: |
+          echo "Auto-Clean is currently disabled."
+          echo "This workflow is intentionally kept for future use."
