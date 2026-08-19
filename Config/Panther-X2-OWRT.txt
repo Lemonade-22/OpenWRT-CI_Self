@@ -1,0 +1,8 @@
+# Panther X2 / Rockchip RK3566
+# Hardware support imported from coolsnowwolf/lede.
+CONFIG_TARGET_rockchip=y
+CONFIG_TARGET_rockchip_armv8=y
+CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_panther_x2=y
+
+# Panther X2 has no onboard Wi-Fi; keep the image focused on the board.
+# U-Boot target is selected by the imported image definition.
