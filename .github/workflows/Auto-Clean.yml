@@ -3,7 +3,7 @@
 
 name: Auto-Clean
 
-aon:
+on:
   # Disabled: keep this workflow for future use, but do not run automatically.
   workflow_dispatch:
 
