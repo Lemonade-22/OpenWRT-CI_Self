@@ -38,3 +38,4 @@ jobs:
       WRT_SOURCE: VIKINGYFY/immortalwrt
       WRT_PACKAGE: ${{inputs.PACKAGE}}
       WRT_TEST: ${{inputs.TEST}}
+      WRT_APT_FIX: true
