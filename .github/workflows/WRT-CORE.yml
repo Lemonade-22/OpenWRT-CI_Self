@@ -43,6 +43,9 @@ on:
       WRT_TEST:
         required: false
         type: string
+      WRT_APT_FIX:
+        required: false
+        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -58,6 +61,7 @@ env:
   WRT_SOURCE: ${{inputs.WRT_SOURCE}}
   WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
   WRT_TEST: ${{inputs.WRT_TEST}}
+  WRT_APT_FIX: ${{inputs.WRT_APT_FIX}}
 
 jobs:
   core:
@@ -71,6 +75,14 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          if [ "$WRT_APT_FIX" = "true" ]; then
+            sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) -exec sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' {} +
+            sudo tee /etc/apt/apt.conf.d/99-wrt-network >/dev/null <<'EOF'
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          Acquire::Retries "3";
+          EOF
+          fi
           sudo -E apt -yqq purge firefox
           sudo -E apt -yqq update
           sudo -E apt -yqq full-upgrade
