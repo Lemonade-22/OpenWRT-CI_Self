@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+
           CONFIG_PACKAGE_luci-app-openclash=y
 # Panther X2: VIKINGYFY owrt rootfs + OPhub RK3566 hardware layer
 name: Panther-X2-OPhub-OWRT
