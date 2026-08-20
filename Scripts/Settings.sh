@@ -34,12 +34,23 @@ sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 echo "CONFIG_PACKAGE_luci=y" >> ./.config
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> ./.config
+case "$WRT_THEME" in
+	aurora|kucat)
+		echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> ./.config
+		;;
+esac
 
 #引入私有扩展配置
 if [ -f "$GITHUB_WORKSPACE/Config/PRIVATE.txt" ]; then
 	echo "Applying private configurations from PRIVATE.txt..."
 	cat $GITHUB_WORKSPACE/Config/PRIVATE.txt >> ./.config
+fi
+
+#引入机型专用覆盖配置（在通用配置之后应用）
+PROFILE_OVERRIDE="$GITHUB_WORKSPACE/Config/$WRT_CONFIG-EXTRA.txt"
+if [ -f "$PROFILE_OVERRIDE" ]; then
+	echo "Applying profile overrides from $PROFILE_OVERRIDE..."
+	cat "$PROFILE_OVERRIDE" >> ./.config
 fi
 
 #手动调整的插件

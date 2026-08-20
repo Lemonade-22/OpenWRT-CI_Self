@@ -27,7 +27,7 @@ jobs:
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       WRT_CONFIG: XY-C5-OWRT-WIFI-NO
-      WRT_THEME: aurora
+      WRT_THEME: openwrt-2020
       WRT_NAME: XiaoYu-XY-C5
       WRT_SSID: XY-C5
       WRT_WORD: 12345678

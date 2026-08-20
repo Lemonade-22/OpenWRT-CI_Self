@@ -1,0 +1,8 @@
+# XiaoYu XY-C5 image-size overrides (32 MiB flash)
+# Keep these packages disabled even when GENERAL.txt enables them.
+# CONFIG_PACKAGE_luci-app-samba4 is not set
+# CONFIG_PACKAGE_luci-app-gecoosac is not set
+# CONFIG_PACKAGE_luci-app-wolplus is not set
+# CONFIG_PACKAGE_luci-app-wolultra is not set
+# CONFIG_PACKAGE_luci-theme-aurora is not set
+# CONFIG_PACKAGE_luci-app-aurora-config is not set
