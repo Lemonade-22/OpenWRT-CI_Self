@@ -16,7 +16,7 @@ env:
   SOURCE_REPO: VIKINGYFY/immortalwrt
   SOURCE_BRANCH: owrt
   OPENWRT_IP: 192.168.10.1
-  PANTHER_DTS_URL: https://raw.githubusercontent.com/unifreq/linux-6.18.y/a0a08476f45fb2d602fd7312def6f587f33fb91e/arch/arm64/boot/dts/rockchip/rk3566-panther-x2.dts
+  PANTHER_DTS_URL: https://raw.githubusercontent.com/unifreq/linux-6.18.y/9f510fa9df2774e8d6ea928f55f7e34f9fc3e143/arch/arm64/boot/dts/rockchip/rk3566-panther-x2.dts
 
 jobs:
   build:
@@ -117,7 +117,7 @@ jobs:
             Panther X2 / RK3566 native Rockchip image
             OpenWrt source: ${{ env.SOURCE_REPO }} (${{ env.SOURCE_BRANCH }})
             Source commit: ${{ env.SOURCE_HASH }}
-            Hardware DTS: unifreq/linux-6.18.y @ a0a08476f45fb2d602fd7312def6f587f33fb91e
+            Hardware DTS: unifreq/linux-6.18.y @ 9f510fa9df2774e8d6ea928f55f7e34f9fc3e143
             Default LAN IP: ${{ env.OPENWRT_IP }}
             Default username: root
             Default password: password
