@@ -67,13 +67,21 @@ jobs:
           # Keep the VIKINGYFY userspace in the OPhub image.
           CONFIG_PACKAGE_luci=y
           CONFIG_LUCI_LANG_zh_Hans=y
-          CONFIG_PACKAGE_luci-theme-bootstrap=y
           EOF
           export WRT_PACKAGE="${{ inputs.PACKAGE }}"
           cd package
           bash "$GITHUB_WORKSPACE/Scripts/Packages.sh"
           bash "$GITHUB_WORKSPACE/Scripts/Handles.sh"
           cd ..
+          export WRT_THEME=aurora
+          export WRT_IP="$OPENWRT_IP"
+          export WRT_NAME=ImmortalWRT
+          export WRT_MARK=VIKINGYFY
+          export WRT_DATE="$(date -u +'%y.%m.%d-%H.%M.%S')"
+          # This remains an OPhub-packaged rootfs: do not trigger the retired native Panther DTS path.
+          export WRT_CONFIG=OPHUB-ARM64
+          export WRT_TARGET=armsr
+          bash "$GITHUB_WORKSPACE/Scripts/Settings.sh"
           make defconfig
 
       - name: Build VIKINGYFY arm64 rootfs
