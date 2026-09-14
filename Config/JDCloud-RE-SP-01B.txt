@@ -1,0 +1,9 @@
+# JDCloud RE-SP-01B / ramips / mt7621
+# GENERAL.txt enables multi-profile builds; select only this device.
+CONFIG_TARGET_ramips=y
+CONFIG_TARGET_ramips_mt7621=y
+CONFIG_TARGET_DEVICE_ramips_mt7621_DEVICE_jdcloud_re-sp-01b=y
+
+# Keep the source tree's device defaults, including Wi-Fi, MMC and USB.
+CONFIG_PACKAGE_kmod-cryptodev=y
+CONFIG_PACKAGE_kmod-tls=y
