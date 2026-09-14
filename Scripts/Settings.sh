@@ -78,3 +78,8 @@ if [[ "${WRT_CONFIG,,}" == *"panther-x2"* ]]; then
 	echo "Applying Panther X2 RK3566 hardware support from LEDE..."
 	bash "$GITHUB_WORKSPACE/Scripts/Panther-X2.sh"
 fi
+
+# ramips 6.18: generic RTL837x changes the context of the Ralink DSA patch.
+if [[ "${WRT_TARGET:-}" == "ramips" ]]; then
+	python3 "$GITHUB_WORKSPACE/Scripts/Fix-Ramips-DSA.py" || exit $?
+fi
