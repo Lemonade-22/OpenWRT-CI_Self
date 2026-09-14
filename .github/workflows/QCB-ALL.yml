@@ -1,15 +1,21 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 VIKINGYFY
 
-# MTK ALL
-name: MTK ALL
+#CI项目
+name: QCB-ALL
 
+#CI计划
 on:
+  #自动编译：当Auto-Clean运行完成后
+  workflow_run:
+    workflows: ["Auto-Clean"]
+    types:
+      - completed
   #手动编译
   workflow_dispatch:
     inputs:
       PACKAGE:
-        description: '手动调整插件包，多个请用换行符分隔。'
+        description: '手动调整插件包，多个请用\n符号隔开。'
         required: false
         type: string
       TEST:
@@ -18,16 +24,22 @@ on:
         required: false
         type: boolean
 
+#CI权限
 permissions: write-all
 
+#CI任务
 jobs:
-  build:
+  config:
+    name: ${{matrix.CONFIG}}
     strategy:
       fail-fast: false
+      #max-parallel: 3
       matrix:
-        CONFIG: [MEDIATEK-WIFI-YES, MEDIATEK-WIFI-NO]
+        CONFIG: [IPQ53XX-WIFI-NO, IPQ95XX-WIFI-YES]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [owrt]
+
+    #调用公用编译核心WRT-CORE.yml
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       #编译配置
