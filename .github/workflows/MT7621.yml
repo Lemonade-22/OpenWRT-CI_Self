@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Based on MTK-ALL.yml.
-name: JDCloud RE-SP-01B and Xiaomi Mi Router 3G
+name: MT7621
 
 on:
   workflow_dispatch:
