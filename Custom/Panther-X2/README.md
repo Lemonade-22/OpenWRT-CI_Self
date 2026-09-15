@@ -6,7 +6,7 @@
 
 在 Actions 中打开 **Panther-X2-Native**，选择 Run workflow。TEST=true 仅生成配置；TEST=false 编译并发布固件。配置检查通过只表示设备和 U-Boot 被选中，不代表内核或 U-Boot 已编译，更不代表实机启动成功。
 
-独立配置为 `Config/Panther-X2-OWRT.txt`，默认地址沿用 192.168.10.1，内核分区 128 MiB，根分区 1024 MiB。保留原有有线设备配置，不额外添加无线软件包；这不表示所有 Panther X2 硬件都没有无线芯片。旧的 OPhub 工作流保持独立。
+独立配置为 `Config/Panther-X2-OWRT.txt`，默认地址沿用 192.168.10.1，内核分区 128 MiB，根分区 1024 MiB。保留原有有线设备配置，不额外添加无线软件包；这不表示所有 Panther X2 硬件都没有无线芯片。
 
 如需在 ROCKCHIP 批量构建中加入本设备，可在 `Config/ROCKCHIP.txt` 添加 `CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_panther_x2=y`。Settings.sh 根据设备选项应用适配，WRT-CORE 在 make defconfig 后检查选项是否被丢弃。
 
