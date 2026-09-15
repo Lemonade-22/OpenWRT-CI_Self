@@ -3,8 +3,8 @@ name: Sync upstream repositories
 on:
   workflow_dispatch:
   schedule:
-    # 每天北京时间 04:00（UTC+8）同步上游
-    - cron: '0 20 * * *'
+    # 每小时检查上游；GitHub 调度可能有延迟。
+    - cron: '17 * * * *'
 
 permissions:
   contents: write
@@ -23,6 +23,7 @@ jobs:
           ref: main
           fetch-depth: 0
           persist-credentials: true
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
 
       - name: Sync VIKINGYFY OpenWRT-CI
         shell: bash
@@ -43,10 +44,18 @@ jobs:
           if git merge-base --is-ancestor upstream/main HEAD; then
             echo "Already up to date with upstream/main."
           else
-            git merge --no-edit upstream/main
+            if ! git merge --no-edit upstream/main; then
+              git diff --name-only --diff-filter=U
+              git merge --abort
+              echo "::error::Upstream merge conflict; custom changes were not overwritten. Resolve the merge manually."
+              exit 1
+            fi
           fi
 
-          git push origin HEAD:main
+          if ! git push origin HEAD:main; then
+            echo "::error::Push failed. Check concurrent changes, branch protection and workflow-file write permission. If required, configure UPSTREAM_SYNC_TOKEN as documented in Custom/Panther-X2/README.md."
+            exit 1
+          fi
 
       - name: Sync completed
         run: |

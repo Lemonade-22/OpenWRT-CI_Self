@@ -190,6 +190,9 @@ jobs:
           fi
           $GITHUB_WORKSPACE/Scripts/Settings.sh
           make defconfig -j$(nproc) && make clean -j$(nproc)
+          if [[ -f .panther-x2-support.json ]]; then
+            python3 "$GITHUB_WORKSPACE/Custom/Panther-X2/apply.py" "$PWD" --verify-config
+          fi
 
       - name: Download Packages
         if: ${{ !inputs.WRT_TEST }}
@@ -227,6 +230,9 @@ jobs:
       - name: Package Firmware
         run: |
           cd ./wrt/ && mkdir ./upload/
+          if [[ -f .panther-x2-support.json ]]; then
+            cp .panther-x2-support.json ./upload/Panther-X2-sources.json
+          fi
           cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
 
           if [[ "$WRT_TEST" != 'true' ]]; then

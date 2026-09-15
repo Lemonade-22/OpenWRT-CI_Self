@@ -1,0 +1,13 @@
+{
+  "lede_repository": "https://github.com/coolsnowwolf/lede",
+  "lede_commit": "611233e63e3e0aefbb6fbac67252e9c44791a7a9",
+  "target_repository": "https://github.com/VIKINGYFY/immortalwrt",
+  "target_branch": "owrt",
+  "sha256": {
+    "files/package/boot/uboot-rockchip/patches/316-rockchip-rk3566-Add-support-for-panther-x2.patch": "1baee70d562406e8b886aee05a1018c8ba52e3d29f89e312ad82549fca52b143",
+    "files/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/rk3566-panther-x2.dts": "d99f75e4bcfe88da44c9cfdffe1342ac1434d61b8631f5d71470a939a2824187",
+    "files/target/linux/rockchip/image/panther-x2.bootscript": "960f98ba0addd25cee116942d49928a45bab00527ae63daaa571e8c47db1a6d4",
+    "integration.patch": "933296e1ea52a409c6c5e3ddb209b3a986b371bb953d99f30e058b24cfc0d327"
+  },
+  "integration_checked_against": "38303d235232861ce77c303b400f40683c5312f7"
+}

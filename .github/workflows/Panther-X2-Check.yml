@@ -1,0 +1,34 @@
+name: Panther-X2-Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Custom/Panther-X2/**'
+      - 'Scripts/Panther-X2.sh'
+      - 'Scripts/Settings.sh'
+      - 'Config/Panther-X2-OWRT.txt'
+      - '.github/workflows/Panther-X2-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch current hardware source definitions
+        uses: actions/checkout@v4
+        with:
+          repository: VIKINGYFY/immortalwrt
+          ref: owrt
+          path: upstream-source
+          sparse-checkout: |
+            target/linux/rockchip/image
+            package/boot/uboot-rockchip
+      - name: Validate port and shell syntax
+        run: |
+          python3 Custom/Panther-X2/test_apply.py upstream-source
+          bash -n Scripts/Panther-X2.sh
+          bash -n Scripts/Settings.sh

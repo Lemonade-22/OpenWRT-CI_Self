@@ -1,0 +1,39 @@
+name: Panther-X2-Native
+
+on:
+  workflow_dispatch:
+    inputs:
+      TEST:
+        description: '仅生成配置并校验设备选择，不编译固件'
+        type: boolean
+        default: false
+      PACKAGE:
+        description: '额外软件包配置，多个选项用换行分隔'
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: panther-x2-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    uses: ./.github/workflows/WRT-CORE.yml
+    with:
+      WRT_CONFIG: Panther-X2-OWRT
+      WRT_THEME: aurora
+      WRT_NAME: OWRT
+      WRT_SSID: OWRT
+      WRT_WORD: '12345678'
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_PACKAGE: ${{ inputs.PACKAGE }}
+      WRT_TEST: ${{ inputs.TEST || false }}
+      WRT_APT_FIX: true

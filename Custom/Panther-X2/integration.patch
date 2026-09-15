@@ -1,0 +1,41 @@
+--- a/target/linux/rockchip/image/armv8.mk
++++ b/target/linux/rockchip/image/armv8.mk
+@@ -649,3 +649,14 @@
+   DEVICE_PACKAGES := kmod-usb-net-rtl8152
+ endef
+ TARGET_DEVICES += xunlong_orangepi-r1-plus-lts
++
++# Panther X2: LEDE board support using this tree's RK3566 image pipeline.
++define Device/panther_x2
++  $(Device/rk3566)
++  DEVICE_VENDOR := Panther
++  DEVICE_MODEL := X2
++  DEVICE_DTS := rk3566-panther-x2
++  UBOOT_DEVICE_NAME := panther-x2-rk3566
++  BOOT_SCRIPT := panther-x2
++endef
++TARGET_DEVICES += panther_x2
+--- a/package/boot/uboot-rockchip/Makefile
++++ b/package/boot/uboot-rockchip/Makefile
+@@ -264,6 +264,13 @@
+   NAME:=ROCK 3C
+   BUILD_DEVICES:= \
+     radxa_rock-3c
++endef
++
++define U-Boot/panther-x2-rk3566
++  $(U-Boot/rk3566/Default)
++  NAME:=Panther X2
++  BUILD_DEVICES:= \
++    panther_x2
+ endef
+ 
+ # RK3568 boards
+@@ -560,6 +567,7 @@
+   radxa-cm3-io-rk3566 \
+   radxa-zero-3-rk3566 \
+   rock-3c-rk3566 \
++  panther-x2-rk3566 \
+   9tripod-x3568-v4-rk3568 \
+   bpi-r2-pro-rk3568 \
+   easepi-r1-rk3568 \
