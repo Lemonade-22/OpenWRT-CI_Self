@@ -19,14 +19,9 @@ permissions: write-all
 
 jobs:
   build:
-    name: ${{matrix.CONFIG}}
-    strategy:
-      fail-fast: false
-      matrix:
-        CONFIG: [JDCloud-RE-SP-01B, Xiaomi-Mi-Router-3G]
     uses: ./.github/workflows/WRT-CORE.yml
     with:
-      WRT_CONFIG: ${{matrix.CONFIG}}
+      WRT_CONFIG: mt7621
       WRT_THEME: aurora
       WRT_NAME: OWRT
       WRT_SSID: OWRT
@@ -39,7 +34,7 @@ jobs:
       # Applied after GENERAL.txt and profile overrides by Settings.sh.
       WRT_PACKAGE: |
         ${{inputs.PACKAGE}}
-        CONFIG_PACKAGE_luci-app-gecoosac=n
+        CONFIG_PACKAGE_luci-app-gecoosac=y
         CONFIG_PACKAGE_luci-app-homeproxy=n
         CONFIG_PACKAGE_luci-app-wolultra=n
       WRT_TEST: ${{inputs.TEST || false}}
