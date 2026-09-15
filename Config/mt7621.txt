@@ -1,11 +1,11 @@
-# ramips / mt7621: build all supported profiles in one shared build.
+# ramips / mt7621: build only the three selected devices in one shared build.
 CONFIG_TARGET_ramips=y
 CONFIG_TARGET_ramips_mt7621=y
 CONFIG_TARGET_MULTI_PROFILE=y
-CONFIG_TARGET_ALL_PROFILES=y
+# CONFIG_TARGET_ALL_PROFILES is not set
 CONFIG_TARGET_PER_DEVICE_ROOTFS=y
 
-# Explicitly retain the previously supported devices.
+# JDCloud RE-SP-01B, Xiaomi Mi Router 3G (not v2), and XiaoYu XY-C5.
 CONFIG_TARGET_DEVICE_ramips_mt7621_DEVICE_jdcloud_re-sp-01b=y
 CONFIG_TARGET_DEVICE_ramips_mt7621_DEVICE_xiaomi_mi-router-3g=y
 CONFIG_TARGET_DEVICE_ramips_mt7621_DEVICE_xiaoyu_xy-c5=y
