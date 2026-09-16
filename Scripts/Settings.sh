@@ -73,11 +73,6 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 	fi
 fi
 
-# Panther X2 / RK3566 硬件支持
-if [[ "${WRT_TARGET:-}" == "rockchip" ]] && grep -q "^CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_panther_x2=y$" .config; then
-	echo "Applying Panther X2 RK3566 hardware support from LEDE..."
-	bash "$GITHUB_WORKSPACE/Scripts/Panther-X2.sh" || exit $?
-fi
 
 # ramips 6.18: generic RTL837x changes the context of the Ralink DSA patch.
 if [[ "${WRT_TARGET:-}" == "ramips" ]]; then

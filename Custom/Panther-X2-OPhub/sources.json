@@ -1,0 +1,14 @@
+{
+  "packer_commit": "028c444dbdb74b1d005affc707cb4cf8adc922a1",
+  "repositories": {
+    "https://github.com/ophub/u-boot": "6d28887796f8e757d7e5f6d7517d7dcb401be1a0",
+    "https://github.com/ophub/amlogic-s9xxx-armbian": "1f3c8c11d7573a736ec80557c5493d13335910b5",
+    "https://github.com/ophub/firmware": "b1b8bcdfa6d6d7e964663e3d85622d569457d271",
+    "https://github.com/ophub/luci-app-amlogic": "8fe2b60b4d63e2d83fbe5eb12c37c77a892c0117"
+  },
+  "kernel": {
+    "version": "6.18.51",
+    "url": "https://github.com/ophub/kernel/releases/download/kernel_stable/6.18.51.tar.gz",
+    "sha256": "3641864ce3307758c919025523e3b1ce78b32f53ac19f5f80b7c4222da249e01"
+  }
+}

@@ -1,0 +1,181 @@
+name: Panther-X2-OPhub-OWRT
+
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: '额外软件包配置，多个选项用换行分隔'
+        type: string
+        required: false
+  push:
+    paths:
+      - '.github/workflows/Panther-X2-OPhub-OWRT.yml'
+      - 'Custom/Panther-X2-OPhub/**'
+      - 'Config/Panther-X2-OPhub.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: panther-x2-ophub-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  OPHUB_COMMIT: 028c444dbdb74b1d005affc707cb4cf8adc922a1
+  SOURCE_REPO: VIKINGYFY/immortalwrt
+  SOURCE_BRANCH: owrt
+  WRT_CONFIG: Panther-X2-OPhub
+  WRT_TARGET: armsr
+  WRT_THEME: aurora
+  WRT_IP: 192.168.10.1
+  WRT_NAME: OWRT
+  WRT_SSID: OWRT
+  WRT_WORD: '12345678'
+  WRT_MARK: Lemonade-22
+  WRT_PACKAGE: ${{ inputs.PACKAGE }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ophub/amlogic-s9xxx-openwrt
+          ref: ${{ env.OPHUB_COMMIT }}
+          path: ophub
+      - name: Check locked dependency integration
+        run: |
+          set -euo pipefail
+          test "$(jq -r .packer_commit Custom/Panther-X2-OPhub/sources.json)" = "$OPHUB_COMMIT"
+          python3 Custom/Panther-X2-OPhub/pin_ophub.py ophub/remake
+          bash -n ophub/remake
+          bash -n Scripts/Settings.sh
+
+  build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free build space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+      - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison g++ gawk gcc-multilib gettext git libncurses-dev libssl-dev python3-setuptools rsync unzip zlib1g-dev file wget swig libelf-dev dos2unix jq
+          curl -fsSL --retry 3 https://build-scripts.immortalwrt.org/init_build_environment.sh -o /tmp/immortalwrt-build-env.sh
+          sudo bash /tmp/immortalwrt-build-env.sh
+      - name: Clone VIKINGYFY userspace source
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --single-branch --branch "$SOURCE_BRANCH" "https://github.com/$SOURCE_REPO.git" wrt
+          echo "SOURCE_HASH=$(git -C wrt rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "WRT_DATE=$(TZ=Asia/Shanghai date +'%y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
+          mkdir -p output
+      - name: Configure generic ARM64 rootfs and user packages
+        working-directory: wrt
+        run: |
+          set -euo pipefail
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          (cd package && bash "$GITHUB_WORKSPACE/Scripts/Packages.sh" && bash "$GITHUB_WORKSPACE/Scripts/Handles.sh")
+          cat "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
+          bash "$GITHUB_WORKSPACE/Scripts/Settings.sh"
+          cat "$GITHUB_WORKSPACE/Config/Panther-X2-OPhub.txt" >> .config
+          make defconfig
+          grep -qx 'CONFIG_TARGET_armsr=y' .config
+          grep -qx 'CONFIG_TARGET_armsr_armv8=y' .config
+          grep -qx 'CONFIG_TARGET_ROOTFS_TARGZ=y' .config
+          if grep -q '^CONFIG_TARGET_rockchip=y' .config; then
+            echo '::error::Expected generic ARM64 rootfs, not native Rockchip firmware'
+            exit 1
+          fi
+          cp .config "$GITHUB_WORKSPACE/output/rootfs-build.config"
+      - name: Build generic rootfs
+        working-directory: wrt
+        run: |
+          set -euo pipefail
+          make download -j"$(nproc)"
+          make -j"$(nproc)" || make -j1 V=s
+          mapfile -t roots < <(find bin/targets/armsr/armv8 -maxdepth 1 -name '*-generic-rootfs.tar.gz' -type f)
+          if [ "${#roots[@]}" -eq 0 ]; then
+            mapfile -t roots < <(find bin/targets/armsr/armv8 -maxdepth 1 -name '*-generic-targz-rootfs.tar.gz' -type f)
+          fi
+          test "${#roots[@]}" -eq 1
+          tar -tzf "${roots[0]}" > "$GITHUB_WORKSPACE/output/rootfs-contents.txt"
+          grep -Eq '^(\./)?etc/openwrt_release$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt"
+          cp "${roots[0]}" "$GITHUB_WORKSPACE/output/immortalwrt-armsr-armv8-generic-rootfs.tar.gz"
+          git rev-parse HEAD > "$GITHUB_WORKSPACE/output/immortalwrt-commit.txt"
+          for feed in feeds/*; do
+            if [ -d "$feed/.git" ]; then printf '%s %s\n' "$feed" "$(git -C "$feed" rev-parse HEAD)"; fi
+          done > "$GITHUB_WORKSPACE/output/feed-commits.txt"
+      - uses: actions/checkout@v4
+        with:
+          repository: ophub/amlogic-s9xxx-openwrt
+          ref: ${{ env.OPHUB_COMMIT }}
+          path: ophub
+      - name: Prepare pinned ophub packer and kernel
+        run: |
+          set -euo pipefail
+          python3 Custom/Panther-X2-OPhub/pin_ophub.py ophub/remake
+          bash -n ophub/remake
+          sudo apt-get update
+          sudo xargs -r apt-get install -y < ophub/make-openwrt/scripts/ubuntu2404-make-openwrt-depends
+          lock=Custom/Panther-X2-OPhub/sources.json
+          kernel=$(jq -r .kernel.version "$lock")
+          kernel_url=$(jq -r .kernel.url "$lock")
+          kernel_sha=$(jq -r .kernel.sha256 "$lock")
+          curl -fL --retry 3 "$kernel_url" -o kernel.tar.gz
+          echo "$kernel_sha  kernel.tar.gz" | sha256sum -c -
+          mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
+          tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
+          test -d "ophub/make-openwrt/kernel/stable/$kernel"
+          cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
+          cp "$lock" output/ophub-sources.json
+          echo "KERNEL_VERSION=$kernel" >> "$GITHUB_ENV"
+      - name: Assemble Panther X2 using ophub hardware support
+        working-directory: ophub
+        run: |
+          set -euo pipefail
+          sudo ./remake -b panther-x2 -r ophub/kernel -u stable -k "$KERNEL_VERSION" -a false -s 384/1280 -p "$WRT_IP" -n Lemonade-22
+          mapfile -t images < <(find openwrt/out -maxdepth 1 -name '*panther-x2*.img.gz' -type f)
+          test "${#images[@]}" -eq 1
+          gzip -t "${images[0]}"
+          cp "${images[0]}" "$GITHUB_WORKSPACE/output/"
+          sha256sum make-openwrt/u-boot/rockchip/panther-x2/idbloader.img make-openwrt/u-boot/rockchip/panther-x2/u-boot.itb > "$GITHUB_WORKSPACE/output/bootloader-sha256sums.txt"
+      - name: Record build provenance
+        run: |
+          set -euo pipefail
+          printf 'CI_COMMIT=%s\nSOURCE_REPO=%s\nSOURCE_COMMIT=%s\nOPHUB_COMMIT=%s\nKERNEL=%s\n' "$GITHUB_SHA" "$SOURCE_REPO" "$SOURCE_HASH" "$OPHUB_COMMIT" "$KERNEL_VERSION" > output/build-info.txt
+          (cd output && sha256sum *.img.gz *rootfs.tar.gz > SHA256SUMS)
+          echo "RELEASE_TAG=Panther-X2-OPhub-OWRT-$(date -u +'%Y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
+      - name: Upload build files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Panther-X2-OPhub-${{ github.run_id }}
+          path: output/
+          if-no-files-found: error
+      - name: Publish test firmware
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          prerelease: true
+          files: output/*
+          body: |
+            Panther X2：VIKINGYFY ImmortalWrt 通用 ARM64 用户空间 + ophub 专用硬件适配。
+            待实机验证：编译/打包成功不代表已经验证启动。原生 Native 移植不再参与此流程。
+            LAN：${{ env.WRT_IP }}
+            用户空间源码：${{ env.SOURCE_REPO }} / ${{ env.SOURCE_BRANCH }} / ${{ env.SOURCE_HASH }}
+            ophub 打包器：${{ env.OPHUB_COMMIT }}
+            内核：stable/${{ env.KERNEL_VERSION }}
+            引导及依赖提交记录见 ophub-sources.json，校验值见 SHA256SUMS 和 bootloader-sha256sums.txt。
+            镜像为 gzip 压缩的整盘镜像；RKDevTool 使用前需解压。不要沿用旧 Native 固件的分区升级方案。
