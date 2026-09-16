@@ -34,7 +34,7 @@ jobs:
       # Applied after GENERAL.txt and profile overrides by Settings.sh.
       WRT_PACKAGE: |
         ${{inputs.PACKAGE}}
-        CONFIG_PACKAGE_luci-app-gecoosac=y
+        CONFIG_PACKAGE_luci-app-gecoosac=n
         CONFIG_PACKAGE_luci-app-homeproxy=n
         CONFIG_PACKAGE_luci-app-wolultra=n
       WRT_TEST: ${{inputs.TEST || false}}
