@@ -180,6 +180,8 @@ jobs:
           set -euo pipefail
           printf 'CI_COMMIT=%s\nSOURCE_REPO=%s\nSOURCE_COMMIT=%s\nOPHUB_COMMIT=%s\nKERNEL=%s\n' "$GITHUB_SHA" "$SOURCE_REPO" "$SOURCE_HASH" "$OPHUB_COMMIT" "$KERNEL_VERSION" > output/build-info.txt
           printf 'UPSTREAM_CI_REPO=VIKINGYFY/OpenWRT-CI\nUPSTREAM_CI_COMMIT=%s\nWRT_THEME=%s\n' "$UPSTREAM_CI_HASH" "$WRT_THEME" >> output/build-info.txt
+          WRT_LIST=$(sed -nE 's/^CONFIG_PACKAGE_(luci-(app|theme)[^=]*)=y$/\1/p' output/rootfs-build.config | sort -u | tr '\n' ' ')
+          echo "WRT_LIST=$WRT_LIST" >> "$GITHUB_ENV"
           (cd output && sha256sum *.img.gz *rootfs.tar.gz > SHA256SUMS)
           echo "RELEASE_TAG=Panther-X2-OPhub-OWRT-$(date -u +'%Y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
       - name: Upload build files
@@ -189,19 +191,21 @@ jobs:
           name: Panther-X2-OPhub-${{ github.run_id }}
           path: output/
           if-no-files-found: error
-      - name: Publish test firmware
+      - name: Release Firmware
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          prerelease: true
+          prerelease: false
           files: output/*
           body: |
-            Panther X2：VIKINGYFY ImmortalWrt 通用 ARM64 用户空间 + ophub 专用硬件适配。
-            待实机验证：编译/打包成功不代表已经验证启动。原生 Native 移植不再参与此流程。
-            LAN：${{ env.WRT_IP }}
-            用户空间源码：${{ env.SOURCE_REPO }} / ${{ env.SOURCE_BRANCH }} / ${{ env.SOURCE_HASH }}
-            插件和主题：VIKINGYFY/OpenWRT-CI / ${{ env.UPSTREAM_CI_HASH }} / ${{ env.WRT_THEME }}
-            ophub 打包器：${{ env.OPHUB_COMMIT }}
-            内核：stable/${{ env.KERNEL_VERSION }}
-            引导及依赖提交记录见 ophub-sources.json，校验值见 SHA256SUMS 和 bootloader-sha256sums.txt。
-            镜像为 gzip 压缩的整盘镜像；RKDevTool 使用前需解压。不要沿用旧 Native 固件的分区升级方案。
+            源码：https://github.com/${{ env.SOURCE_REPO }}.git
+            分支：${{ env.SOURCE_BRANCH }}
+            提交：${{ env.SOURCE_HASH }}
+
+            配置：Panther X2
+            平台：armsr/armv8
+
+            登录地址：${{ env.WRT_IP }}
+
+            内核版本：${{ env.KERNEL_VERSION }}
+            插件列表：${{ env.WRT_LIST }}
