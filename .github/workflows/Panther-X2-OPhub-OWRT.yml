@@ -2,11 +2,6 @@ name: Panther-X2-OPhub-OWRT
 
 on:
   workflow_dispatch:
-    inputs:
-      PACKAGE:
-        description: '额外软件包配置，多个选项用换行分隔'
-        type: string
-        required: false
   push:
     paths:
       - '.github/workflows/Panther-X2-OPhub-OWRT.yml'
@@ -26,13 +21,12 @@ env:
   SOURCE_BRANCH: owrt
   WRT_CONFIG: Panther-X2-OPhub
   WRT_TARGET: armsr
-  WRT_THEME: aurora
   WRT_IP: 192.168.10.1
   WRT_NAME: OWRT
   WRT_SSID: OWRT
   WRT_WORD: '12345678'
   WRT_MARK: Lemonade-22
-  WRT_PACKAGE: ${{ inputs.PACKAGE }}
+  WRT_PACKAGE: ''
 
 jobs:
   validate:
@@ -44,13 +38,19 @@ jobs:
           repository: ophub/amlogic-s9xxx-openwrt
           ref: ${{ env.OPHUB_COMMIT }}
           path: ophub
+      - name: Checkout upstream plugin configuration
+        uses: actions/checkout@v4
+        with:
+          repository: VIKINGYFY/OpenWRT-CI
+          ref: main
+          path: upstream-ci
       - name: Check locked dependency integration
         run: |
           set -euo pipefail
           test "$(jq -r .packer_commit Custom/Panther-X2-OPhub/sources.json)" = "$OPHUB_COMMIT"
           python3 Custom/Panther-X2-OPhub/pin_ophub.py ophub/remake
           bash -n ophub/remake
-          bash -n Scripts/Settings.sh
+          for script in upstream-ci/Scripts/*.sh; do bash -n "$script"; done
 
   build:
     if: github.event_name == 'workflow_dispatch'
@@ -74,6 +74,12 @@ jobs:
           sudo apt-get install -y build-essential clang flex bison g++ gawk gcc-multilib gettext git libncurses-dev libssl-dev python3-setuptools rsync unzip zlib1g-dev file wget swig libelf-dev dos2unix jq
           curl -fsSL --retry 3 https://build-scripts.immortalwrt.org/init_build_environment.sh -o /tmp/immortalwrt-build-env.sh
           sudo bash /tmp/immortalwrt-build-env.sh
+      - name: Checkout upstream plugin configuration
+        uses: actions/checkout@v4
+        with:
+          repository: VIKINGYFY/OpenWRT-CI
+          ref: main
+          path: upstream-ci
       - name: Clone VIKINGYFY userspace source
         run: |
           set -euo pipefail
@@ -81,17 +87,28 @@ jobs:
           echo "SOURCE_HASH=$(git -C wrt rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "WRT_DATE=$(TZ=Asia/Shanghai date +'%y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
           mkdir -p output
-      - name: Configure generic ARM64 rootfs and user packages
+          echo "UPSTREAM_CI_HASH=$(git -C upstream-ci rev-parse HEAD)" >> "$GITHUB_ENV"
+          theme=$(sed -nE 's/^[[:space:]]*WRT_THEME:[[:space:]]*([a-zA-Z0-9_-]+)[[:space:]]*$/\1/p' upstream-ci/.github/workflows/OWRT-ALL.yml)
+          [[ "$theme" =~ ^[a-zA-Z0-9_-]+$ ]]
+          echo "WRT_THEME=$theme" >> "$GITHUB_ENV"
+          ln -s "$GITHUB_WORKSPACE/wrt" upstream-ci/wrt
+          tar -czf output/upstream-plugin-config.tar.gz -C upstream-ci Config Scripts .github/workflows/OWRT-ALL.yml
+      - name: Configure generic ARM64 rootfs with upstream packages
         working-directory: wrt
         run: |
           set -euo pipefail
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          (cd package && bash "$GITHUB_WORKSPACE/Scripts/Packages.sh" && bash "$GITHUB_WORKSPACE/Scripts/Handles.sh")
-          cat "$GITHUB_WORKSPACE/Config/GENERAL.txt" > .config
-          bash "$GITHUB_WORKSPACE/Scripts/Settings.sh"
+          upstream="$GITHUB_WORKSPACE/upstream-ci"
+          (export GITHUB_WORKSPACE="$upstream"; cd package; bash "$upstream/Scripts/Packages.sh" && bash "$upstream/Scripts/Handles.sh")
+          cat "$upstream/Config/GENERAL.txt" > .config
+          GITHUB_WORKSPACE="$upstream" bash "$upstream/Scripts/Settings.sh"
+          grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/Panther-X2-OPhub.txt" >> .config
           make defconfig
+          while IFS= read -r option; do
+            grep -Fxq "$option" .config || { echo "::error::Upstream LuCI package was dropped: $option"; exit 1; }
+          done < "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           grep -qx 'CONFIG_TARGET_armsr=y' .config
           grep -qx 'CONFIG_TARGET_armsr_armv8=y' .config
           grep -qx 'CONFIG_TARGET_ROOTFS_TARGZ=y' .config
@@ -156,6 +173,7 @@ jobs:
         run: |
           set -euo pipefail
           printf 'CI_COMMIT=%s\nSOURCE_REPO=%s\nSOURCE_COMMIT=%s\nOPHUB_COMMIT=%s\nKERNEL=%s\n' "$GITHUB_SHA" "$SOURCE_REPO" "$SOURCE_HASH" "$OPHUB_COMMIT" "$KERNEL_VERSION" > output/build-info.txt
+          printf 'UPSTREAM_CI_REPO=VIKINGYFY/OpenWRT-CI\nUPSTREAM_CI_COMMIT=%s\nWRT_THEME=%s\n' "$UPSTREAM_CI_HASH" "$WRT_THEME" >> output/build-info.txt
           (cd output && sha256sum *.img.gz *rootfs.tar.gz > SHA256SUMS)
           echo "RELEASE_TAG=Panther-X2-OPhub-OWRT-$(date -u +'%Y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
       - name: Upload build files
@@ -175,6 +193,7 @@ jobs:
             待实机验证：编译/打包成功不代表已经验证启动。原生 Native 移植不再参与此流程。
             LAN：${{ env.WRT_IP }}
             用户空间源码：${{ env.SOURCE_REPO }} / ${{ env.SOURCE_BRANCH }} / ${{ env.SOURCE_HASH }}
+            插件和主题：VIKINGYFY/OpenWRT-CI / ${{ env.UPSTREAM_CI_HASH }} / ${{ env.WRT_THEME }}
             ophub 打包器：${{ env.OPHUB_COMMIT }}
             内核：stable/${{ env.KERNEL_VERSION }}
             引导及依赖提交记录见 ophub-sources.json，校验值见 SHA256SUMS 和 bootloader-sha256sums.txt。

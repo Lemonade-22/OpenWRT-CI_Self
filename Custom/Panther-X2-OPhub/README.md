@@ -2,7 +2,7 @@
 
 ## 使用
 
-Actions → Panther-X2-OPhub-OWRT → Run workflow。PACKAGE 可填写额外软件包选项；留空沿用 Config/GENERAL.txt 和仓库现有 Packages.sh、Handles.sh、Settings.sh 定制。
+Actions → Panther-X2-OPhub-OWRT → Run workflow。插件全部采用构建时 VIKINGYFY/OpenWRT-CI main 的 Config/GENERAL.txt，以及同一提交的 Packages.sh、Handles.sh、Settings.sh。默认主题从该提交的 OWRT-ALL.yml 读取（当前为 aurora），随上游更新。取消额外 PACKAGE 输入，不混入 fork 的 PRIVATE 配置。这里的“全部”指上游默认选中的插件，未选中的可选插件不会额外强制安装。
 
 推送本流程相关文件只运行 validate（固定资源接入和语法校验），不会自动编译或发布。手动运行才会编译 rootfs 并打包，成功后上传 Artifact 和标为 prerelease 的测试固件。
 
@@ -11,6 +11,7 @@ Actions → Panther-X2-OPhub-OWRT → Run workflow。PACKAGE 可填写额外软�
 ## 来源
 
 - 用户空间：每次获取 VIKINGYFY/immortalwrt 的最新 owrt 分支，记录实际提交。
+- 插件配置：每次独立获取 VIKINGYFY/OpenWRT-CI main 快照，记录提交；上游脚本在隔离的配置目录下运行。
 - ophub 打包器：028c444dbdb74b1d005affc707cb4cf8adc922a1。
 - 内核：ophub/kernel 的 kernel_stable/6.18.51.tar.gz；下载后比对 sources.json 的 SHA256，再交由原打包器校验内部文件。
 - U-Boot、Armbian 启动资源、firmware、安装升级脚本：sources.json 中各自固定提交。
@@ -20,6 +21,8 @@ pin_ophub.py 只将打包器的依赖下载函数改为获取这些固定提交�
 ophub 使用 Panther X2 专用 idbloader.img 与 u-boot.itb，独立内核、配套模块和 DTB，以及 armbianEnv.txt/boot.scr。BOOT/ROOTFS 大小传入 384/1280 MiB，分区和文件系统按锁定的 remake 原有规则生成。VIKINGYFY 的内核模块和硬件加速特性不会因此自动保留；ophub 会替换 rootfs 的内核模块。
 
 ## 验证与追踪
+
+构建会核对上游选中的 LuCI 插件和主题，若 make defconfig 丢弃任何选项则停止。产物额外保留 upstream-plugin-config.tar.gz 和 upstream-luci-selected.config，便于核对实际使用的上游配置。
 
 产物附带 rootfs-build.config、immortalwrt-commit.txt、feed-commits.txt、ophub-sources.json、build-info.txt、bootloader-sha256sums.txt 和 SHA256SUMS。
 
