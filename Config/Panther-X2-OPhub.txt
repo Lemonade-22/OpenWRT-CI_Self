@@ -25,3 +25,8 @@ CONFIG_PACKAGE_sfdisk=y
 CONFIG_PACKAGE_kmod=y
 CONFIG_PACKAGE_kmod-fs-btrfs=y
 CONFIG_PACKAGE_kmod-fs-ext4=y
+
+# QModem vendor drivers own the same .ko files as these ImmortalWrt packages.
+# Keep QModem dependencies; do not install a second provider into the rootfs.
+CONFIG_PACKAGE_kmod-usb-net-qmi-wwan-fibocom=n
+CONFIG_PACKAGE_kmod-usb-net-qmi-wwan-quectel=n

@@ -106,6 +106,12 @@ jobs:
           grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/Panther-X2-OPhub.txt" >> .config
           make defconfig
+          for package in kmod-usb-net-qmi-wwan-fibocom kmod-usb-net-qmi-wwan-quectel; do
+            if grep -Eq "^CONFIG_PACKAGE_${package}=[ym]$" .config; then
+              echo "::error::Duplicate QMI driver was re-enabled: $package"
+              exit 1
+            fi
+          done
           while IFS= read -r option; do
             grep -Fxq "$option" .config || { echo "::error::Upstream LuCI package was dropped: $option"; exit 1; }
           done < "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
@@ -177,6 +183,7 @@ jobs:
           (cd output && sha256sum *.img.gz *rootfs.tar.gz > SHA256SUMS)
           echo "RELEASE_TAG=Panther-X2-OPhub-OWRT-$(date -u +'%Y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
       - name: Upload build files
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Panther-X2-OPhub-${{ github.run_id }}

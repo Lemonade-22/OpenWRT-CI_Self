@@ -33,3 +33,9 @@ RKDevTool 不会自动解压 .img.gz，使用前需解压为整盘 .img；不能
 ## 更新
 
 CI 仓库仍通过现有 sync-upstream.yml 合并上游，用户空间每次跟随 owrt；硬件资源不会随同步自动漂移。更新 sources.json 时核对提交与内核 SHA256；更新打包器还需同步工作流 OPHUB_COMMIT，并重新验证。
+
+## QMI 驱动冲突处理
+
+X2 配置禁用 kmod-usb-net-qmi-wwan-fibocom 与 kmod-usb-net-qmi-wwan-quectel，保留 QModem 依赖的 kmod-qmi_wwan_f / kmod-qmi_wwan_q。这两组包分别提供同名模块，不能同时安装到 rootfs。只调整重复的内核驱动，不删除 LuCI 插件或主题；最终内核模块仍由 ophub 替换，蜂窝网卡功能需按最终内核实测。
+
+配置展开后检查重复驱动是否被依赖重新启用，避免到编译末尾才报文件冲突。失败时也上传已生成的配置文件，便于排查。
