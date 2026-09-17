@@ -32,7 +32,7 @@ env:
 jobs:
   core:
     name: N60 Pro 512M UBI-506M WIFI-YES
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Projects
         uses: actions/checkout@main
@@ -43,11 +43,10 @@ jobs:
         run: |
           sudo -E apt -yqq purge firefox
           sudo -E apt -yqq update
-          sudo -E apt -yqq full-upgrade
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
-          sudo -E apt -yqq install dos2unix libfuse-dev
+          sudo -E apt -yqq install dos2unix libfuse-dev clang-18 llvm-18
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
@@ -82,26 +81,6 @@ jobs:
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
-      - name: Check Caches
-        id: check-cache
-        if: env.WRT_TEST != 'true'
-        uses: actions/cache@main
-        with:
-          key: N60-Pro-512M-${{env.WRT_INFO}}-${{env.WRT_HASH}}
-          restore-keys: N60-Pro-512M-${{env.WRT_INFO}}-
-          path: |
-            ./wrt/.ccache
-            ./wrt/staging_dir/host*
-            ./wrt/staging_dir/tool*
-
-      - name: Update Caches
-        if: env.WRT_TEST != 'true'
-        run: |
-          if [ -d "./wrt/staging_dir" ]; then
-            find ./wrt/staging_dir -type d -name stamp -not -path "*target*" -exec sh -c 'find "$1" -type f -exec touch {} +' _ {} \;
-            mkdir -p ./wrt/tmp && echo 1 > ./wrt/tmp/.build
-          fi
-
       - name: Update Feeds
         run: |
           cd ./wrt/
@@ -119,20 +98,112 @@ jobs:
           cd ./wrt/
           cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
           $GITHUB_WORKSPACE/Scripts/Settings.sh
-          make defconfig -j$(nproc)
-          make clean -j$(nproc)
+          # Use Ubuntu's LLVM for BPF instead of building LLVM from source.
+          for tool in clang llc llvm-dis opt llvm-strip; do
+            test -x "/usr/lib/llvm-18/bin/$tool"
+          done
+          BPF_TEST=$(mktemp -d)
+          trap 'rm -rf "$BPF_TEST"' EXIT
+          printf 'int probe(void) { return 0; }\n' > "$BPF_TEST/probe.c"
+          /usr/lib/llvm-18/bin/clang -target bpfel -O2 -emit-llvm -c "$BPF_TEST/probe.c" -o "$BPF_TEST/probe.bc"
+          /usr/lib/llvm-18/bin/opt -O2 "$BPF_TEST/probe.bc" -o "$BPF_TEST/probe.opt"
+          /usr/lib/llvm-18/bin/llvm-dis "$BPF_TEST/probe.opt" -o "$BPF_TEST/probe.ll"
+          /usr/lib/llvm-18/bin/llc -march=bpfel -mcpu=v3 -filetype=obj "$BPF_TEST/probe.ll" -o "$BPF_TEST/probe.o"
+          /usr/lib/llvm-18/bin/llvm-strip --strip-debug "$BPF_TEST/probe.o"
+          sed -i -E '/^(# )?CONFIG_(DEVEL|CCACHE|BUILD_LOG|BPF_TOOLCHAIN_[A-Z_]+|USE_LLVM_[A-Z_]+)(=| )/d' .config
+          printf '%s\n' 'CONFIG_DEVEL=y' 'CONFIG_CCACHE=y' 'CONFIG_BUILD_LOG=y' \
+            '# CONFIG_BPF_TOOLCHAIN_BUILD_LLVM is not set' \
+            '# CONFIG_BPF_TOOLCHAIN_PREBUILT is not set' \
+            '# CONFIG_BPF_TOOLCHAIN_NONE is not set' \
+            'CONFIG_BPF_TOOLCHAIN_HOST=y' \
+            'CONFIG_BPF_TOOLCHAIN_HOST_PATH="/usr/lib/llvm-18"' >> .config
+          make defconfig
+          grep -qx 'CONFIG_USE_LLVM_HOST=y' .config
+          if grep -qx 'CONFIG_USE_LLVM_BUILD=y' .config; then
+            echo "::error::LLVM source build is still enabled"
+            exit 1
+          fi
+          echo "WRT_CONFIG_HASH=$(sha256sum .config | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+          mkdir -p logs
+          lscpu
+          free -h
+          df -h
+
+      # Staging caches only match the same source and resolved configuration.
+      - name: Restore Toolchain Cache
+        id: toolchain-cache
+        if: env.WRT_TEST != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          key: n60-v2-ubuntu24-llvm18-${{env.WRT_INFO}}-${{env.WRT_HASH}}-${{env.WRT_CONFIG_HASH}}
+          path: |
+            ./wrt/staging_dir/host
+            ./wrt/staging_dir/toolchain-*
+
+      - name: Refresh Restored Stamps
+        if: env.WRT_TEST != 'true' && steps.toolchain-cache.outputs.cache-hit == 'true'
+        run: |
+          find ./wrt/staging_dir -type d -name stamp -exec sh -c 'find "$1" -type f -exec touch {} +' _ {} \;
+          mkdir -p ./wrt/tmp
+          echo 1 > ./wrt/tmp/.build
+
+      - name: Restore Compiler Cache
+        id: compiler-cache
+        if: env.WRT_TEST != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          key: n60-ccache-v2-ubuntu24-${{env.WRT_INFO}}-${{github.run_id}}-${{github.run_attempt}}
+          restore-keys: n60-ccache-v2-ubuntu24-${{env.WRT_INFO}}-
+          path: ./wrt/.ccache
 
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
-          make download -j$(nproc)
+          set -o pipefail
+          make download -j"$(nproc)" V=s 2>&1 | tee logs/download.log
+
+      - name: Build Tools and Toolchain
+        id: build-toolchain
+        if: env.WRT_TEST != 'true'
+        run: |
+          set -o pipefail
+          cd ./wrt/
+          make tools/install -j"$(nproc)" V=s 2>&1 | tee logs/tools.log
+          make toolchain/install -j"$(nproc)" V=s 2>&1 | tee logs/toolchain.log
+
+      - name: Save Toolchain Cache
+        if: env.WRT_TEST != 'true' && steps.toolchain-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{steps.toolchain-cache.outputs.cache-primary-key}}
+          path: |
+            ./wrt/staging_dir/host
+            ./wrt/staging_dir/toolchain-*
 
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
-          make -j$(nproc) || make -j1 V=s
+          set -o pipefail
+          make -j"$(nproc)" V=s 2>&1 | tee logs/firmware.log
+
+      - name: Save Compiler Cache
+        if: always() && env.WRT_TEST != 'true' && steps.build-toolchain.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{steps.compiler-cache.outputs.cache-primary-key}}
+          path: ./wrt/.ccache
+
+      - name: Upload Build Logs
+        if: always() && env.WRT_TEST != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: N60-Pro-build-logs-${{github.run_id}}-${{github.run_attempt}}
+          path: ./wrt/logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
 
       - name: Machine Information
         run: |
@@ -185,3 +256,4 @@ jobs:
           cd ./wrt
           mkdir -p ./upload
           cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > ./upload/Config-N60-Pro-512M-WIFI-YES.txt
+
