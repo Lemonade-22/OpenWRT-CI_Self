@@ -92,8 +92,6 @@ jobs:
           cd ./wrt/package/
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
-          # N60 Pro: exclude QModem, its bundled drivers and automatic translations.
-          rm -rf -- ./QModem ./luci-app-qmodem-generic
 
       - name: Custom Settings
         run: |
@@ -119,13 +117,7 @@ jobs:
             '# CONFIG_BPF_TOOLCHAIN_NONE is not set' \
             'CONFIG_BPF_TOOLCHAIN_HOST=y' \
             'CONFIG_BPF_TOOLCHAIN_HOST_PATH="/usr/lib/llvm-18"' >> .config
-          # N60-only override, after all common/private/manual settings.
-          sed -i -E '/^(# )?CONFIG_PACKAGE_[^= ]*[Qq][Mm][Oo][Dd][Ee][Mm][^= ]*(=| )/d' .config
           make defconfig
-          if grep -Ei '^CONFIG_PACKAGE_[^=]*qmodem[^=]*=(y|m)$' .config; then
-            echo "::error::QModem must remain disabled for N60 Pro"
-            exit 1
-          fi
           grep -qx 'CONFIG_USE_LLVM_HOST=y' .config
           if grep -qx 'CONFIG_USE_LLVM_BUILD=y' .config; then
             echo "::error::LLVM source build is still enabled"

@@ -106,12 +106,6 @@ jobs:
           grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/Panther-X2-OPhub.txt" >> .config
           make defconfig
-          for package in kmod-usb-net-qmi-wwan-fibocom kmod-usb-net-qmi-wwan-quectel; do
-            if grep -Eq "^CONFIG_PACKAGE_${package}=[ym]$" .config; then
-              echo "::error::Duplicate QMI driver was re-enabled: $package"
-              exit 1
-            fi
-          done
           while IFS= read -r option; do
             grep -Fxq "$option" .config || { echo "::error::Upstream LuCI package was dropped: $option"; exit 1; }
           done < "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
