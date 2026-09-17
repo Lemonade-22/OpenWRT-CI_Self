@@ -4,7 +4,7 @@
 
 Actions → Panther-X2-OPhub-OWRT → Run workflow。插件全部采用构建时 VIKINGYFY/OpenWRT-CI main 的 Config/GENERAL.txt，以及同一提交的 Packages.sh、Handles.sh、Settings.sh。默认主题从该提交的 OWRT-ALL.yml 读取（当前为 aurora），随上游更新。取消额外 PACKAGE 输入，不混入 fork 的 PRIVATE 配置。这里的“全部”指上游默认选中的插件，未选中的可选插件不会额外强制安装。
 
-推送本流程相关文件只运行 validate（固定资源接入和语法校验），不会自动编译或发布。手动运行才会编译 rootfs 并打包，成功后上传 Artifact 和标为 prerelease 的测试固件。
+推送本流程相关文件只运行 validate（固定资源接入和语法校验），不会自动编译或发布。手动运行才会编译 rootfs 并打包，成功后上传 Artifact 和正式 Release 固件。
 
 本流程替代已删除的 Panther-X2-Native 和 Panther-X2-Check，不使用 LEDE DTS/U-Boot 移植。Config/Panther-X2-OPhub.txt 最后应用，强制 armsr/armv8 generic 和 rootfs.tar.gz 输出；原生 Rockchip 设备配置不参与。
 
@@ -26,7 +26,7 @@ ophub 使用 Panther X2 专用 idbloader.img 与 u-boot.itb，独立内核、配
 
 产物附带 rootfs-build.config、immortalwrt-commit.txt、feed-commits.txt、ophub-sources.json、build-info.txt、bootloader-sha256sums.txt 和 SHA256SUMS。
 
-首次运行仍需完整编译及设备测试。校验 job 成功不代表固件已启动；此次硬件资源固定的是当前取得的提交，并非已经逐字节复现某个历史发布镜像。验证启动、网口、存储及插件后再将测试版视为可用版本。
+仓库维护者已确认 2026.09.17-10.44.03 版本可用，该版本已转为正式 Release。后续构建使用相同发布格式，配置为 Panther X2，平台为 armsr/armv8。
 
 RKDevTool 不会自动解压 .img.gz，使用前需解压为整盘 .img；不能当单个分区镜像写入。不要从旧 Native 镜像保留配置直接升级到本布局。默认 LAN 地址 192.168.10.1；账号与密码以最终 rootfs/ophub 的实际设置为准。
 
