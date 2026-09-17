@@ -21,7 +21,7 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib, re
           config = (pathlib.Path(os.environ["RUNNER_TEMP"]) / "panther-release/rootfs-build.config").read_text()
-          packages = sorted(set(re.findall(r"^CONFIG_PACKAGE_(luci-(?:app|theme)[^=]*)=y$", config, re.M)))
+          packages = sorted(set(re.findall(r"^CONFIG_PACKAGE_(luci-(?:app|theme)[^=_]*)=y$", config, re.M)))
           assert packages, "No LuCI package list found"
           body = "\n".join([
               "源码：https://github.com/VIKINGYFY/immortalwrt.git",

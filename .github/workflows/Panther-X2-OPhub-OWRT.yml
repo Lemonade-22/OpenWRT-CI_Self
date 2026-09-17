@@ -180,7 +180,7 @@ jobs:
           set -euo pipefail
           printf 'CI_COMMIT=%s\nSOURCE_REPO=%s\nSOURCE_COMMIT=%s\nOPHUB_COMMIT=%s\nKERNEL=%s\n' "$GITHUB_SHA" "$SOURCE_REPO" "$SOURCE_HASH" "$OPHUB_COMMIT" "$KERNEL_VERSION" > output/build-info.txt
           printf 'UPSTREAM_CI_REPO=VIKINGYFY/OpenWRT-CI\nUPSTREAM_CI_COMMIT=%s\nWRT_THEME=%s\n' "$UPSTREAM_CI_HASH" "$WRT_THEME" >> output/build-info.txt
-          WRT_LIST=$(sed -nE 's/^CONFIG_PACKAGE_(luci-(app|theme)[^=]*)=y$/\1/p' output/rootfs-build.config | sort -u | tr '\n' ' ')
+          WRT_LIST=$(sed -nE 's/^CONFIG_PACKAGE_(luci-(app|theme)[^=_]*)=y$/\1/p' output/rootfs-build.config | sort -u | tr '\n' ' ')
           echo "WRT_LIST=$WRT_LIST" >> "$GITHUB_ENV"
           (cd output && sha256sum *.img.gz *rootfs.tar.gz > SHA256SUMS)
           echo "RELEASE_TAG=Panther-X2-OPhub-OWRT-$(date -u +'%Y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
