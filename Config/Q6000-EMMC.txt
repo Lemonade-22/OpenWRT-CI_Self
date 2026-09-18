@@ -1,0 +1,4 @@
+# Q6000 eMMC only; NAND variants use different layouts.
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_ikuai_q6000-emmc=y
