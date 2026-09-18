@@ -206,10 +206,19 @@ jobs:
           fi
           make defconfig -j$(nproc)
           if [[ "$WRT_CONFIG" == "Q6000-EMMC" ]]; then
-            grep -qx 'CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_ikuai_q6000-emmc=y' .config
-            grep -qx 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' .config
-            grep -qx 'CONFIG_PACKAGE_kmod-mt7915e=y' .config
-            grep -qx 'CONFIG_PACKAGE_kmod-mt7986-firmware=y' .config
+            require_config() {
+              local pattern="$1"
+              if ! grep -Eq "$pattern" .config; then
+                echo "::error::Q6000 config check failed: $pattern"
+                grep -E 'ikuai_q6000|TARGET_ROOTFS_INITRAMFS|TARGET_PER_DEVICE_ROOTFS|kmod-mt7915e|kmod-mt7986-firmware' .config || true
+                return 1
+              fi
+            }
+            require_config '^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_ikuai_q6000-emmc=y$'
+            require_config '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$'
+            # Per-device rootfs builds profile packages as m, then installs them into that image.
+            require_config '^CONFIG_PACKAGE_kmod-mt7915e=[ym]$'
+            require_config '^CONFIG_PACKAGE_kmod-mt7986-firmware=[ym]$'
           fi
           make clean -j$(nproc)
 
