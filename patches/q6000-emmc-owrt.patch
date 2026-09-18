@@ -1,0 +1,414 @@
+diff --git a/target/linux/mediatek/dts/mt7986a-ikuai-q6000-emmc.dts b/target/linux/mediatek/dts/mt7986a-ikuai-q6000-emmc.dts
+new file mode 100644
+--- /dev/null
++++ b/target/linux/mediatek/dts/mt7986a-ikuai-q6000-emmc.dts
+@@ -0,0 +1,350 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++/dts-v1/;
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
++#include <dt-bindings/pinctrl/mt65xx.h>
++
++#include "mt7986a.dtsi"
++
++/ {
++	model = "iKuai-Q6000 eMMC versions";
++	compatible = "ikuai,q6000-emmc", "mediatek,mt7986a";
++
++	aliases {
++		serial0 = &uart0;
++		led-boot = &led_red;
++		led-failsafe = &led_red;
++		led-running = &led_green;
++		led-upgrade = &led_blue;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++		bootargs-append = " root=PARTLABEL=rootfs rootwait";
++	};
++
++	memory@40000000 {
++		device_type = "memory";
++		reg = <0 0x40000000 0 0x20000000>;
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		button-reset {
++			label = "reset";
++			gpios = <&pio 7 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++
++		button-wps {
++			label = "wps";
++			gpios = <&pio 15 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_WPS_BUTTON>;
++		};
++	};
++
++	leds-gpio {
++		compatible = "gpio-leds";
++
++		led_green: green {
++			label = "green:status";
++			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
++		};
++
++		led_blue: blue {
++			label = "blue:status";
++			gpios = <&pio 2 GPIO_ACTIVE_LOW>;
++		};
++
++		led_red: red {
++			label = "red:status";
++			gpios = <&pio 21 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	reg_1p8v: regulator-1p8v {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-1.8V";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-boot-on;
++		regulator-always-on;
++	};
++
++	reg_3p3v: regulator-3p3v {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-3.3V";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-boot-on;
++		regulator-always-on;
++	};
++};
++
++&crypto {
++	status = "okay";
++};
++
++&eth {
++	status = "okay";
++
++	gmac0: mac@0 {
++		compatible = "mediatek,eth-mac";
++		reg = <0>;
++		phy-mode = "2500base-x";
++
++		nvmem-cells = <&macaddr_factory_4 0>;
++		nvmem-cell-names = "mac-address";
++
++		fixed-link {
++			speed = <2500>;
++			full-duplex;
++			pause;
++		};
++	};
++
++	gmac1: mac@1 {
++		compatible = "mediatek,eth-mac";
++		reg = <1>;
++		phy-handle = <&phy7>;
++		phy-mode = "2500base-x";
++
++		nvmem-cells = <&macaddr_factory_10048 0>;
++		nvmem-cell-names = "mac-address";
++	};
++
++	mdio: mdio-bus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		phy7: ethernet-phy@3 {
++			compatible = "ethernet-phy-ieee802.3-c45";
++			reg = <3>;
++			reset-delay-us = <600>;
++			reset-assert-us = <100000>;
++			reset-deassert-us = <100000>;
++			reset-gpios = <&pio 6 GPIO_ACTIVE_LOW>;
++		};
++
++		switch@1f {
++			compatible = "mediatek,mt7531";
++			reg = <31>;
++			reset-gpios = <&pio 5 GPIO_ACTIVE_HIGH>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@2 {
++					reg = <2>;
++					label = "lan3";
++				};
++
++				port@3 {
++					reg = <3>;
++					label = "lan2";
++				};
++
++				port@4 {
++					reg = <4>;
++					label = "lan1";
++				};
++
++				port@6 {
++					reg = <6>;
++					label = "cpu";
++					ethernet = <&gmac0>;
++					phy-mode = "2500base-x";
++
++					fixed-link {
++						speed = <2500>;
++						full-duplex;
++						pause;
++					};
++				};
++			};
++		};
++	};
++};
++
++&pio {
++	wf_2g_5g_pins: wf_2g_5g-pins {
++		mux {
++			function = "wifi";
++			groups = "wf_2g", "wf_5g";
++		};
++		conf {
++			pins = "WF0_HB1", "WF0_HB2", "WF0_HB3", "WF0_HB4",
++			       "WF0_HB0", "WF0_HB0_B", "WF0_HB5", "WF0_HB6",
++			       "WF0_HB7", "WF0_HB8", "WF0_HB9", "WF0_HB10",
++			       "WF0_TOP_CLK", "WF0_TOP_DATA", "WF1_HB1",
++			       "WF1_HB2", "WF1_HB3", "WF1_HB4", "WF1_HB0",
++			       "WF1_HB5", "WF1_HB6", "WF1_HB7", "WF1_HB8",
++			       "WF1_TOP_CLK", "WF1_TOP_DATA";
++			drive-strength = <MTK_DRIVE_4mA>;
++		};
++	};
++
++	mmc0_pins_default: mmc0-pins {
++		mux {
++			function = "emmc";
++			groups = "emmc_51";
++		};
++		conf-cmd-dat {
++			pins = "EMMC_DATA_0", "EMMC_DATA_1", "EMMC_DATA_2",
++			       "EMMC_DATA_3", "EMMC_DATA_4", "EMMC_DATA_5",
++			       "EMMC_DATA_6", "EMMC_DATA_7", "EMMC_CMD";
++			input-enable;
++			drive-strength = <MTK_DRIVE_4mA>;
++			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	/* pull-up 10K */
++		};
++		conf-clk {
++			pins = "EMMC_CK";
++			drive-strength = <MTK_DRIVE_6mA>;
++			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;	/* pull-down 50K */
++		};
++		conf-ds {
++			pins = "EMMC_DSL";
++			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;	/* pull-down 50K */
++		};
++		conf-rst {
++			pins = "EMMC_RSTB";
++			drive-strength = <MTK_DRIVE_4mA>;
++			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	/* pull-up 10K */
++		};
++	};
++
++	mmc0_pins_uhs: mmc0-uhs-pins {
++		mux {
++			function = "emmc";
++			groups = "emmc_51";
++		};
++		conf-cmd-dat {
++			pins = "EMMC_DATA_0", "EMMC_DATA_1", "EMMC_DATA_2",
++			       "EMMC_DATA_3", "EMMC_DATA_4", "EMMC_DATA_5",
++			       "EMMC_DATA_6", "EMMC_DATA_7", "EMMC_CMD";
++			input-enable;
++			drive-strength = <MTK_DRIVE_4mA>;
++			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	/* pull-up 10K */
++		};
++		conf-clk {
++			pins = "EMMC_CK";
++			drive-strength = <MTK_DRIVE_6mA>;
++			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;	/* pull-down 50K */
++		};
++		conf-ds {
++			pins = "EMMC_DSL";
++			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;	/* pull-down 50K */
++		};
++		conf-rst {
++			pins = "EMMC_RSTB";
++			drive-strength = <MTK_DRIVE_4mA>;
++			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	/* pull-up 10K */
++		};
++	};
++};
++
++&mmc0 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	pinctrl-names = "default", "state_uhs";
++	pinctrl-0 = <&mmc0_pins_default>;
++	pinctrl-1 = <&mmc0_pins_uhs>;
++	bus-width = <8>;
++	max-frequency = <200000000>;
++	cap-mmc-highspeed;
++	mmc-hs200-1_8v;
++	mmc-hs400-1_8v;
++	hs400-ds-delay = <0x14014>;
++	vmmc-supply = <&reg_3p3v>;
++	vqmmc-supply = <&reg_1p8v>;
++	non-removable;
++	no-sd;
++	no-sdio;
++	status = "okay";
++
++	card@0 {
++		compatible = "mmc-card";
++		reg = <0>;
++
++		block {
++			compatible = "block-device";
++			partitions {
++				block-partition-env {
++					partname = "u-boot-env";
++
++					nvmem-layout {
++						compatible = "u-boot,env";
++					};
++				};
++
++				block-partition-factory {
++					partname = "factory";
++
++					nvmem-layout {
++						compatible = "fixed-layout";
++						#address-cells = <1>;
++						#size-cells = <1>;
++
++						eeprom_factory_0: eeprom@0 {
++							reg = <0x0 0x1000>;
++						};
++
++						macaddr_factory_4: macaddr@4 {
++							compatible = "mac-base";
++							reg = <0x4 0x6>;
++							#nvmem-cell-cells = <1>;
++						};
++
++						macaddr_factory_a: macaddr@a {
++							compatible = "mac-base";
++							reg = <0xa 0x6>;
++							#nvmem-cell-cells = <1>;
++						};
++
++						macaddr_factory_10048: macaddr@10048 {
++							compatible = "mac-base";
++							reg = <0x10048 0x6>;
++							#nvmem-cell-cells = <1>;
++						};
++					};
++				};
++			};
++		};
++	};
++};
++
++&trng {
++	status = "okay";
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&watchdog {
++	status = "okay";
++};
++
++&wifi {
++	status = "okay";
++	nvmem-cells = <&eeprom_factory_0>;
++	nvmem-cell-names = "eeprom";
++	pinctrl-names = "default";
++	pinctrl-0 = <&wf_2g_5g_pins>;
++
++	band@0 {
++		reg = <0>;
++		nvmem-cells = <&macaddr_factory_a 0>;
++		nvmem-cell-names = "mac-address";
++	};
++
++	band@1 {
++		reg = <1>;
++		nvmem-cells = <&macaddr_factory_a 1>;
++		nvmem-cell-names = "mac-address";
++	};
++};
+diff --git a/target/linux/mediatek/image/filogic.mk b/target/linux/mediatek/image/filogic.mk
+--- a/target/linux/mediatek/image/filogic.mk
++++ b/target/linux/mediatek/image/filogic.mk
+@@ -2185,6 +2185,17 @@
+ endef
+ TARGET_DEVICES += huasifei_wh3000r-nand
+ 
++define Device/ikuai_q6000-emmc
++  DEVICE_VENDOR := iKuai
++  DEVICE_MODEL := Q6000
++  DEVICE_VARIANT := eMMC
++  DEVICE_DTS := mt7986a-ikuai-q6000-emmc
++  DEVICE_DTS_DIR := ../dts
++  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware e2fsprogs f2fsck mkf2fs
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
++endef
++TARGET_DEVICES += ikuai_q6000-emmc
++
+ define Device/imou_hx21
+   DEVICE_VENDOR := Imou
+   DEVICE_MODEL := HX21
+diff --git a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+--- a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
++++ b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+@@ -8,6 +8,9 @@
+ 	local board="$1"
+ 
+ 	case $board in
++	ikuai,q6000-emmc)
++		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" eth1
++		;;
+ 	abt,asr3000|\
+ 	buffalo,wsr-6000ax8|\
+ 	cmcc,rax3000m|\
+diff --git a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+--- a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
++++ b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+@@ -148,6 +148,11 @@
+ 	local board=$(board_name)
+ 
+ 	case "$board" in
++	ikuai,q6000-emmc)
++		CI_KERNPART="kernel"
++		CI_ROOTPART="rootfs"
++		emmc_do_upgrade "$1"
++		;;
+ 	abt,asr3000|\
+ 	acer,predator-w6x-ubootmod|\
+ 	asus,zenwifi-bt8-ubootmod|\
+@@ -505,6 +510,9 @@
+ 
+ platform_copy_config() {
+ 	case "$(board_name)" in
++	ikuai,q6000-emmc)
++		emmc_copy_config
++		;;
+ 	acer,predator-w6|\
+ 	acer,predator-w6d|\
+ 	acer,vero-w6m|\
