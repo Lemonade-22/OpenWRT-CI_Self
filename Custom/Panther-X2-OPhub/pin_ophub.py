@@ -10,7 +10,8 @@ lock = json.loads((here / 'sources.json').read_text(encoding='utf-8'))
 source = Path(sys.argv[1])
 text = source.read_text(encoding='utf-8')
 assert all(re.fullmatch(r'[0-9a-f]{40}', sha) for sha in lock['repositories'].values())
-assert re.fullmatch(r'[0-9a-f]{64}', lock['kernel']['sha256'])
+assert lock['kernel']['mode'] == 'build'
+assert re.fullmatch(r'[0-9a-f]{40}', lock['kernel']['config_commit'])
 assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', lock['kernel']['version'])
 cases = '\n'.join('        "' + repo + '") locked_commit="' + sha + '" ;;'
                   for repo, sha in lock['repositories'].items())
@@ -41,5 +42,10 @@ updated = re.sub(pattern, lambda _: replacement, text, count=1, flags=re.M | re.
 # Reject added/untracked dependency repositories before patching anything.
 repos = set(re.findall(r'^\w+_repo="(https://github.com/[^" ]+)"', text, re.M))
 assert repos - {'https://github.com/ophub/kernel'} == set(lock['repositories']), repos
+# A missing artifact must never fall back to an unrelated release kernel.
+kernel_pattern = r'^download_kernel\(\) \{\n.*?^\}\n'
+assert len(re.findall(kernel_pattern, updated, re.M | re.S)) == 1
+local_kernel = 'download_kernel() {\n    [[ -d "${kernel_path}/stable/VERSION" ]] || error_msg "Compiled kernel artifact missing; refusing remote fallback"\n}\n'.replace('VERSION', lock['kernel']['version'])
+updated = re.sub(kernel_pattern, lambda _: local_kernel, updated, count=1, flags=re.M | re.S)
 source.write_text(updated, encoding='utf-8', newline='\n')
 print('Pinned four ophub resource repositories; board and image logic unchanged.')

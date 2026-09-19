@@ -7,8 +7,13 @@
     "https://github.com/ophub/luci-app-amlogic": "8fe2b60b4d63e2d83fbe5eb12c37c77a892c0117"
   },
   "kernel": {
+    "mode": "build",
     "version": "6.18.51",
-    "url": "https://github.com/ophub/kernel/releases/download/kernel_stable/6.18.51.tar.gz",
-    "sha256": "3641864ce3307758c919025523e3b1ce78b32f53ac19f5f80b7c4222da249e01"
+    "config_repository": "Lemonade-22/ophub-kernel",
+    "config_commit": "35527918391e697f994d9efa02948d4308a7a766",
+    "config_path": "kernel-config/release/stable",
+    "builder_commit": "d7ad87797c2c3f60108082b0f84bf315a9fb6b63",
+    "source": "ophub",
+    "sign": "-ophub"
   }
 }

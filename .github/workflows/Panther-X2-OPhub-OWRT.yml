@@ -52,9 +52,76 @@ jobs:
           bash -n ophub/remake
           for script in upstream-ci/Scripts/*.sh; do bash -n "$script"; done
 
-  build:
+  kernel:
     if: github.event_name == 'workflow_dispatch'
     needs: validate
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read kernel build settings
+        id: settings
+        run: |
+          set -euo pipefail
+          lock=Custom/Panther-X2-OPhub/sources.json
+          for key in version config_repository config_commit source sign; do
+            echo "$key=$(jq -er ".kernel.$key" "$lock")" >> "$GITHUB_OUTPUT"
+          done
+      - name: Checkout your kernel configuration
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.settings.outputs.config_repository }}
+          ref: ${{ steps.settings.outputs.config_commit }}
+          path: kernel-fork
+      - name: Prepare BTF configuration and build directory
+        run: |
+          set -euo pipefail
+          python3 Custom/Panther-X2-OPhub/prepare_kernel.py
+          sudo mkdir -p /mnt/panther-kernel
+          sudo chown "$USER:$USER" /mnt/panther-kernel
+          df -h
+      - uses: actions/cache@v4
+        with:
+          path: /mnt/panther-kernel/ccache
+          key: panther-kernel-arm64-gcc-${{ steps.settings.outputs.version }}-${{ hashFiles('kernel-fork/kernel-config/release/stable/config-6.18') }}
+          restore-keys: panther-kernel-arm64-gcc-${{ steps.settings.outputs.version }}-
+      - name: Compile Panther X2 kernel, modules and DTBs
+        uses: ophub/amlogic-s9xxx-armbian@d7ad87797c2c3f60108082b0f84bf315a9fb6b63
+        with:
+          build_target: kernel
+          kernel_source: ${{ steps.settings.outputs.source }}
+          kernel_version: ${{ steps.settings.outputs.version }}
+          kernel_auto: 'false'
+          kernel_package: all
+          kernel_toolchain: gcc
+          kernel_sign: ${{ steps.settings.outputs.sign }}
+          kernel_config: kernel-fork/kernel-config/release/stable
+          delete_source: 'true'
+          docker_hostpath: /mnt/panther-kernel
+          docker_image: ophub/armbian-noble:arm64
+      - name: Validate and record kernel artifact
+        run: |
+          set -euo pipefail
+          version=$(jq -r .kernel.version Custom/Panther-X2-OPhub/sources.json)
+          archive="$PACKAGED_OUTPUTPATH/$version.tar.gz"
+          test -s "$archive"
+          python3 Scripts/Check-DAEDE-Kernel.py "$archive" --panther-x2
+          mkdir -p kernel-output
+          cp "$archive" kernel-output/kernel.tar.gz
+          cp kernel-fork/kernel-config/release/stable/config-6.18 kernel-output/requested-kernel.config
+          cp Custom/Panther-X2-OPhub/sources.json kernel-output/kernel-sources.json
+          (cd kernel-output && sha256sum kernel.tar.gz > kernel.sha256)
+      - name: Upload compiled kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: panther-x2-kernel
+          path: kernel-output/
+          if-no-files-found: error
+          retention-days: 30
+
+  build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [validate, kernel]
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     permissions:
@@ -143,6 +210,11 @@ jobs:
           repository: ophub/amlogic-s9xxx-openwrt
           ref: ${{ env.OPHUB_COMMIT }}
           path: ophub
+      - name: Download kernel compiled in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: panther-x2-kernel
+          path: compiled-kernel
       - name: Prepare pinned ophub packer and kernel
         run: |
           set -euo pipefail
@@ -152,12 +224,12 @@ jobs:
           sudo xargs -r apt-get install -y < ophub/make-openwrt/scripts/ubuntu2404-make-openwrt-depends
           lock=Custom/Panther-X2-OPhub/sources.json
           kernel=$(jq -r .kernel.version "$lock")
-          kernel_url=$(jq -r .kernel.url "$lock")
-          kernel_sha=$(jq -r .kernel.sha256 "$lock")
-          curl -fL --retry 3 "$kernel_url" -o kernel.tar.gz
-          echo "$kernel_sha  kernel.tar.gz" | sha256sum -c -
+          (cd compiled-kernel && sha256sum -c kernel.sha256)
+          cp compiled-kernel/kernel.tar.gz kernel.tar.gz
+          cp compiled-kernel/kernel.sha256 output/kernel.sha256
+          cp compiled-kernel/requested-kernel.config output/requested-kernel.config
           mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
-          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz
+          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --panther-x2
           tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
           test -d "ophub/make-openwrt/kernel/stable/$kernel"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
@@ -167,7 +239,7 @@ jobs:
         working-directory: ophub
         run: |
           set -euo pipefail
-          sudo ./remake -b panther-x2 -r ophub/kernel -u stable -k "$KERNEL_VERSION" -a false -s 384/1280 -p "$WRT_IP" -n Lemonade-22
+          sudo ./remake -b panther-x2 -r Lemonade-22/ophub-kernel -u stable -k "$KERNEL_VERSION" -a false -s 384/1280 -p "$WRT_IP" -n Lemonade-22
           mapfile -t images < <(find openwrt/out -maxdepth 1 -name '*panther-x2*.img.gz' -type f)
           test "${#images[@]}" -eq 1
           gzip -t "${images[0]}"

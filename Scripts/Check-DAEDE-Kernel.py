@@ -13,14 +13,18 @@ MODULAR = {"NET_SCH_INGRESS": "sch_ingress", "NET_CLS_BPF": "cls_bpf",
            "NET_ACT_BPF": "act_bpf", "VETH": "veth"}
 configs = []
 modules = set()
+panther_dtb = False
 
 def scan(archive, depth=0):
+    global panther_dtb
     if depth > 3:
         return
     for item in archive:
         if not item.isfile():
             continue
         name = item.name.rsplit("/", 1)[-1]
+        if name == "rk3566-panther-x2.dtb":
+            panther_dtb = True
         match = re.match(r"(.+)\.ko(?:\.(?:gz|xz|zst))?$", name)
         if match:
             modules.add(match.group(1))
@@ -34,6 +38,9 @@ def scan(archive, depth=0):
 
 with tarfile.open(sys.argv[1], "r:*") as archive:
     scan(archive)
+configs = list({data: (name, data) for name, data in configs}.values())
+if "--panther-x2" in sys.argv and not panther_dtb:
+    sys.exit("::error::Missing Panther X2 device tree")
 if len(configs) != 1:
     sys.exit("::error::Cannot uniquely verify ophub kernel config; expected one kernel config in archive")
 name, config = configs[0]
