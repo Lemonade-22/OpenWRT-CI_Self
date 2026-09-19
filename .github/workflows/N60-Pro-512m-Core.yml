@@ -94,11 +94,6 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Prepare dae and daed packages
-        run: |
-          cd ./wrt/
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" prepare
-
       - name: Custom Settings
         run: |
           cd ./wrt/
@@ -123,9 +118,33 @@ jobs:
             '# CONFIG_BPF_TOOLCHAIN_NONE is not set' \
             'CONFIG_BPF_TOOLCHAIN_HOST=y' \
             'CONFIG_BPF_TOOLCHAIN_HOST_PATH="/usr/lib/llvm-18"' >> .config
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+          # Apply N60 kernel requirements after upstream and private settings.
+          required="$GITHUB_WORKSPACE/Config/N60-Pro-EBPF.txt"
+          while IFS= read -r option; do
+            case "$option" in
+              CONFIG_*=*) symbol="${option%%=*}" ;;
+              "# CONFIG_"*" is not set") symbol="${option#\# }"; symbol="${symbol% is not set}" ;;
+              *) continue ;;
+            esac
+            sed -i -E "/^(# )?${symbol}(=| )/d" .config
+            printf '%s\n' "$option" >> .config
+          done < "$required"
           make defconfig
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+          while IFS= read -r option; do
+            case "$option" in
+              CONFIG_*=y)
+                grep -qxF "$option" .config || { echo "::error::Missing required option: $option"; exit 1; }
+                ;;
+              "# CONFIG_"*" is not set")
+                symbol="${option#\# }"
+                symbol="${symbol% is not set}"
+                if grep -Eq "^$symbol=(y|m)$" .config; then
+                  echo "::error::Conflicting option: $symbol"
+                  exit 1
+                fi
+                ;;
+            esac
+          done < "$required"
           grep -qx 'CONFIG_USE_LLVM_HOST=y' .config
           if grep -qx 'CONFIG_USE_LLVM_BUILD=y' .config; then
             echo "::error::LLVM source build is still enabled"
