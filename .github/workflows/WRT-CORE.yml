@@ -191,6 +191,11 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
+      - name: Prepare dae and daed packages
+        run: |
+          cd ./wrt/
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" prepare
+
       - name: Custom Settings
         run: |
           cd ./wrt/
@@ -204,7 +209,9 @@ jobs:
             sed -i '/^CONFIG_TARGET_ROOTFS_INITRAMFS=/d; /^# CONFIG_TARGET_ROOTFS_INITRAMFS is not set$/d; /^CONFIG_TARGET_ROOTFS_SQUASHFS=/d; /^# CONFIG_TARGET_ROOTFS_SQUASHFS is not set$/d' .config
             printf '%s\n' 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' 'CONFIG_TARGET_ROOTFS_SQUASHFS=y' >> .config
           fi
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           make defconfig -j$(nproc)
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           if [[ "$WRT_CONFIG" == "Q6000-EMMC" ]]; then
             require_config() {
               local pattern="$1"

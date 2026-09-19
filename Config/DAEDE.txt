@@ -1,4 +1,4 @@
-# N60 Pro: dae + daed with integrated kernel BTF.
+# Shared non-MT7621 profiles: dae + daed with integrated kernel BTF.
 CONFIG_KERNEL_DEBUG_INFO=y
 # CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set
 CONFIG_KERNEL_DEBUG_INFO_BTF=y
@@ -9,7 +9,6 @@ CONFIG_KERNEL_KPROBE_EVENTS=y
 CONFIG_KERNEL_BPF_EVENTS=y
 CONFIG_KERNEL_BPF_STREAM_PARSER=y
 CONFIG_KERNEL_XDP_SOCKETS=y
-CONFIG_KERNEL_NETKIT=y
 CONFIG_PACKAGE_kmod-sched-core=y
 CONFIG_PACKAGE_kmod-sched-bpf=y
 CONFIG_PACKAGE_kmod-veth=y

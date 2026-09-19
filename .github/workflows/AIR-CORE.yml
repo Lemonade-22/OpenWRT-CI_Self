@@ -158,6 +158,11 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
+      - name: Prepare dae and daed packages
+        run: |
+          cd ./wrt/
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" prepare
+
       - name: Custom Settings
         run: |
           cd ./wrt/
@@ -167,7 +172,10 @@ jobs:
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
           fi
           $GITHUB_WORKSPACE/Scripts/Settings.sh
-          make defconfig -j$(nproc) && make clean -j$(nproc)
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+          make defconfig -j$(nproc)
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+          make clean -j$(nproc)
 
       - name: Download Packages
         if: env.WRT_TEST != 'true'

@@ -94,22 +94,10 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Add pinned dae and daed packages
+      - name: Prepare dae and daed packages
         run: |
-          set -euo pipefail
-          cd ./wrt
-          # Replace only the exact conflicting feed packages.
-          ./scripts/feeds uninstall dae daed luci-app-daed luci-app-daede vmlinux-btf
-          for pkg in dae daed luci-app-daed luci-app-daede vmlinux-btf; do
-            find feeds -mindepth 2 -maxdepth 4 -type d -name "$pkg" -prune -exec rm -rf -- {} +
-          done
-          git init package/openwrt-daede
-          git -C package/openwrt-daede remote add origin https://github.com/kenzok8/openwrt-daede.git
-          git -C package/openwrt-daede fetch --depth=1 origin a696f20ec4e1887439cbc6bd67db31525591d24a
-          git -C package/openwrt-daede checkout --detach FETCH_HEAD
-          # Snapshot imports require a real directory before the first daemon start.
-          mkdir -p files/etc/daed
-          chmod 750 files/etc/daed
+          cd ./wrt/
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" prepare
 
       - name: Custom Settings
         run: |
@@ -135,25 +123,9 @@ jobs:
             '# CONFIG_BPF_TOOLCHAIN_NONE is not set' \
             'CONFIG_BPF_TOOLCHAIN_HOST=y' \
             'CONFIG_BPF_TOOLCHAIN_HOST_PATH="/usr/lib/llvm-18"' >> .config
-          # Apply the required profile settings after all general/private overrides.
-          cat "$GITHUB_WORKSPACE/Config/N60-Pro-DAEDE.txt" >> .config
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           make defconfig
-          # Fail early if dependencies or an unknown symbol dropped a required option.
-          while IFS= read -r option; do
-            case "$option" in
-              CONFIG_*=y)
-                grep -qxF "$option" .config || { echo "::error::Missing required option: $option"; exit 1; }
-                ;;
-              "# CONFIG_"*" is not set")
-                symbol="${option#\# }"
-                symbol="${symbol% is not set}"
-                if grep -Eq "^$symbol=(y|m)$" .config; then
-                  echo "::error::Conflicting option: $symbol"
-                  exit 1
-                fi
-                ;;
-            esac
-          done < "$GITHUB_WORKSPACE/Config/N60-Pro-DAEDE.txt"
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           grep -qx 'CONFIG_USE_LLVM_HOST=y' .config
           if grep -qx 'CONFIG_USE_LLVM_BUILD=y' .config; then
             echo "::error::LLVM source build is still enabled"
@@ -291,5 +263,5 @@ jobs:
         run: |
           cd ./wrt
           mkdir -p ./upload
-          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" > ./upload/Config-N60-Pro-512M-WIFI-YES.txt
+          cp .config ./upload/Config-N60-Pro-512M-WIFI-YES.txt
 

@@ -101,11 +101,14 @@ jobs:
           ./scripts/feeds install -a
           upstream="$GITHUB_WORKSPACE/upstream-ci"
           (export GITHUB_WORKSPACE="$upstream"; bash "$upstream/Scripts/Packages.sh" && bash "$upstream/Scripts/Handles.sh")
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" prepare
           cat "$upstream/Config/GENERAL.txt" > .config
           GITHUB_WORKSPACE="$upstream" bash "$upstream/Scripts/Settings.sh"
           grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/Panther-X2-OPhub.txt" >> .config
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           make defconfig
+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           while IFS= read -r option; do
             grep -Fxq "$option" .config || { echo "::error::Upstream LuCI package was dropped: $option"; exit 1; }
           done < "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
@@ -154,6 +157,7 @@ jobs:
           curl -fL --retry 3 "$kernel_url" -o kernel.tar.gz
           echo "$kernel_sha  kernel.tar.gz" | sha256sum -c -
           mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
+          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz
           tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
           test -d "ophub/make-openwrt/kernel/stable/$kernel"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
