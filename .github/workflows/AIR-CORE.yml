@@ -158,11 +158,6 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Prepare dae and daed packages
-        run: |
-          cd ./wrt/
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" prepare
-
       - name: Custom Settings
         run: |
           cd ./wrt/
