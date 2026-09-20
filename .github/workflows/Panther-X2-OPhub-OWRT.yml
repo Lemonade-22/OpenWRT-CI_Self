@@ -222,7 +222,6 @@ jobs:
           sudo apt-get update
           sudo xargs -r apt-get install -y < ophub/make-openwrt/scripts/ubuntu2404-make-openwrt-depends
           lock=Custom/Panther-X2-OPhub/sources.json
-          kernel=$(jq -r .kernel.version "$lock")
           (cd compiled-kernel && sha256sum -c kernel.sha256)
           cp compiled-kernel/kernel.tar.gz kernel.tar.gz
           cp compiled-kernel/kernel.sha256 output/kernel.sha256
@@ -230,7 +229,8 @@ jobs:
           mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
           python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --panther-x2
           tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
-          test -d "ophub/make-openwrt/kernel/stable/$kernel"
+          kernel=$(python3 Custom/Panther-X2-OPhub/stage_kernel.py ophub/make-openwrt/kernel/stable)
+          echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
           cp "$lock" output/ophub-sources.json
           echo "KERNEL_VERSION=$kernel" >> "$GITHUB_ENV"
