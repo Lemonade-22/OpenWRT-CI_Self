@@ -1,0 +1,14 @@
+# qualcommax / ipq60xx: build only NN6000 v2 and ZN M2.
+CONFIG_TARGET_qualcommax=y
+CONFIG_TARGET_qualcommax_ipq60xx=y
+CONFIG_TARGET_MULTI_PROFILE=y
+# CONFIG_TARGET_ALL_PROFILES is not set
+CONFIG_TARGET_PER_DEVICE_ROOTFS=y
+
+CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_link_nn6000-v2=y
+CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_zn_m2=y
+
+# WRT-CORE.yml applies Config/DAEDE.txt through Scripts/DAEDE.sh.
+# Shared requirements include BTF, cgroup BPF, kprobes, XDP, sched-bpf,
+# veth and ip-full; make defconfig is followed by dependency verification.
+# Keep target/device default Wi-Fi packages; do not use a no-WiFi profile.

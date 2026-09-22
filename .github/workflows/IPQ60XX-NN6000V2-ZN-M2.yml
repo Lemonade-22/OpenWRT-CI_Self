@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: MIT
+# Based on MT7621.yml; NN6000 v2 and ZN M2 share one IPQ60xx build.
+# WRT-CORE applies and verifies Config/DAEDE.txt after all package overrides.
+name: IPQ60XX-NN6000V2-ZN-M2
+
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: '手动调整插件包，多个请用换行符分隔。'
+        required: false
+        type: string
+      TEST:
+        description: '仅输出配置文件，不编译固件。'
+        default: false
+        required: false
+        type: boolean
+
+permissions: write-all
+
+jobs:
+  build:
+    uses: ./.github/workflows/WRT-CORE.yml
+    with:
+      WRT_CONFIG: IPQ60XX-NN6000V2-ZN-M2
+      WRT_THEME: aurora
+      WRT_NAME: OWRT
+      WRT_SSID: OWRT
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      # Applied after GENERAL.txt and profile overrides by Settings.sh.
+      WRT_PACKAGE: |
+        ${{inputs.PACKAGE}}
+        CONFIG_PACKAGE_luci-app-gecoosac=n
+        CONFIG_PACKAGE_luci-app-homeproxy=n
+        CONFIG_PACKAGE_luci-app-wolultra=n
+      WRT_TEST: ${{inputs.TEST || false}}
