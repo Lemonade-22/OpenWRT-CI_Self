@@ -191,12 +191,6 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Prepare NN6000 v2 and ZN M2 no-WiFi defaults
-        if: ${{ inputs.WRT_CONFIG == 'IPQ60XX-WIFI-NO-NN6000V2-ZN-M2' }}
-        run: |
-          cd ./wrt/
-          python3 "$GITHUB_WORKSPACE/Scripts/IPQ60XX-Nowifi.py" prepare
-
       - name: Custom Settings
         run: |
           cd ./wrt/
@@ -213,9 +207,6 @@ jobs:
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           make defconfig -j$(nproc)
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
-          if [[ "$WRT_CONFIG" == "IPQ60XX-WIFI-NO-NN6000V2-ZN-M2" ]]; then
-            python3 "$GITHUB_WORKSPACE/Scripts/IPQ60XX-Nowifi.py" verify-config
-          fi
           if [[ "$WRT_CONFIG" == "Q6000-EMMC" ]]; then
             require_config() {
               local pattern="$1"
@@ -244,12 +235,6 @@ jobs:
         run: |
           cd ./wrt/
           make -j$(nproc) || make -j1 V=s
-
-      - name: Verify NN6000 v2 and ZN M2 firmware
-        if: ${{ !inputs.WRT_TEST && inputs.WRT_CONFIG == 'IPQ60XX-WIFI-NO-NN6000V2-ZN-M2' }}
-        run: |
-          cd ./wrt/
-          python3 "$GITHUB_WORKSPACE/Scripts/IPQ60XX-Nowifi.py" verify-build
 
       - name: Save Build Cache
         if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
