@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT
+name: Delete-All-Logs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: delete-all-workflow-logs
+  cancel-in-progress: false
+
+jobs:
+  delete-logs:
+    name: 删除所有已完成任务的日志
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout cleanup script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Delete workflow logs
+        uses: actions/github-script@v7
+        with:
+          retries: 3
+          script: |
+            const cleanup = require('./Scripts/Delete-Workflow-Logs.cjs');
+            await cleanup({ github, context, core });
