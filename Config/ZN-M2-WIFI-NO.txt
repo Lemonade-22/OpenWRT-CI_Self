@@ -1,0 +1,18 @@
+# ZN M2 only. WIFI package selection matches VIKINGYFY Config/IPQ60XX-WIFI-NO.txt.
+# dae/daed kernel dependencies are applied by Scripts/DAEDE.sh from Config/DAEDE.txt.
+CONFIG_TARGET_qualcommax=y
+CONFIG_TARGET_qualcommax_ipq60xx=y
+CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_zn_m2=y
+
+#WIFI驱动
+CONFIG_PACKAGE_kmod-ath=n
+CONFIG_PACKAGE_kmod-ath11k=n
+CONFIG_PACKAGE_kmod-ath11k-ahb=n
+CONFIG_PACKAGE_kmod-ath11k-pci=n
+CONFIG_PACKAGE_ath11k-firmware-ipq6018=n
+CONFIG_PACKAGE_ath11k-firmware-ipq6018-ddwrt=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074-ddwrt=n
+# ZN M2 profile and target defaults. Upstream's multi-device file does not list these.
+CONFIG_PACKAGE_ipq-wifi-zn_m2=n
+CONFIG_PACKAGE_wpad-openssl=n

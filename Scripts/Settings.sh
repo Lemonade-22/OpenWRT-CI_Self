@@ -78,3 +78,9 @@ fi
 if [[ "${WRT_TARGET:-}" == "ramips" ]]; then
 	python3 "$GITHUB_WORKSPACE/Scripts/Fix-Ramips-DSA.py" || exit $?
 fi
+
+# BTF makes the gzip FIT large. ZN M2 keeps the upstream NAND layout and only
+# switches the kernel recipe to FitImageLzma.
+if [[ "${WRT_CONFIG:-}" == "ZN-M2-WIFI-NO" ]]; then
+	python3 "$GITHUB_WORKSPACE/Scripts/ZN-M2-WIFI-NO.py" || exit $?
+fi

@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: MIT
+# ZN M2 only. WIFI-NO follows VIKINGYFY IPQ60XX-WIFI-NO; daede deps come from WRT-CORE.
+name: ZN-M2-WIFI-NO
+
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: '手动调整插件包，多个请用换行符分隔。'
+        required: false
+        type: string
+      TEST:
+        description: '仅输出配置文件，不编译固件。'
+        default: false
+        required: false
+        type: boolean
+
+permissions: write-all
+
+jobs:
+  build:
+    uses: ./.github/workflows/WRT-CORE.yml
+    with:
+      WRT_CONFIG: ZN-M2-WIFI-NO
+      WRT_THEME: footstrap
+      WRT_NAME: OWRT
+      WRT_SSID: OWRT
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      # Applied after GENERAL.txt. Aurora is not cloned when the theme is footstrap.
+      WRT_PACKAGE: |
+        ${{inputs.PACKAGE}}
+        CONFIG_PACKAGE_gecoosac=n
+        CONFIG_PACKAGE_luci-app-gecoosac=n
+        CONFIG_PACKAGE_luci-i18n-gecoosac-zh-cn=n
+        CONFIG_PACKAGE_luci-app-homeproxy=n
+        CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=n
+        CONFIG_PACKAGE_sing-box=n
+        CONFIG_PACKAGE_luci-theme-aurora=n
+        CONFIG_PACKAGE_luci-app-aurora-config=n
+        CONFIG_PACKAGE_luci-i18n-aurora-config-zh-cn=n
+        CONFIG_PACKAGE_luci-theme-footstrap=y
+      WRT_TEST: ${{inputs.TEST || false}}
