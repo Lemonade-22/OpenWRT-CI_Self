@@ -65,7 +65,7 @@ fi
 
 #高通平台调整
 DTS_PATH="./target/linux/qualcommax/dts/"
-if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
+if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* && "${WRT_CONFIG:-}" != "ZN-M2-WIFI-NO" ]]; then
 	#无WIFI配置调整Q6大小
 	if [[ "${WRT_CONFIG,,}" == *"wifi"* && "${WRT_CONFIG,,}" == *"no"* ]]; then
 		find $DTS_PATH -type f ! -iname '*nowifi*' -exec sed -i 's/ipq\(6018\|8074\).dtsi/ipq\1-nowifi.dtsi/g' {} +
@@ -77,10 +77,4 @@ fi
 # ramips 6.18: generic RTL837x changes the context of the Ralink DSA patch.
 if [[ "${WRT_TARGET:-}" == "ramips" ]]; then
 	python3 "$GITHUB_WORKSPACE/Scripts/Fix-Ramips-DSA.py" || exit $?
-fi
-
-# BTF makes the gzip FIT large. ZN M2 keeps the upstream NAND layout and only
-# switches the kernel recipe to FitImageLzma.
-if [[ "${WRT_CONFIG:-}" == "ZN-M2-WIFI-NO" ]]; then
-	python3 "$GITHUB_WORKSPACE/Scripts/ZN-M2-WIFI-NO.py" || exit $?
 fi
