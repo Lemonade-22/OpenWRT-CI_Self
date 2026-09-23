@@ -80,6 +80,6 @@ if [[ "${WRT_TARGET:-}" == "ramips" ]]; then
 fi
 
 # eBPF/BTF makes the gzip kernel exceed NN6000 v2's 6 MiB boot partition.
-if [[ "${WRT_CONFIG:-}" == "IPQ60XX-NN6000V2-ZN-M2" ]]; then
+if [[ "${WRT_CONFIG:-}" == "IPQ60XX-WIFI-NO-NN6000V2-ZN-M2" ]]; then
 	python3 "$GITHUB_WORKSPACE/Scripts/Fix-NN6000-Kernel.py" || exit $?
 fi

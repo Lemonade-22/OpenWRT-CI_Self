@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
-# Based on MT7621.yml; NN6000 v2 and ZN M2 share one IPQ60xx build.
-# WRT-CORE applies and verifies Config/DAEDE.txt after all package overrides.
-name: IPQ60XX-NN6000V2-ZN-M2
+# VIKINGYFY IPQ60XX-WIFI-NO, limited to NN6000 v2 and ZN M2.
+name: IPQ60XX-WIFI-NO
 
 on:
   workflow_dispatch:
@@ -22,8 +21,8 @@ jobs:
   build:
     uses: ./.github/workflows/WRT-CORE.yml
     with:
-      WRT_CONFIG: IPQ60XX-NN6000V2-ZN-M2
-      WRT_THEME: aurora
+      WRT_CONFIG: IPQ60XX-WIFI-NO-NN6000V2-ZN-M2
+      WRT_THEME: footstrap
       WRT_NAME: OWRT
       WRT_SSID: OWRT
       WRT_WORD: 12345678
@@ -32,6 +31,14 @@ jobs:
       WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
       WRT_BRANCH: owrt
       WRT_SOURCE: VIKINGYFY/immortalwrt
-      # Applied after GENERAL.txt and profile overrides by Settings.sh.
-      WRT_PACKAGE: ${{inputs.PACKAGE}}
+      # Same application exclusions as MT7621, followed by the theme selection.
+      WRT_PACKAGE: |
+        ${{inputs.PACKAGE}}
+        CONFIG_PACKAGE_luci-app-gecoosac=n
+        CONFIG_PACKAGE_luci-app-homeproxy=n
+        CONFIG_PACKAGE_luci-app-wolultra=n
+        CONFIG_PACKAGE_luci-theme-aurora=n
+        CONFIG_PACKAGE_luci-app-aurora-config=n
+        CONFIG_PACKAGE_luci-i18n-aurora-config-zh-cn=n
+        CONFIG_PACKAGE_luci-theme-footstrap=y
       WRT_TEST: ${{inputs.TEST || false}}

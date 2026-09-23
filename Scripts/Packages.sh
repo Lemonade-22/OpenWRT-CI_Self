@@ -47,8 +47,16 @@ UPDATE_PACKAGE() {
 
 # UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg，可选，从大杂烩中单独提取包名插件"
 UPDATE_PACKAGE "argon" "sbwml/luci-theme-argon" "openwrt-25.12"
-UPDATE_PACKAGE "aurora" "eamonxg/luci-theme-aurora" "master"
-UPDATE_PACKAGE "aurora-config" "eamonxg/luci-app-aurora-config" "master"
+if [[ "${WRT_THEME:-}" != "footstrap" ]]; then
+	UPDATE_PACKAGE "aurora" "eamonxg/luci-theme-aurora" "master"
+	UPDATE_PACKAGE "aurora-config" "eamonxg/luci-app-aurora-config" "master"
+else
+	# feeds.conf.default tracks immortalwrt/luci master; use its current theme.
+	if [[ ! -f ./feeds/luci/themes/luci-theme-footstrap/Makefile ]]; then
+		echo "::error::Footstrap is missing from the updated ImmortalWrt LuCI feed"
+		exit 1
+	fi
+fi
 UPDATE_PACKAGE "kucat" "sirpdboy/luci-theme-kucat" "master"
 UPDATE_PACKAGE "kucat-config" "sirpdboy/luci-app-kucat-config" "master"
 UPDATE_PACKAGE "noobwrt" "nooblk-98/luci-theme-noobwrt" "master"
