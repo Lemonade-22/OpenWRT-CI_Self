@@ -6,7 +6,7 @@
 - 平台：`qualcommax/ipq60xx`，一次编译两款设备，各自生成固件。
 - 仅选择 `link_nn6000-v2` 和 `zn_m2`，保留设备默认无线驱动和固件。
 - 默认地址 `192.168.10.1`，主机名和 Wi-Fi 名称 `OWRT`，Wi-Fi 密码 `12345678`。
-- 沿用 MT7621 的 aurora 主题、通用插件配置和三个插件排除项。
+- 使用 aurora 主题和 OWRT 通用插件配置，默认包含 homeproxy、gecoosac、wolultra；MT7621 仅作为多设备统一编译结构的参考。
 - PACKAGE 可以追加插件配置；TEST 勾选后仅生成配置，不编译固件。
 
 ## DAEDE 依赖

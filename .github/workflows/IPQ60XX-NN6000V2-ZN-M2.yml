@@ -33,9 +33,5 @@ jobs:
       WRT_BRANCH: owrt
       WRT_SOURCE: VIKINGYFY/immortalwrt
       # Applied after GENERAL.txt and profile overrides by Settings.sh.
-      WRT_PACKAGE: |
-        ${{inputs.PACKAGE}}
-        CONFIG_PACKAGE_luci-app-gecoosac=n
-        CONFIG_PACKAGE_luci-app-homeproxy=n
-        CONFIG_PACKAGE_luci-app-wolultra=n
+      WRT_PACKAGE: ${{inputs.PACKAGE}}
       WRT_TEST: ${{inputs.TEST || false}}
