@@ -80,6 +80,89 @@ It does **not** embed the transition firmware's explicit `rootfs` / `ubi_kernel`
 
 This is a verified image difference. It is a strong boot-failure candidate, but it has **not yet been proven to be the only cause**.
 
+## Additional boot/runtime findings from prior Codex analysis
+
+The partition-layout mismatch is not the only known compatibility issue. The following observations must be reviewed together with the fixed-partition proposal.
+
+### 1. Partition-name / bootargs mismatch
+
+In one failing boot, the VIKINGYFY kernel exposed the 1 GiB partition as lowercase `qwrt` and the trailing 24 MiB partition as `rootfs`, while the original bootargs requested uppercase `QWRT`. This produced:
+
+```
+cannot open mtd QWRT
+```
+
+After changing the referenced name to lowercase `qwrt`, the kernel started scanning the large partition. That establishes a real name/case-sensitivity mismatch in that boot path.
+
+This does **not** by itself prove the final desired partition labels; the fixed-partition proposal should instead make the kernel-visible names deliberately match the immutable transition layout and any bootloader/rootfs expectations.
+
+### 2. ECC read errors remain unresolved
+
+After the bootargs/name change allowed scanning of the large partition, the later log showed repeated NAND `ECC error -74` read failures.
+
+This demonstrates a separate read problem that still needs to be explained, but the available evidence is insufficient to conclude that Linux 6.18's NAND driver is incompatible with the hardware. The same upgrade attempt had already experienced write failures, so that damaged/incomplete flash state cannot independently validate the driver's ability to read a correctly written system.
+
+Likewise, a warning that configured ECC strength of 4 bits / 512 bytes is weaker than the NAND chip's stated requirement should be retained as evidence, but **must not be treated as a proven root cause on its own**.
+
+Codex should compare the transition kernel's NAND controller/ECC configuration and the VIKINGYFY kernel DT/driver configuration before attributing the failure to a kernel regression.
+
+### 3. AP8220 image geometry is currently wrong upstream
+
+Current `VIKINGYFY/immortalwrt:main` defines AP8220 in `target/linux/qualcommax/image/ipq807x.mk` with:
+
+```make
+BLOCKSIZE := 128k
+PAGESIZE := 2048
+```
+
+The observed device geometry is 256 KiB eraseblocks and 4096-byte pages.
+
+So the AP8220 image recipe should be reviewed for:
+
+```make
+BLOCKSIZE := 256k
+PAGESIZE := 4096
+```
+
+However, this mismatch must **not** be presented as the sole explanation for the failed transition upgrade. The tested sysupgrade archive contains a FIT kernel plus a SquashFS `root` member, while the transition environment created/attached UBI using the actual device geometry. The practical effect of these Makefile geometry values depends on which build steps consume them for this AP8220 image path and must be traced before changing them blindly.
+
+### 4. Subsequent sysupgrade path is also incompatible
+
+Current upstream `target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh` handles AP8220 as:
+
+```sh
+aliyun,ap8220|\\
+zte,mf269-stock)
+    CI_UBIPART="rootfs"
+    nand_do_upgrade "$1"
+    ;;
+```
+
+In the transition-compatible 1 GiB layout proposed here, `rootfs` is the large 1000 MiB partition and `ubi_kernel` is the separate 24 MiB kernel UBI partition. Therefore the generic single-`CI_UBIPART=rootfs` upgrade path is not sufficient to describe this split layout.
+
+Codex should determine whether AP8220 needs the same split-UBI variables used elsewhere in the file, conceptually:
+
+```sh
+CI_KERN_UBIPART="ubi_kernel"
+CI_ROOT_UBIPART="rootfs"
+CI_DATA_UBIPART="rootfs"
+nand_do_upgrade "$1"
+```
+
+This is a candidate direction, **not yet a validated patch**. It must be checked against `nand_do_upgrade` behavior, the actual rootfs format, volume names, bootloader expectations, and the immutable transition install path.
+
+### Review implication
+
+The working hypothesis is now a multi-layer compatibility problem rather than a DTB-only problem:
+
+1. **DT/DTS:** make Linux expose the intended 1000 MiB `rootfs` and 24 MiB `ubi_kernel` partitions consistently.
+2. **Bootargs/root discovery:** remove the `QWRT` vs `qwrt`/wrong-label dependency and verify how the root filesystem is selected.
+3. **NAND geometry/ECC:** verify 4096-byte pages, 256 KiB eraseblocks, ECC requirements, and transition-vs-VIKINGYFY NAND configuration.
+4. **Image recipe:** determine where `PAGESIZE`/`BLOCKSIZE` affect this sysupgrade build and correct AP8220-specific values where appropriate.
+5. **Runtime sysupgrade:** make future upgrades understand the split `ubi_kernel` + `rootfs` layout instead of assuming a single UBI partition named `rootfs`.
+
+A successful first boot after a DTB change would not close items 3-5; those must still be validated before considering the adaptation complete.
+
 ## Proposed direction
 
 Keep the transition firmware and `setup` unchanged.
