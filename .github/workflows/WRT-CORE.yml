@@ -153,9 +153,22 @@ jobs:
           git diff --check
           git diff --stat
 
+      - name: Apply AP8220 1G NAND adaptation
+        if: ${{ inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
+        run: |
+          set -euo pipefail
+          test "$WRT_SOURCE" = 'VIKINGYFY/immortalwrt'
+          cd ./wrt/
+          PATCH="$GITHUB_WORKSPACE/patches/ap8220-1g-nand.patch"
+          git apply --check "$PATCH"
+          git apply "$PATCH"
+          git diff --check
+          git diff --stat
+
       - name: Check Scripts
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+          sh -n Scripts/Install-AP8220-1G-From-Transition.sh
 
       - name: Restore Build Cache
         id: cache-restore
@@ -200,7 +213,7 @@ jobs:
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
           fi
           $GITHUB_WORKSPACE/Scripts/Settings.sh
-          if [[ "$WRT_CONFIG" == "Q6000-EMMC" ]]; then
+          if [[ "$WRT_CONFIG" == "Q6000-EMMC" || "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
             sed -i '/^CONFIG_TARGET_ROOTFS_INITRAMFS=/d; /^# CONFIG_TARGET_ROOTFS_INITRAMFS is not set$/d; /^CONFIG_TARGET_ROOTFS_SQUASHFS=/d; /^# CONFIG_TARGET_ROOTFS_SQUASHFS is not set$/d' .config
             printf '%s\n' 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' 'CONFIG_TARGET_ROOTFS_SQUASHFS=y' >> .config
           fi
@@ -222,6 +235,11 @@ jobs:
             require_config '^CONFIG_PACKAGE_kmod-mt7915e=[ym]$'
             require_config '^CONFIG_PACKAGE_kmod-mt7986-firmware=[ym]$'
           fi
+          if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
+            grep -Eq '^CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y$' .config
+            grep -Eq '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$' .config
+            grep -Eq '^CONFIG_TARGET_ROOTFS_SQUASHFS=y$' .config
+          fi
           make clean -j$(nproc)
 
       - name: Download Packages
@@ -235,6 +253,12 @@ jobs:
         run: |
           cd ./wrt/
           make -j$(nproc) || make -j1 V=s
+
+      - name: Verify AP8220 1G image layout
+        if: ${{ !inputs.WRT_TEST && inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/Scripts/Check-AP8220-1G.py" ./wrt/bin/targets/qualcommax/ipq807x/
 
       - name: Save Build Cache
         if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
@@ -269,6 +293,9 @@ jobs:
             for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
               EXT=$(basename $FILE | cut -d '.' -f 2-)
               NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+              if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" && "$NAME" == *aliyun_ap8220* ]]; then
+                NAME="${NAME}-1g"
+              fi
               NEW_FILE="$NAME"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_WIFI"-"$WRT_DATE"."$EXT"
               mv -f $FILE ./upload/$NEW_FILE
             done
@@ -276,7 +303,37 @@ jobs:
             make clean -j$(nproc)
           fi
 
+      - name: Package AP8220 installation guide
+        if: ${{ inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
+        run: |
+          cp Scripts/Install-AP8220-1G-From-Transition.sh docs/AP8220-1G-NAND-SETUP-COMPAT.md ./wrt/upload/
+          cd ./wrt/upload/
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Save AP8220 build artifacts
+        if: ${{ inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AP8220-1G-${{github.run_id}}
+          path: ./wrt/upload/
+
+      - name: Release AP8220 test firmware
+        if: ${{ !inputs.WRT_TEST && inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
+        uses: softprops/action-gh-release@master
+        with:
+          prerelease: true
+          tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+          files: ./wrt/upload/*.*
+          body: |
+            AP8220 1 GiB NAND 测试版：4096-byte page / 256-KiB eraseblock。
+            仅适用 QWRT 1000 MiB + ubi_kernel 24 MiB 布局，实机启动尚待验证。
+            先用 Initramfs 启动检查 NAND 读取，再按照随包文档安装。
+            首次安装脚本会清除原 rootfs_data 和配置；不要使用旧过渡网页的“继续”写入流程。
+            源码：${{env.WRT_REPO}} / ${{env.WRT_BRANCH}} / ${{env.WRT_HASH}}
+            登录地址：${{env.WRT_IP}}
+
       - name: Release Firmware
+        if: ${{ inputs.WRT_CONFIG != 'IPQ807X-AP8220-1G-WIFI-NO' }}
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}

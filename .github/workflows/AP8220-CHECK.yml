@@ -1,0 +1,43 @@
+name: AP8220 adaptation checks
+
+on:
+  push:
+    branches: [proposal/ap8220-1g-nand-setup-compat]
+  pull_request:
+    paths:
+      - 'patches/ap8220-1g-nand.patch'
+      - 'Scripts/*AP8220*'
+      - 'Config/IPQ807X-AP8220-1G-WIFI-NO.txt'
+      - '.github/workflows/AP8220-CHECK.yml'
+      - '.github/workflows/QCA-ALL.yml'
+      - '.github/workflows/WRT-CORE.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch firmware source
+        uses: actions/checkout@v4
+        with:
+          repository: VIKINGYFY/immortalwrt
+          ref: owrt
+          path: firmware-source
+          sparse-checkout: |
+            target/linux/qualcommax
+            package/base-files/files/lib/upgrade
+      - name: Check adaptation patch and shell syntax
+        run: |
+          set -euo pipefail
+          sh -n Scripts/Install-AP8220-1G-From-Transition.sh
+          python3 -m py_compile Scripts/Check-AP8220-1G.py
+          cd firmware-source
+          git apply --check ../patches/ap8220-1g-nand.patch
+          git apply ../patches/ap8220-1g-nand.patch
+          git diff --check
+          bash -n package/base-files/files/lib/upgrade/nand.sh
+          sh -n target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh

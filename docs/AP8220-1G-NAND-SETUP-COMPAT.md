@@ -1,10 +1,10 @@
-# AP8220 1 GiB NAND / transition setup compatibility proposal
+# AP8220 1 GiB NAND / transition setup compatibility
 
 ## Status
 
-Design and validation proposal only. **Do not merge as an implementation without reviewing the upstream VIKINGYFY/immortalwrt AP8220 DTS, image recipe and upgrade path.**
+An isolated AP8220 1 GiB test build is implemented. The patch applies to the inspected VIKINGYFY main and owrt sources. This opt-in variant builds owrt and is published only as a prerelease; a successful device boot has not yet been demonstrated.
 
-The transition firmware's `setup` script is treated as an immutable compatibility contract.
+The transition firmware's `setup` script is treated as immutable. Its Linux partition labels and the labels in the new system do not have to be identical: the physical offsets must match, while the installed system must also match the saved U-Boot boot arguments.
 
 ## Problem
 
@@ -15,7 +15,7 @@ The CI path is:
 - `.github/workflows/QCA-ALL.yml`
 - source: `VIKINGYFY/immortalwrt`
 - branch: `main`
-- config: `IPQ807X-WIFI-{YES,NO}`
+- original config: `IPQ807X-WIFI-{YES,NO}`; isolated test config: `IPQ807X-AP8220-1G-WIFI-NO`
 - device: `CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y`
 
 ## Evidence collected from the actual images
@@ -82,7 +82,7 @@ This is a verified image difference. It is a strong boot-failure candidate, but 
 
 ## Additional boot/runtime findings from prior Codex analysis
 
-The partition-layout mismatch is not the only known compatibility issue. The following observations must be reviewed together with the fixed-partition proposal.
+The partition-layout mismatch is not the only known compatibility issue. The following observations are tracked alongside the fixed-partition implementation.
 
 ### 1. Partition-name / bootargs mismatch
 
@@ -94,7 +94,7 @@ cannot open mtd QWRT
 
 After changing the referenced name to lowercase `qwrt`, the kernel started scanning the large partition. That establishes a real name/case-sensitivity mismatch in that boot path.
 
-This does **not** by itself prove the final desired partition labels; the fixed-partition proposal should instead make the kernel-visible names deliberately match the immutable transition layout and any bootloader/rootfs expectations.
+The device's saved U-Boot `fsbootargs` use `ubi.mtd=QWRT`. The test kernel therefore labels the large fixed partition uppercase `QWRT`; the transition kernel can continue to call the same physical range `rootfs`. `root=/dev/ubiblock0_1` chooses a volume *after* `ubi.mtd` attaches an MTD partition, so it cannot by itself resolve a bad `ubi.mtd` name.
 
 ### 2. ECC read errors remain unresolved
 
@@ -117,7 +117,7 @@ PAGESIZE := 2048
 
 The observed device geometry is 256 KiB eraseblocks and 4096-byte pages.
 
-So the AP8220 image recipe should be reviewed for:
+The isolated AP8220 image recipe now uses:
 
 ```make
 BLOCKSIZE := 256k
@@ -138,24 +138,27 @@ zte,mf269-stock)
     ;;
 ```
 
-In the transition-compatible 1 GiB layout proposed here, `rootfs` is the large 1000 MiB partition and `ubi_kernel` is the separate 24 MiB kernel UBI partition. Therefore the generic single-`CI_UBIPART=rootfs` upgrade path is not sufficient to describe this split layout.
+The transition Linux calls the large partition `rootfs`, while the installed test Linux calls the same physical range `QWRT` to match the saved U-Boot bootargs. Both call the trailing 24 MiB partition `ubi_kernel`. Therefore the generic single-`CI_UBIPART=rootfs` upgrade path is not sufficient for the installed system.
 
-Codex should determine whether AP8220 needs the same split-UBI variables used elsewhere in the file, conceptually:
+The AP8220 test variant now uses separate kernel and root/data partitions:
 
 ```sh
 CI_KERN_UBIPART="ubi_kernel"
-CI_ROOT_UBIPART="rootfs"
-CI_DATA_UBIPART="rootfs"
+CI_ROOT_UBIPART="QWRT"
+CI_DATA_UBIPART="QWRT"
+CI_KERN_VOL_ID=0
+CI_ROOTFS_VOL_ID=1
+CI_DATA_VOL_ID=2
 nand_do_upgrade "$1"
 ```
 
-This is a candidate direction, **not yet a validated patch**. It must be checked against `nand_do_upgrade` behavior, the actual rootfs format, volume names, bootloader expectations, and the immutable transition install path.
+The optional volume-ID variables in the test patch make `nand.sh` recreate the IDs used by the working QWRT layout. The tar writer also stops when a UBI volume lookup or `ubiupdatevol` fails, instead of reporting false success. This still needs a build and a device upgrade test.
 
 ### Review implication
 
 The working hypothesis is now a multi-layer compatibility problem rather than a DTB-only problem:
 
-1. **DT/DTS:** make Linux expose the intended 1000 MiB `rootfs` and 24 MiB `ubi_kernel` partitions consistently.
+1. **DT/DTS:** make the installed Linux expose 1000 MiB `QWRT` and 24 MiB `ubi_kernel` at the transition firmware's physical offsets.
 2. **Bootargs/root discovery:** remove the `QWRT` vs `qwrt`/wrong-label dependency and verify how the root filesystem is selected.
 3. **NAND geometry/ECC:** verify 4096-byte pages, 256 KiB eraseblocks, ECC requirements, and transition-vs-VIKINGYFY NAND configuration.
 4. **Image recipe:** determine where `PAGESIZE`/`BLOCKSIZE` affect this sysupgrade build and correct AP8220-specific values where appropriate.
@@ -167,16 +170,16 @@ A successful first boot after a DTB change would not close items 3-5; those must
 
 Keep the transition firmware and `setup` unchanged.
 
-Adapt the VIKINGYFY AP8220 build so the resulting kernel/runtime agrees with the NAND layout already established/expected by the transition environment.
+Adapt the VIKINGYFY AP8220 build so its physical NAND layout agrees with the transition environment and its large-partition name agrees with the saved U-Boot `ubi.mtd=QWRT` argument.
 
-The first candidate change is to override the AP8220 NAND partition description to match the transition firmware:
+The AP8220 test patch overrides the NAND partition description as follows:
 
 ```dts
 partitions {
     compatible = "fixed-partitions";
 
     partition@0 {
-        label = "rootfs";
+        label = "QWRT";
         reg = <0x00000000 0x3e800000>;
     };
 
@@ -187,28 +190,48 @@ partitions {
 };
 ```
 
-The exact DTS syntax/cell width must be taken from the current upstream source rather than copied blindly from this pseudocode.
+The committed patch uses the current upstream source's `nand@0/partitions` node and one address/size cell, and disables any inherited controller-level partition node.
 
 ## Preferred CI implementation
 
 Do not maintain a full fork of VIKINGYFY/immortalwrt solely for this experiment.
 
-Add a repository-owned patch, for example:
+The repository-owned patch is:
 
 ```
-patches/ap8220-1g-nand-setup-compat.patch
+patches/ap8220-1g-nand.patch
 ```
 
-and apply it in `WRT-CORE.yml` after cloning upstream, similar to the existing Q6000 eMMC adaptation.
+`WRT-CORE.yml` applies it after cloning upstream, only for the isolated `IPQ807X-AP8220-1G-WIFI-NO` config. The normal multi-device QCA builds retain the original upstream AP8220 image.
 
-Prefer a dedicated AP8220 build config/workflow or an explicit opt-in condition so the patch does not silently change every IPQ807x device in the existing multi-device QCA build.
+This variant suppresses the upstream combined `factory.ubi`, which does not describe the two separate UBI partitions used here. Release filenames include `-1g-` so they cannot be mistaken for the stock AP8220 build.
+
+Select the `AP8220_1G` input on `QCA-ALL` to build only this variant from `VIKINGYFY/immortalwrt:owrt`. The config requests both sysupgrade and initramfs images; the latter is for a RAM-boot/read-only NAND test before any flash write.
+
+## First installation from the existing transition system
+
+The release includes `Install-AP8220-1G-From-Transition.sh` and `SHA256SUMS.txt`.
+After the new initramfs has read the existing NAND without ECC errors, boot the original transition ITB through **救砖 → Initramfs 启动** and upload the installer and the matching `-1g-` sysupgrade archive to `/tmp`.
+
+Run over SSH, replacing the archive name with its actual full filename:
+
+```sh
+sh /tmp/Install-AP8220-1G-From-Transition.sh /tmp/qualcommax-ipq807x-aliyun_ap8220-squashfs-sysupgrade-1g-VIKINGYFY-owrt-wifi-no-DATE.bin
+```
+
+This replaces both kernel and rootfs and **erases rootfs_data, including old settings**.
+Do not run the old `setup` or click the old web continuation as additional steps: the installer performs both writes explicitly, with fixed volume IDs and payload readback hashes.
+It does not alter the bootloader environment or automatically reboot. Keep the already working saved `fsbootargs` containing `ubi.mtd=QWRT rootfstype=squashfs`.
+Only reboot after the installer reports successful readback; on any error, remain in the transition system and retain the complete log.
+
+The installer requires the existing UBI containers created by the previous working QWRT installation. It stops if either container cannot attach, rather than reformatting it. This is not a blank-flash provisioning tool.
 
 ## Codex review tasks
 
 1. Locate the exact current AP8220 DTS/DTSI in `VIKINGYFY/immortalwrt:main` and identify where `qcom,smem-part` is inherited or declared.
 2. Locate the AP8220 device/image definition (likely under the qualcommax image recipes) and document how `kernel`, `root`, and sysupgrade metadata are generated.
 3. Verify whether replacing/overriding the NAND partition node with the transition firmware's fixed map is sufficient for early boot and rootfs discovery.
-4. Determine how the sysupgrade `root` payload is supposed to reach/use the 1000 MiB `rootfs` MTD partition. The observed `setup` fragment explicitly updates only the kernel volume; this is currently an unresolved part of the installation path.
+4. The immutable `setup` writes only the kernel to the 24 MiB partition. The transition web continuation attempts to write `root` to the 1000 MiB partition, but the observed VIKINGYFY attempt failed because its volume lookup produced `/dev/`. Therefore the initial install needs a separately verified root-volume writer; changing the new kernel cannot repair that old transition script.
 5. Check `fstab`, `mount_root`, UBI/ubiblock behavior, platform upgrade scripts, and any `PART_NAME`/rootfs assumptions for AP8220.
 6. Verify ART/caldata and MAC-address lookup behavior under the fixed partition map. Do not regress Wi-Fi calibration or board identity.
 7. Check bootloader expectations for the `ubi_kernel` UBI volume and FIT payload (volume name/id, load/entry addresses, DTB selection and compression).
@@ -220,11 +243,11 @@ Before publishing an AP8220 test artifact, fail the job unless all of the follow
 
 - sysupgrade tar contains `sysupgrade-aliyun_ap8220/kernel` and `root`;
 - kernel payload is <= 16 MiB;
-- embedded DTB reports `rootfs` at `0x0 / 0x3e800000`;
+- embedded DTB reports `QWRT` at `0x0 / 0x3e800000`;
 - embedded DTB reports `ubi_kernel` at `0x3e800000 / 0x01800000`;
 - the AP8220 kernel DTB no longer relies on `qcom,smem-part` for this 1 GiB NAND variant.
 
-If practical, keep these checks in a small script committed to this CI repository so future upstream changes cannot silently restore an incompatible layout.
+`Scripts/Check-AP8220-1G.py` checks these FIT/DTB properties, the SquashFS member and the presence of an initramfs ITB before publishing an AP8220 test build.
 
 ## Validation sequence
 
@@ -233,8 +256,9 @@ If practical, keep these checks in a small script committed to this CI repositor
 3. Inspect the kernel FIT and embedded DTB.
 4. Compare the generated DTB against the known-good transition firmware DTB.
 5. Confirm kernel size and sysupgrade member paths.
-6. Review the rootfs/upgrade path identified above.
-7. Only after all static checks pass, perform a controlled device test with serial recovery available.
+6. RAM-boot the new initramfs and inspect the 1 GiB NAND/UBI read path for ECC errors without changing flash contents.
+7. Use `Scripts/Install-AP8220-1G-From-Transition.sh` only with the published `-1g-` sysupgrade archive from the transition initramfs. It checks the actual MTD layout, writes kernel as small-UBI volume 0 and root as big-UBI volume 1, recreates data volume 2, and hashes the rootfs readback. It does not call `fw_setenv` because that transition image lacks `/etc/fw_env.config`. Confirm U-Boot's saved `fsbootargs` still contain `ubi.mtd=QWRT` before booting. This script has not yet been tested on the device.
+8. Only after the read-only test and writer validation, perform a controlled flash test with serial recovery available.
 
 ## Non-goals
 
@@ -248,9 +272,6 @@ This proposal does not attempt to change:
 
 The first experiment should minimize variables and address only AP8220 1 GiB NAND/setup compatibility.
 
-## Review outcome expected
+## LiBwrt/LibWrt reference
 
-Codex should either:
-
-- turn this proposal into a minimal AP8220-specific patch plus CI validation; or
-- explain, with upstream source references, why the fixed-partition hypothesis is incomplete and amend the design before any flash test.
+The [LibWrt `25.12-nss` AP8220 DTS](https://github.com/LiBwrt/LibWrt/blob/25.12-nss/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8071-ap8220.dts) disables an inherited controller-level partition node and supplies `fixed-partitions` under `nand@0`. It also uses ECC 4/512 and `root=/dev/ubiblock0_1`. These are useful structural comparisons with the VIKINGYFY DTS. Its `reg = <0x0 0x0>` rootfs definition, 2048/128k image recipe and single-partition upgrade path are not the required 1 GiB/4096/256-KiB split. The observed `ECC error -74` remains unexplained until the new initramfs reads a known-good NAND image successfully.

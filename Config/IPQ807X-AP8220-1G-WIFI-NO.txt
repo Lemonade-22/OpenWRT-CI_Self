@@ -1,0 +1,13 @@
+# AP8220 with 1 GiB NAND, 4096-byte pages and 256-KiB eraseblocks.
+CONFIG_TARGET_qualcommax=y
+CONFIG_TARGET_qualcommax_ipq807x=y
+CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y
+CONFIG_PACKAGE_kmod-ath=n
+CONFIG_PACKAGE_kmod-ath11k=n
+CONFIG_PACKAGE_kmod-ath11k-ahb=n
+CONFIG_PACKAGE_kmod-ath11k-pci=n
+CONFIG_PACKAGE_ath10k-firmware-qca9887=n
+CONFIG_PACKAGE_ath11k-firmware-ipq8074=n
+CONFIG_PACKAGE_ath11k-firmware-ipq8074-ddwrt=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074-ddwrt=n
