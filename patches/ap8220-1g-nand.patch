@@ -1,0 +1,132 @@
+diff --git a/target/linux/qualcommax/dts/ipq8071-ap8220.dts b/target/linux/qualcommax/dts/ipq8071-ap8220.dts
+--- a/target/linux/qualcommax/dts/ipq8071-ap8220.dts
++++ b/target/linux/qualcommax/dts/ipq8071-ap8220.dts
+@@ -134,6 +134,10 @@
+ &qpic_nand {
+ 	status = "okay";
+ 
++	partitions {
++		status = "disabled";
++	};
++
+ 	nand@0 {
+ 		reg = <0>;
+ 
+@@ -142,8 +146,19 @@
+ 		nand-bus-width = <8>;
+ 
+ 		partitions {
+-			compatible = "qcom,smem-part";
+-			qcom,smem-flash-id = <1>;
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "QWRT";
++				reg = <0x00000000 0x3e800000>;
++			};
++
++			partition@3e800000 {
++				label = "ubi_kernel";
++				reg = <0x3e800000 0x01800000>;
++			};
+ 		};
+ 	};
+ };
+diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
+--- a/target/linux/qualcommax/image/ipq807x.mk
++++ b/target/linux/qualcommax/image/ipq807x.mk
+@@ -58,8 +58,10 @@
+ 	$(call Device/UbiFit)
+ 	DEVICE_VENDOR := Aliyun
+ 	DEVICE_MODEL := AP8220
+-	BLOCKSIZE := 128k
+-	PAGESIZE := 2048
++	DEVICE_VARIANT := 1 GiB NAND
++	IMAGES := sysupgrade.bin
++	BLOCKSIZE := 256k
++	PAGESIZE := 4096
+ 	SOC := ipq8071
+ 	DEVICE_DTS_CONFIG := config@ac02
+ 	DEVICE_PACKAGES := ipq-wifi-aliyun_ap8220 kmod-hci-uart kmod-bluetooth kmod-bluetooth-6lowpan
+diff --git a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
+--- a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
++++ b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
+@@ -50,7 +50,15 @@
+ 	arista,c360)
+ 		arista_ap_do_upgrade "$1"
+ 		;;
+-	aliyun,ap8220|\
++	aliyun,ap8220)
++		CI_KERN_UBIPART="ubi_kernel"
++		CI_ROOT_UBIPART="QWRT"
++		CI_DATA_UBIPART="QWRT"
++		CI_KERN_VOL_ID=0
++		CI_ROOTFS_VOL_ID=1
++		CI_DATA_VOL_ID=2
++		nand_do_upgrade "$1"
++		;;
+ 	zte,mf269-stock)
+ 		CI_UBIPART="rootfs"
+ 		nand_do_upgrade "$1"
+diff --git a/package/base-files/files/lib/upgrade/nand.sh b/package/base-files/files/lib/upgrade/nand.sh
+--- a/package/base-files/files/lib/upgrade/nand.sh
++++ b/package/base-files/files/lib/upgrade/nand.sh
+@@ -229,7 +229,9 @@
+ 
+ 	# create kernel vol
+ 	if [ -n "$kernel_length" ]; then
+-		if ! ubimkvol /dev/$kern_ubidev -N "$CI_KERNPART" -s $kernel_length; then
++		local kern_vol_id_arg=
++		[ -n "${CI_KERN_VOL_ID:-}" ] && kern_vol_id_arg="-n $CI_KERN_VOL_ID"
++		if ! ubimkvol /dev/$kern_ubidev $kern_vol_id_arg -N "$CI_KERNPART" -s $kernel_length; then
+ 			echo "cannot create kernel volume"
+ 			return 1;
+ 		fi
+@@ -243,7 +245,9 @@
+ 		else
+ 			rootfs_size_param="-s $rootfs_length"
+ 		fi
+-		if ! ubimkvol /dev/$root_ubidev -N "$CI_ROOTPART" $rootfs_size_param; then
++		local root_vol_id_arg=
++		[ -n "${CI_ROOTFS_VOL_ID:-}" ] && root_vol_id_arg="-n $CI_ROOTFS_VOL_ID"
++		if ! ubimkvol /dev/$root_ubidev $root_vol_id_arg -N "$CI_ROOTPART" $rootfs_size_param; then
+ 			echo "cannot create rootfs volume"
+ 			return 1;
+ 		fi
+@@ -255,8 +259,10 @@
+ 		if [ -n "$rootfs_data_max" ]; then
+ 			rootfs_data_size_param="-s $rootfs_data_max"
+ 		fi
+-		if ! ubimkvol /dev/$data_ubidev -N rootfs_data $rootfs_data_size_param; then
+-			if ! ubimkvol /dev/$data_ubidev -N rootfs_data -m; then
++		local data_vol_id_arg=
++		[ -n "${CI_DATA_VOL_ID:-}" ] && data_vol_id_arg="-n $CI_DATA_VOL_ID"
++		if ! ubimkvol /dev/$data_ubidev $data_vol_id_arg -N rootfs_data $rootfs_data_size_param; then
++			if ! ubimkvol /dev/$data_ubidev $data_vol_id_arg -N rootfs_data -m; then
+ 				echo "cannot initialize rootfs_data volume"
+ 				return 1
+ 			fi
+@@ -351,8 +357,9 @@
+ 	if [ "$rootfs_length" ]; then
+ 		local ubidev="$( nand_find_ubi "${CI_ROOT_UBIPART:-$CI_UBIPART}" )"
+ 		local root_ubivol="$( nand_find_volume $ubidev "$CI_ROOTPART" )"
++		[ -n "$root_ubivol" ] && [ -c "/dev/$root_ubivol" ] || return 1
+ 		$cmd < "$tar_file" | tar xOf - "$board_dir/root" | \
+-			ubiupdatevol /dev/$root_ubivol -s "$rootfs_length" -
++			ubiupdatevol /dev/$root_ubivol -s "$rootfs_length" - || return 1
+ 	fi
+ 	if [ "$kernel_length" ]; then
+ 		if [ "$kernel_mtd" ]; then
+@@ -367,8 +374,9 @@
+ 		else
+ 			local ubidev="$( nand_find_ubi "${CI_KERN_UBIPART:-$CI_UBIPART}" )"
+ 			local kern_ubivol="$( nand_find_volume $ubidev "$CI_KERNPART" )"
++			[ -n "$kern_ubivol" ] && [ -c "/dev/$kern_ubivol" ] || return 1
+ 			$cmd < "$tar_file" | tar xOf - "$board_dir/kernel" | \
+-				ubiupdatevol /dev/$kern_ubivol -s "$kernel_length" -
++				ubiupdatevol /dev/$kern_ubivol -s "$kernel_length" - || return 1
+ 		fi
+ 	fi
+ 
