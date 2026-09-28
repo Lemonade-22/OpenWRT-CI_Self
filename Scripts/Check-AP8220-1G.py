@@ -58,6 +58,10 @@ def check_image(path):
         root = archive.extractfile(prefix + "root")
         require(root.read(4) == b"hsqs", "root is not SquashFS")
 
+    check_fit(kernel, path.name)
+
+
+def check_fit(kernel, name):
     fit = {(node, key): value for node, key, value in fdt_properties(kernel)}
     config = fit.get(("/configurations/config@ac02", "fdt"), b"").rstrip(b"\0").decode()
     require(config, "missing config@ac02 FDT selection")
@@ -71,6 +75,11 @@ def check_image(path):
     ]
     require(len(partitions) == 1, "expected one NAND fixed-partitions node")
     parent = partitions[0]
+    nand = parent.rsplit("/", 1)[0]
+    require(props.get((nand, "nand-ecc-strength")) == struct.pack(">I", 8),
+            "NAND ECC strength must be 8 bits to match the transition writer")
+    require(props.get((nand, "nand-ecc-step-size")) == struct.pack(">I", 512),
+            "NAND ECC step size must be 512 bytes")
     require(props[(parent, "compatible")] == b"fixed-partitions\0", "NAND still uses SMEM partitions")
 
     for node_name, label, offset, size in (
@@ -85,7 +94,7 @@ def check_image(path):
     bootargs = props.get(("/chosen", "bootargs-append"), b"")
     require(b"root=/dev/ubiblock0_1" in bootargs,
             "rootfs boot argument does not select UBI volume 1")
-    print(f"OK: {path.name}: QWRT 1000 MiB, ubi_kernel 24 MiB, root volume 1")
+    print(f"OK: {name}: QWRT 1000 MiB, ubi_kernel 24 MiB, root volume 1, ECC 8/512")
 
 
 def main():
@@ -97,7 +106,7 @@ def main():
     factory = list(directory.glob("*aliyun_ap8220*factory.ubi"))
     require(not factory, "split-UBI AP8220 build must not publish a single factory UBI")
     check_image(images[0])
-    print(f"OK: {initramfs[0].name}: RAM-boot test artifact present")
+    check_fit(initramfs[0].read_bytes(), initramfs[0].name)
 
 
 if __name__ == "__main__":

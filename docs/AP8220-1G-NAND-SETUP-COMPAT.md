@@ -275,3 +275,9 @@ The first experiment should minimize variables and address only AP8220 1 GiB NAN
 ## LiBwrt/LibWrt reference
 
 The [LibWrt `25.12-nss` AP8220 DTS](https://github.com/LiBwrt/LibWrt/blob/25.12-nss/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8071-ap8220.dts) disables an inherited controller-level partition node and supplies `fixed-partitions` under `nand@0`. It also uses ECC 4/512 and `root=/dev/ubiblock0_1`. These are useful structural comparisons with the VIKINGYFY DTS. Its `reg = <0x0 0x0>` rootfs definition, 2048/128k image recipe and single-partition upgrade path are not the required 1 GiB/4096/256-KiB split. The observed `ECC error -74` remains unexplained until the new initramfs reads a known-good NAND image successfully.
+
+## ECC correction after hardware testing
+
+The transition Linux 6.12.9 reports runtime ECC strength 8 and step size 512 on both NAND partitions. It reads PEB 0 successfully with a valid UBI EC header. The first adapted Linux 6.18.52 image uses 4/512 and fails on PEB 0 despite correct QWRT/ubi_kernel partitions and boot arguments. The 1 GiB variant now explicitly requests 8/512. Both sysupgrade and initramfs embedded DTBs are checked for this setting before publication. Earlier DTS declarations alone did not establish the transition driver's runtime ECC configuration.
+
+Validate this correction by RAM-booting the new initramfs and checking runtime ECC and NAND reads before installing. Successful boot with the corrected image is still pending hardware testing.
