@@ -9,7 +9,7 @@ on:
       - 'Scripts/*AP8220*'
       - 'Config/IPQ807X-AP8220-1G-WIFI-NO.txt'
       - '.github/workflows/AP8220-CHECK.yml'
-      - '.github/workflows/QCA-ALL.yml'
+      - '.github/workflows/AP8220-1G.yml'
       - '.github/workflows/WRT-CORE.yml'
   workflow_dispatch:
 

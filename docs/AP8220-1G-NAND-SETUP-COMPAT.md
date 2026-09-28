@@ -206,7 +206,7 @@ patches/ap8220-1g-nand.patch
 
 This variant suppresses the upstream combined `factory.ubi`, which does not describe the two separate UBI partitions used here. Release filenames include `-1g-` so they cannot be mistaken for the stock AP8220 build.
 
-Select the `AP8220_1G` input on `QCA-ALL` to build only this variant from `VIKINGYFY/immortalwrt:owrt`. The config requests both sysupgrade and initramfs images; the latter is for a RAM-boot/read-only NAND test before any flash write.
+Run the standalone `AP8220-1G` workflow (Actions → AP8220-1G → Run workflow, branch `main`, `TEST` unchecked) to build this variant from `VIKINGYFY/immortalwrt:owrt`. The config requests both sysupgrade and initramfs images; the latter is for a RAM-boot/read-only NAND test before any flash write.
 
 ## First installation from the existing transition system
 
