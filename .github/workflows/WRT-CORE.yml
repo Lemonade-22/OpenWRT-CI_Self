@@ -218,15 +218,7 @@ jobs:
             printf '%s\n' 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' 'CONFIG_TARGET_ROOTFS_SQUASHFS=y' >> .config
           fi
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
-          if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
-            python3 "$GITHUB_WORKSPACE/Scripts/AP8220-No-WiFi.py" prepare
-          fi
           make defconfig -j$(nproc)
-          if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
-            python3 "$GITHUB_WORKSPACE/Scripts/AP8220-No-WiFi.py" configure
-            make defconfig -j$(nproc)
-            python3 "$GITHUB_WORKSPACE/Scripts/AP8220-No-WiFi.py" verify
-          fi
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           if [[ "$WRT_CONFIG" == "Q6000-EMMC" ]]; then
             require_config() {
@@ -267,7 +259,6 @@ jobs:
         run: |
           set -euo pipefail
           python3 "$GITHUB_WORKSPACE/Scripts/Check-AP8220-1G.py" ./wrt/bin/targets/qualcommax/ipq807x/
-          python3 "$GITHUB_WORKSPACE/Scripts/AP8220-No-WiFi.py" manifest ./wrt/bin/targets/qualcommax/ipq807x/
 
       - name: Save Build Cache
         if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
