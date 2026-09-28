@@ -2,7 +2,11 @@ name: AP8220 adaptation checks
 
 on:
   push:
-    branches: [proposal/ap8220-1g-nand-setup-compat]
+    branches: [main, proposal/ap8220-1g-nand-setup-compat]
+    paths:
+      - 'patches/ap8220-1g-nand.patch'
+      - 'Scripts/*AP8220*'
+      - '.github/workflows/AP8220-CHECK.yml'
   pull_request:
     paths:
       - 'patches/ap8220-1g-nand.patch'

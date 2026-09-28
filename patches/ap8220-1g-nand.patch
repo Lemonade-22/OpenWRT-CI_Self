@@ -131,3 +131,4 @@ diff --git a/package/base-files/files/lib/upgrade/nand.sh b/package/base-files/f
 +				ubiupdatevol /dev/$kern_ubivol -s "$kernel_length" - || return 1
  		fi
  	fi
+ 
