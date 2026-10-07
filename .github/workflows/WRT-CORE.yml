@@ -240,7 +240,7 @@ jobs:
             grep -Eq '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$' .config
             grep -Eq '^CONFIG_TARGET_ROOTFS_SQUASHFS=y$' .config
           fi
-          if [[ "$WRT_CONFIG" == "ZN-M2-WIFI-NO" || "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
+          if [[ "$WRT_BRANCH" == "main" && ( "$WRT_CONFIG" == "ZN-M2-WIFI-NO" || "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ) ]]; then
             for pattern in \
               '^CONFIG_PACKAGE_nss-firmware=y$' \
               '^CONFIG_PACKAGE_kmod-qca-nss-drv=y$' \
