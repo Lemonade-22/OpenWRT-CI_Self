@@ -1,10 +1,20 @@
 # SPDX-License-Identifier: MIT
 # ZN M2 only. WIFI-NO follows VIKINGYFY IPQ60XX-WIFI-NO; daede deps come from WRT-CORE.
+# PPE uses VIKINGYFY/immortalwrt owrt; NSS uses main.
 name: ZN-M2-WIFI-NO
+run-name: ${{ inputs.FIRMWARE || '编译PPE固件' }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
 on:
   workflow_dispatch:
     inputs:
+      FIRMWARE:
+        description: '固件类型'
+        type: choice
+        required: true
+        default: '编译PPE固件'
+        options:
+          - '编译PPE固件'
+          - '编译NSS固件'
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false
@@ -29,7 +39,7 @@ jobs:
       WRT_IP: 192.168.10.1
       WRT_PW: 无
       WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
-      WRT_BRANCH: owrt
+      WRT_BRANCH: ${{ inputs.FIRMWARE == '编译NSS固件' && 'main' || 'owrt' }}
       WRT_SOURCE: VIKINGYFY/immortalwrt
       # Applied after GENERAL.txt. Aurora is not cloned when the theme is footstrap.
       WRT_PACKAGE: |

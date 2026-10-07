@@ -22,6 +22,11 @@ permissions:
 
 jobs:
   check:
+    name: AP8220 patch (${{ matrix.branch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [owrt, main]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: VIKINGYFY/immortalwrt
-          ref: owrt
+          ref: ${{ matrix.branch }}
           path: firmware-source
           sparse-checkout: |
             target/linux/qualcommax
