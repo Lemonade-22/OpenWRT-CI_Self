@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MIT
 # ZN M2 only. WIFI-NO follows VIKINGYFY IPQ60XX-WIFI-NO; daede deps come from WRT-CORE.
+# NSS needs VIKINGYFY/immortalwrt branch main (qca-nss-drv/ecm/firmware).
+# Branch owrt only has wired PPE and does not build NSS.
 name: ZN-M2-WIFI-NO
 
 on:
@@ -29,7 +31,7 @@ jobs:
       WRT_IP: 192.168.10.1
       WRT_PW: 无
       WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
-      WRT_BRANCH: owrt
+      WRT_BRANCH: main
       WRT_SOURCE: VIKINGYFY/immortalwrt
       # Applied after GENERAL.txt. Aurora is not cloned when the theme is footstrap.
       WRT_PACKAGE: |

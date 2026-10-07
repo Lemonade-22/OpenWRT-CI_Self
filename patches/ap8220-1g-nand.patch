@@ -51,7 +51,7 @@ diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/
 +	PAGESIZE := 4096
  	SOC := ipq8071
  	DEVICE_DTS_CONFIG := config@ac02
- 	DEVICE_PACKAGES := ipq-wifi-aliyun_ap8220 kmod-hci-uart kmod-bluetooth kmod-bluetooth-6lowpan
+ 	DEVICE_PACKAGES := ipq-wifi-aliyun_ap8220 input-support kmod-hci-uart kmod-bluetooth kmod-bluetooth-6lowpan
 diff --git a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
 --- a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh

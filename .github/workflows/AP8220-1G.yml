@@ -2,6 +2,8 @@
 # Copyright (C) 2026 VIKINGYFY
 
 # AP8220 1 GiB NAND
+# NSS needs VIKINGYFY/immortalwrt branch main (qca-nss-drv/ecm/firmware).
+# Branch owrt only has wired PPE and does not build NSS.
 name: AP8220-1G
 
 on:
@@ -29,7 +31,7 @@ jobs:
       matrix:
         CONFIG: [IPQ807X-AP8220-1G-WIFI-NO]
         SOURCE: [VIKINGYFY/immortalwrt]
-        BRANCH: [owrt]
+        BRANCH: [main]
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       #编译配置

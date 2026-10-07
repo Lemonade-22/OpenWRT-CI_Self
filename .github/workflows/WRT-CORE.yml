@@ -240,6 +240,20 @@ jobs:
             grep -Eq '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$' .config
             grep -Eq '^CONFIG_TARGET_ROOTFS_SQUASHFS=y$' .config
           fi
+          if [[ "$WRT_CONFIG" == "ZN-M2-WIFI-NO" || "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
+            for pattern in \
+              '^CONFIG_PACKAGE_nss-firmware=y$' \
+              '^CONFIG_PACKAGE_kmod-qca-nss-drv=y$' \
+              '^CONFIG_PACKAGE_kmod-qca-nss-ecm=y$' \
+              '^CONFIG_PACKAGE_kmod-qca-nss-dp=y$' \
+              '^CONFIG_PACKAGE_kmod-qca-ssdk=y$'
+            do
+              if ! grep -Eq "$pattern" .config; then
+                echo "::error::NSS is not selected ($pattern). These profiles must build VIKINGYFY/immortalwrt branch main."
+                exit 1
+              fi
+            done
+          fi
           make clean -j$(nproc)
 
       - name: Download Packages

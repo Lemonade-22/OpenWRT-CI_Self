@@ -29,7 +29,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: VIKINGYFY/immortalwrt
-          ref: owrt
+          # Same branch the firmware job compiles. main has the NSS stack; owrt will not take this patch.
+          ref: main
           path: firmware-source
           sparse-checkout: |
             target/linux/qualcommax
