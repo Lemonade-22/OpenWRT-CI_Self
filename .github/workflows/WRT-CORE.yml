@@ -143,17 +143,6 @@ jobs:
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
 
-      - name: Apply Q6000 eMMC adaptation
-        if: ${{ inputs.WRT_CONFIG == 'Q6000-EMMC' }}
-        run: |
-          set -euo pipefail
-          cd ./wrt/
-          PATCH="$GITHUB_WORKSPACE/patches/q6000-emmc-owrt.patch"
-          git apply --check "$PATCH"
-          git apply "$PATCH"
-          git diff --check
-          git diff --stat
-
       - name: Apply AP8220 1G NAND adaptation
         if: ${{ inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
         run: |
@@ -214,28 +203,13 @@ jobs:
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
           fi
           $GITHUB_WORKSPACE/Scripts/Settings.sh
-          if [[ "$WRT_CONFIG" == "Q6000-EMMC" || "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
+          if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
             sed -i '/^CONFIG_TARGET_ROOTFS_INITRAMFS=/d; /^# CONFIG_TARGET_ROOTFS_INITRAMFS is not set$/d; /^CONFIG_TARGET_ROOTFS_SQUASHFS=/d; /^# CONFIG_TARGET_ROOTFS_SQUASHFS is not set$/d' .config
             printf '%s\n' 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' 'CONFIG_TARGET_ROOTFS_SQUASHFS=y' >> .config
           fi
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           make defconfig -j$(nproc)
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
-          if [[ "$WRT_CONFIG" == "Q6000-EMMC" ]]; then
-            require_config() {
-              local pattern="$1"
-              if ! grep -Eq "$pattern" .config; then
-                echo "::error::Q6000 config check failed: $pattern"
-                grep -E 'ikuai_q6000|TARGET_ROOTFS_INITRAMFS|TARGET_PER_DEVICE_ROOTFS|kmod-mt7915e|kmod-mt7986-firmware' .config || true
-                return 1
-              fi
-            }
-            require_config '^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_ikuai_q6000-emmc=y$'
-            require_config '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$'
-            # Per-device rootfs builds profile packages as m, then installs them into that image.
-            require_config '^CONFIG_PACKAGE_kmod-mt7915e=[ym]$'
-            require_config '^CONFIG_PACKAGE_kmod-mt7986-firmware=[ym]$'
-          fi
           if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
             grep -Eq '^CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y$' .config
             grep -Eq '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$' .config
