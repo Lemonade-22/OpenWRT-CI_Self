@@ -332,15 +332,15 @@ jobs:
           name: AP8220-1G-${{github.run_id}}
           path: ./wrt/upload/
 
-      - name: Release AP8220 test firmware
+      - name: Release AP8220 firmware
         if: ${{ !inputs.WRT_TEST && inputs.WRT_CONFIG == 'IPQ807X-AP8220-1G-WIFI-NO' }}
         uses: softprops/action-gh-release@master
         with:
-          prerelease: true
+          prerelease: false
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
-            AP8220 1 GiB NAND 测试版：4096-byte page / 256-KiB eraseblock。
+            AP8220 1 GiB NAND 固件：4096-byte page / 256-KiB eraseblock。
             仅适用 QWRT 1000 MiB + ubi_kernel 24 MiB 布局，实机启动尚待验证。
             先用 Initramfs 启动检查 NAND 读取，再按照随包文档安装。
             首次安装脚本会清除原 rootfs_data 和配置；不要使用旧过渡网页的“继续”写入流程。
