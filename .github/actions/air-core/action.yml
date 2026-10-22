@@ -1,0 +1,260 @@
+# SPDX-License-Identifier: MIT
+# AIR Core
+
+# 本文件是复合 action，不会出现在 Actions 工作流列表中。
+name: AIR Core
+description: Airoha (XG-040G-MD) build core shared by the device workflows.
+inputs:
+  WRT_CONFIG:
+    description: WRT_CONFIG
+    required: true
+  WRT_THEME:
+    description: WRT_THEME
+    required: true
+  WRT_NAME:
+    description: WRT_NAME
+    required: true
+  WRT_SSID:
+    description: WRT_SSID
+    required: true
+  WRT_WORD:
+    description: WRT_WORD
+    required: true
+  WRT_IP:
+    description: WRT_IP
+    required: true
+  WRT_PW:
+    description: WRT_PW
+    required: true
+  WRT_REPO:
+    description: WRT_REPO
+    required: true
+  WRT_BRANCH:
+    description: WRT_BRANCH
+    required: true
+  WRT_SOURCE:
+    description: WRT_SOURCE
+    required: true
+  WRT_PACKAGE:
+    description: WRT_PACKAGE
+    required: false
+  WRT_TEST:
+    description: WRT_TEST
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Export build inputs
+      shell: bash
+      env:
+        IN_WRT_CONFIG: ${{ inputs.WRT_CONFIG }}
+        IN_WRT_THEME: ${{ inputs.WRT_THEME }}
+        IN_WRT_NAME: ${{ inputs.WRT_NAME }}
+        IN_WRT_SSID: ${{ inputs.WRT_SSID }}
+        IN_WRT_WORD: ${{ inputs.WRT_WORD }}
+        IN_WRT_IP: ${{ inputs.WRT_IP }}
+        IN_WRT_PW: ${{ inputs.WRT_PW }}
+        IN_WRT_REPO: ${{ inputs.WRT_REPO }}
+        IN_WRT_BRANCH: ${{ inputs.WRT_BRANCH }}
+        IN_WRT_SOURCE: ${{ inputs.WRT_SOURCE }}
+        IN_WRT_PACKAGE: ${{ inputs.WRT_PACKAGE }}
+        IN_WRT_TEST: ${{ inputs.WRT_TEST }}
+      run: |
+        {
+          echo "GITHUB_TOKEN=${{ github.token }}"
+          echo "WRT_CONFIG=$IN_WRT_CONFIG"
+          echo "WRT_THEME=$IN_WRT_THEME"
+          echo "WRT_NAME=$IN_WRT_NAME"
+          echo "WRT_SSID=$IN_WRT_SSID"
+          echo "WRT_WORD=$IN_WRT_WORD"
+          echo "WRT_IP=$IN_WRT_IP"
+          echo "WRT_PW=$IN_WRT_PW"
+          echo "WRT_REPO=$IN_WRT_REPO"
+          echo "WRT_BRANCH=$IN_WRT_BRANCH"
+          echo "WRT_SOURCE=$IN_WRT_SOURCE"
+          echo "WRT_PACKAGE<<__WRT_PACKAGE_EOF__"
+          echo "$IN_WRT_PACKAGE"
+          echo "__WRT_PACKAGE_EOF__"
+          echo "WRT_TEST=$IN_WRT_TEST"
+        } >> "$GITHUB_ENV"
+
+    - name: Initialization Environment
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo -E apt -yqq purge firefox
+        sudo -E apt -yqq update
+        sudo -E apt -yqq full-upgrade
+        sudo -E apt -yqq autoremove --purge
+        sudo -E apt -yqq autoclean
+        sudo -E apt -yqq clean
+        sudo -E apt -yqq install dos2unix libfuse-dev
+        sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo -E systemctl daemon-reload
+        sudo -E timedatectl set-timezone "Asia/Shanghai"
+        sudo mkdir -p /mnt/build_wrt
+        sudo chown $USER:$USER /mnt/build_wrt
+        sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+
+    - name: Initialization Values
+      shell: bash
+      run: |
+        echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
+        echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
+        echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
+        echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
+        echo "WRT_WIFI=wifi-no" >> $GITHUB_ENV
+        echo "WRT_KVER=none" >> $GITHUB_ENV
+        echo "WRT_LIST=none" >> $GITHUB_ENV
+
+    - name: Clone Code
+      shell: bash
+      run: |
+        git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
+        cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+        fi
+
+    - name: Apply bingo XG-040G-MD Hardware Layer
+      shell: bash
+      if: inputs.WRT_NAME == 'XG-040G-Series'
+      run: |
+        bash "$GITHUB_WORKSPACE/Scripts/XG-040G-MD.sh"
+
+    - name: Check Scripts
+      shell: bash
+      run: |
+        find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+
+    - name: Check Caches
+      id: check-cache
+      if: inputs.WRT_TEST != 'true'
+      uses: actions/cache@main
+      with:
+        key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
+        restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}
+        path: |
+          ./wrt/.ccache
+          ./wrt/staging_dir/host*
+          ./wrt/staging_dir/tool*
+
+    - name: Update Caches
+      shell: bash
+      if: inputs.WRT_TEST != 'true'
+      run: |
+        if [ -d "./wrt/staging_dir" ]; then
+          find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
+            find "$DIR" -type f -exec touch {} +
+          done
+          mkdir -p ./wrt/tmp && echo "1" > ./wrt/tmp/.build
+          echo "toolchain skiped done!"
+        else
+          echo "caches missed!"
+        fi
+        if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
+          CACHE_LIST=$(gh cache list --key "$WRT_CONFIG-$WRT_INFO" | cut -f 1)
+          for CACHE_KEY in $CACHE_LIST; do
+            gh cache delete $CACHE_KEY
+          done
+          echo "caches cleanup done!"
+        fi
+
+    - name: Update Feeds
+      shell: bash
+      run: |
+        cd ./wrt/
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Custom Packages
+      shell: bash
+      run: |
+        cd ./wrt/
+        $GITHUB_WORKSPACE/Scripts/Packages.sh
+        $GITHUB_WORKSPACE/Scripts/Handles.sh
+
+    - name: Custom Settings
+      shell: bash
+      run: |
+        cd ./wrt/
+        if [[ "${WRT_CONFIG,,}" == *"test"* ]]; then
+          cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt >> .config
+        else
+          cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
+        fi
+        $GITHUB_WORKSPACE/Scripts/Settings.sh
+        bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+        make defconfig -j$(nproc)
+        bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+        make clean -j$(nproc)
+
+    - name: Download Packages
+      shell: bash
+      if: inputs.WRT_TEST != 'true'
+      run: |
+        cd ./wrt/
+        make download -j$(nproc)
+
+    - name: Compile Firmware
+      shell: bash
+      if: inputs.WRT_TEST != 'true'
+      run: |
+        cd ./wrt/
+        make -j$(nproc) || make -j1 V=s
+
+    - name: Machine Information
+      shell: bash
+      run: |
+        cd ./wrt/
+        echo "======================="
+        lscpu | grep -E "name|Core|Thread"
+        echo "======================="
+        df -h
+        echo "======================="
+        du -h --max-depth=1
+        echo "======================="
+
+    - name: Package Firmware
+      shell: bash
+      run: |
+        cd ./wrt/ && mkdir ./upload/
+        cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
+        if [[ $WRT_TEST != 'true' ]]; then
+          echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
+          echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
+          find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+          for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
+            EXT=$(basename $FILE | cut -d '.' -f 2-)
+            NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+            NEW_FILE="$NAME"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_WIFI"-"$WRT_DATE"."$EXT"
+            mv -f $FILE ./upload/$NEW_FILE
+          done
+          find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+          make clean -j$(nproc)
+        fi
+
+    - name: Release Firmware
+      uses: softprops/action-gh-release@master
+      with:
+        tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+        files: ./wrt/upload/*.*
+        body: |
+          xg-040G-MD 固件，带加速 （2.5G WAN）
+
+          底层源码：${{env.WRT_REPO}}
+          分支：${{env.WRT_BRANCH}}
+          提交：${{env.WRT_HASH}}
+          配置：${{env.WRT_CONFIG}}
+          平台：${{env.WRT_TARGET}}
+
+          登录地址：${{env.WRT_IP}}
+          登录密码：${{env.WRT_PW}}
+          WIFI名称：${{env.WRT_SSID}}
+          WIFI密码：${{env.WRT_WORD}}
+
+          内核版本：${{env.WRT_KVER}}
+          插件列表：${{env.WRT_LIST}}

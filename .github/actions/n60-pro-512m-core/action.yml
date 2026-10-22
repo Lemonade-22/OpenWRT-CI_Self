@@ -1,0 +1,314 @@
+# SPDX-License-Identifier: MIT
+# N60 Pro 512M Core
+
+# 本文件是复合 action，不会出现在 Actions 工作流列表中。
+name: N60 Pro 512M Core
+description: N60 Pro 512M UBI-506M build core.
+inputs:
+  PACKAGE:
+    description: PACKAGE
+    required: false
+  TEST:
+    description: TEST
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Export build inputs
+      shell: bash
+      env:
+        IN_WRT_CONFIG: "N60-Pro-512M"
+        IN_WRT_THEME: "aurora"
+        IN_WRT_NAME: "N60-Pro"
+        IN_WRT_SSID: "N60-Pro"
+        IN_WRT_WORD: "12345678"
+        IN_WRT_IP: "192.168.10.1"
+        IN_WRT_PW: "无"
+        IN_WRT_REPO: "https://github.com/VIKINGYFY/immortalwrt.git"
+        IN_WRT_BRANCH: "owrt"
+        IN_WRT_SOURCE: "VIKINGYFY/immortalwrt"
+        IN_WRT_PACKAGE: ${{ inputs.PACKAGE }}
+        IN_WRT_TEST: ${{ inputs.TEST }}
+        IN_UBI_LABEL: "UBI-506M"
+      run: |
+        {
+          echo "GITHUB_TOKEN=${{ github.token }}"
+          echo "WRT_CONFIG=$IN_WRT_CONFIG"
+          echo "WRT_THEME=$IN_WRT_THEME"
+          echo "WRT_NAME=$IN_WRT_NAME"
+          echo "WRT_SSID=$IN_WRT_SSID"
+          echo "WRT_WORD=$IN_WRT_WORD"
+          echo "WRT_IP=$IN_WRT_IP"
+          echo "WRT_PW=$IN_WRT_PW"
+          echo "WRT_REPO=$IN_WRT_REPO"
+          echo "WRT_BRANCH=$IN_WRT_BRANCH"
+          echo "WRT_SOURCE=$IN_WRT_SOURCE"
+          echo "WRT_PACKAGE<<__WRT_PACKAGE_EOF__"
+          echo "$IN_WRT_PACKAGE"
+          echo "__WRT_PACKAGE_EOF__"
+          echo "WRT_TEST=$IN_WRT_TEST"
+          echo "UBI_LABEL=$IN_UBI_LABEL"
+        } >> "$GITHUB_ENV"
+
+    - name: Initialization Environment
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo -E apt -yqq purge firefox
+        sudo -E apt -yqq update
+        sudo -E apt -yqq autoremove --purge
+        sudo -E apt -yqq autoclean
+        sudo -E apt -yqq clean
+        sudo -E apt -yqq install dos2unix libfuse-dev clang-18 llvm-18
+        sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo -E systemctl daemon-reload
+        sudo -E timedatectl set-timezone "Asia/Shanghai"
+        sudo mkdir -p /mnt/build_wrt
+        sudo chown $USER:$USER /mnt/build_wrt
+        sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+
+    - name: Initialization Values
+      shell: bash
+      run: |
+        echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
+        echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
+        echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
+        echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/N60-Pro-512M.txt)" >> $GITHUB_ENV
+        echo "WRT_WIFI=wifi-yes" >> $GITHUB_ENV
+
+    - name: Clone Code
+      shell: bash
+      run: |
+        git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
+        cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+        fi
+
+    - name: Apply N60 Pro 506.5MiB UBI Patch
+      shell: bash
+      if: inputs.TEST != 'true'
+      run: |
+        cd ./wrt
+        patch -p1 --forward < "$GITHUB_WORKSPACE/patches/n60pro-512m-ubi-5065m.patch"
+
+    - name: Check Scripts
+      shell: bash
+      run: |
+        find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+
+    - name: Update Feeds
+      shell: bash
+      run: |
+        cd ./wrt/
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Custom Packages
+      shell: bash
+      run: |
+        cd ./wrt/
+        $GITHUB_WORKSPACE/Scripts/Packages.sh
+        $GITHUB_WORKSPACE/Scripts/Handles.sh
+
+    - name: Custom Settings
+      shell: bash
+      run: |
+        cd ./wrt/
+        cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
+        $GITHUB_WORKSPACE/Scripts/Settings.sh
+        # Use Ubuntu's LLVM for BPF instead of building LLVM from source.
+        for tool in clang llc llvm-dis opt llvm-strip; do
+          test -x "/usr/lib/llvm-18/bin/$tool"
+        done
+        BPF_TEST=$(mktemp -d)
+        trap 'rm -rf "$BPF_TEST"' EXIT
+        printf 'int probe(void) { return 0; }\n' > "$BPF_TEST/probe.c"
+        /usr/lib/llvm-18/bin/clang -target bpfel -O2 -emit-llvm -c "$BPF_TEST/probe.c" -o "$BPF_TEST/probe.bc"
+        /usr/lib/llvm-18/bin/opt -O2 "$BPF_TEST/probe.bc" -o "$BPF_TEST/probe.opt"
+        /usr/lib/llvm-18/bin/llvm-dis "$BPF_TEST/probe.opt" -o "$BPF_TEST/probe.ll"
+        /usr/lib/llvm-18/bin/llc -march=bpfel -mcpu=v3 -filetype=obj "$BPF_TEST/probe.ll" -o "$BPF_TEST/probe.o"
+        /usr/lib/llvm-18/bin/llvm-strip --strip-debug "$BPF_TEST/probe.o"
+        sed -i -E '/^(# )?CONFIG_(DEVEL|CCACHE|BUILD_LOG|BPF_TOOLCHAIN_[A-Z_]+|USE_LLVM_[A-Z_]+)(=| )/d' .config
+        printf '%s\n' 'CONFIG_DEVEL=y' 'CONFIG_CCACHE=y' 'CONFIG_BUILD_LOG=y' \
+          '# CONFIG_BPF_TOOLCHAIN_BUILD_LLVM is not set' \
+          '# CONFIG_BPF_TOOLCHAIN_PREBUILT is not set' \
+          '# CONFIG_BPF_TOOLCHAIN_NONE is not set' \
+          'CONFIG_BPF_TOOLCHAIN_HOST=y' \
+          'CONFIG_BPF_TOOLCHAIN_HOST_PATH="/usr/lib/llvm-18"' >> .config
+        # Apply N60 kernel requirements after upstream and private settings.
+        required="$GITHUB_WORKSPACE/Config/N60-Pro-EBPF.txt"
+        while IFS= read -r option; do
+          case "$option" in
+            CONFIG_*=*) symbol="${option%%=*}" ;;
+            "# CONFIG_"*" is not set") symbol="${option#\# }"; symbol="${symbol% is not set}" ;;
+            *) continue ;;
+          esac
+          sed -i -E "/^(# )?${symbol}(=| )/d" .config
+          printf '%s\n' "$option" >> .config
+        done < "$required"
+        make defconfig
+        while IFS= read -r option; do
+          case "$option" in
+            CONFIG_*=y)
+              grep -qxF "$option" .config || { echo "::error::Missing required option: $option"; exit 1; }
+              ;;
+            "# CONFIG_"*" is not set")
+              symbol="${option#\# }"
+              symbol="${symbol% is not set}"
+              if grep -Eq "^$symbol=(y|m)$" .config; then
+                echo "::error::Conflicting option: $symbol"
+                exit 1
+              fi
+              ;;
+          esac
+        done < "$required"
+        grep -qx 'CONFIG_USE_LLVM_HOST=y' .config
+        if grep -qx 'CONFIG_USE_LLVM_BUILD=y' .config; then
+          echo "::error::LLVM source build is still enabled"
+          exit 1
+        fi
+        echo "WRT_CONFIG_HASH=$(sha256sum .config | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+        mkdir -p logs
+        lscpu
+        free -h
+        df -h
+
+    # Staging caches only match the same source and resolved configuration.
+    - name: Restore Toolchain Cache
+      id: toolchain-cache
+      if: inputs.TEST != 'true'
+      uses: actions/cache/restore@v4
+      with:
+        key: n60-v2-ubuntu24-llvm18-${{env.WRT_INFO}}-${{env.WRT_HASH}}-${{env.WRT_CONFIG_HASH}}
+        path: |
+          ./wrt/staging_dir/host
+          ./wrt/staging_dir/toolchain-*
+
+    - name: Refresh Restored Stamps
+      shell: bash
+      if: inputs.TEST != 'true' && steps.toolchain-cache.outputs.cache-hit == 'true'
+      run: |
+        find ./wrt/staging_dir -type d -name stamp -exec sh -c 'find "$1" -type f -exec touch {} +' _ {} \;
+        mkdir -p ./wrt/tmp
+        echo 1 > ./wrt/tmp/.build
+
+    - name: Restore Compiler Cache
+      id: compiler-cache
+      if: inputs.TEST != 'true'
+      uses: actions/cache/restore@v4
+      with:
+        key: n60-ccache-v2-ubuntu24-${{env.WRT_INFO}}-${{github.run_id}}-${{github.run_attempt}}
+        restore-keys: n60-ccache-v2-ubuntu24-${{env.WRT_INFO}}-
+        path: ./wrt/.ccache
+
+    - name: Download Packages
+      shell: bash
+      if: inputs.TEST != 'true'
+      run: |
+        cd ./wrt/
+        set -o pipefail
+        make download -j"$(nproc)" V=s 2>&1 | tee logs/download.log
+
+    - name: Build Tools and Toolchain
+      shell: bash
+      id: build-toolchain
+      if: inputs.TEST != 'true'
+      run: |
+        set -o pipefail
+        cd ./wrt/
+        make tools/install -j"$(nproc)" V=s 2>&1 | tee logs/tools.log
+        make toolchain/install -j"$(nproc)" V=s 2>&1 | tee logs/toolchain.log
+
+    - name: Save Toolchain Cache
+      if: inputs.TEST != 'true' && steps.toolchain-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        key: ${{steps.toolchain-cache.outputs.cache-primary-key}}
+        path: |
+          ./wrt/staging_dir/host
+          ./wrt/staging_dir/toolchain-*
+
+    - name: Compile Firmware
+      shell: bash
+      if: inputs.TEST != 'true'
+      run: |
+        cd ./wrt/
+        set -o pipefail
+        make -j"$(nproc)" V=s 2>&1 | tee logs/firmware.log
+
+    - name: Save Compiler Cache
+      if: always() && inputs.TEST != 'true' && steps.build-toolchain.outcome == 'success'
+      uses: actions/cache/save@v4
+      with:
+        key: ${{steps.compiler-cache.outputs.cache-primary-key}}
+        path: ./wrt/.ccache
+
+    - name: Upload Build Logs
+      if: always() && inputs.TEST != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: N60-Pro-build-logs-${{github.run_id}}-${{github.run_attempt}}
+        path: ./wrt/logs/
+        if-no-files-found: ignore
+        retention-days: 7
+
+
+    - name: Machine Information
+      shell: bash
+      run: |
+        cd ./wrt/
+        lscpu | grep -E "name|Core|Thread" || true
+        df -h
+
+    - name: Package Firmware
+      shell: bash
+      run: |
+        cd ./wrt
+        mkdir -p ./upload
+        cp -f ./.config ./upload/Config-N60-Pro-512M-WIFI-YES-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt
+        if [[ "$WRT_TEST" != "true" ]]; then
+          echo "WRT_KVER=$(find ./bin/targets/ -type f -name '*.manifest' -exec grep -oP '^kernel - \K[\d.]+' {} \; | head -1)" >> $GITHUB_ENV
+          echo "WRT_LIST=$(find ./bin/targets/ -type f -name '*.manifest' -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
+          find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+          for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*"); do
+            EXT=$(basename "$FILE" | cut -d '.' -f 2-)
+            NAME=$(basename "$FILE" | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+            NEW_FILE="${NAME}-${UBI_LABEL}-${WRT_INFO}-${WRT_BRANCH}-${WRT_WIFI}-${WRT_DATE}.${EXT}"
+            mv -f "$FILE" "./upload/$NEW_FILE"
+          done
+          find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+        fi
+
+    - name: Release Firmware
+      if: inputs.TEST != 'true'
+      uses: softprops/action-gh-release@master
+      with:
+        tag_name: N60-Pro-512M-WIFI-YES-${{env.UBI_LABEL}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+        files: ./wrt/upload/*.*
+        body: |
+          N60 Pro 512M / UBI-506M
+          源码：${{env.WRT_REPO}}
+          分支：${{env.WRT_BRANCH}}
+          提交：${{env.WRT_HASH}}
+          配置：N60-Pro-512M-WIFI-YES
+          平台：${{env.WRT_TARGET}}
+          UBI：506.5MiB
+          登录地址：${{env.WRT_IP}}
+          登录密码：${{env.WRT_PW}}
+          WIFI名称：${{env.WRT_SSID}}
+          WIFI密码：${{env.WRT_WORD}}
+          内核版本：${{env.WRT_KVER}}
+          插件列表：${{env.WRT_LIST}}
+
+    - name: Output Configuration Files
+      shell: bash
+      if: inputs.TEST == 'true'
+      run: |
+        cd ./wrt
+        mkdir -p ./upload
+        cp .config ./upload/Config-N60-Pro-512M-WIFI-YES.txt
+

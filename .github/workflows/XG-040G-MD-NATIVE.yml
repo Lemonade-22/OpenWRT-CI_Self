@@ -17,19 +17,24 @@ permissions:
   contents: write
   actions: write
 
+
 jobs:
   build:
-    uses: ./.github/workflows/AIR-NATIVE-CORE.yml
-    with:
-      WRT_CONFIG: AIROHA-MD-NATIVE
-      WRT_THEME: aurora
-      WRT_NAME: OWRT
-      WRT_SSID: OWRT
-      WRT_WORD: '12345678'
-      WRT_IP: 192.168.10.1
-      WRT_PW: none
-      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
-      WRT_BRANCH: owrt
-      WRT_SOURCE: VIKINGYFY/immortalwrt
-      WRT_PACKAGE: ${{inputs.PACKAGE}}
-      WRT_TEST: ${{inputs.TEST}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Projects
+        uses: actions/checkout@main
+      - uses: ./.github/actions/air-native-core
+        with:
+          WRT_CONFIG: AIROHA-MD-NATIVE
+          WRT_THEME: aurora
+          WRT_NAME: OWRT
+          WRT_SSID: OWRT
+          WRT_WORD: '12345678'
+          WRT_IP: 192.168.10.1
+          WRT_PW: none
+          WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+          WRT_BRANCH: owrt
+          WRT_SOURCE: VIKINGYFY/immortalwrt
+          WRT_PACKAGE: ${{ inputs.PACKAGE }}
+          WRT_TEST: ${{ inputs.TEST }}

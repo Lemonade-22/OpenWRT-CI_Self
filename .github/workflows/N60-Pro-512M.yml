@@ -18,12 +18,16 @@ on:
 
 permissions: write-all
 
+
 jobs:
   build:
     name: N60 Pro 512M UBI-506M WIFI-YES
-    uses: ./.github/workflows/N60-Pro-512m-Core.yml
-    with:
-      PACKAGE: ${{ inputs.PACKAGE || '' }}
-      TEST: ${{ inputs.TEST || false }}
-    secrets: inherit
+    runs-on: ubuntu-24.04
     permissions: write-all
+    steps:
+      - name: Checkout Projects
+        uses: actions/checkout@main
+      - uses: ./.github/actions/n60-pro-512m-core
+        with:
+          PACKAGE: ${{ inputs.PACKAGE || '' }}
+          TEST: ${{ inputs.TEST || false }}
