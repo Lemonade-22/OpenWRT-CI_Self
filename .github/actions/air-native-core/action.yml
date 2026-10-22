@@ -194,7 +194,7 @@ runs:
         bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Packages.sh"
         bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Handles.sh"
         find ./feeds/luci/ ./feeds/packages/ -type d -name luci-app-airoha-npu -prune -exec rm -rf {} +
-        git clone --depth=1 --branch main https://github.com/luanmuc/luci-app-airoha-npu.git package/luci-app-airoha-npu
+        git clone --depth=1 --branch main https://github.com/Lemonade-22/luci-app-airoha-npu.git package/luci-app-airoha-npu
         echo "WRT_NPU_HASH=$(git -C package/luci-app-airoha-npu rev-parse HEAD)" >> "$GITHUB_ENV"
         echo "WRT_CI_HASH=$(git -C "$GITHUB_WORKSPACE/upstream-ci" rev-parse HEAD)" >> "$GITHUB_ENV"
 
