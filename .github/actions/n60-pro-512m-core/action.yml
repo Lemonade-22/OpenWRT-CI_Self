@@ -51,9 +51,6 @@ runs:
           echo "UBI_LABEL=$IN_UBI_LABEL"
         } >> "$GITHUB_ENV"
 
-    - name: Checkout Projects
-      uses: actions/checkout@main
-
     - name: Initialization Environment
       shell: bash
       env:

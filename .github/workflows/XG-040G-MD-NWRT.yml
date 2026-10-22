@@ -27,6 +27,8 @@ jobs:
     name: XG-040G-MD / VIKING owrt / bingo NWRT
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Projects
+        uses: actions/checkout@main
       - uses: ./.github/actions/air-core
         with:
           WRT_CONFIG: AIROHA-NWRT

@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions: write-all
     steps:
+      - name: Checkout Projects
+        uses: actions/checkout@main
       - uses: ./.github/actions/n60-pro-512m-core
         with:
           PACKAGE: ${{ inputs.PACKAGE || '' }}

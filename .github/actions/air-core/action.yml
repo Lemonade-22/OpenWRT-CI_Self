@@ -79,9 +79,6 @@ runs:
           echo "WRT_TEST=$IN_WRT_TEST"
         } >> "$GITHUB_ENV"
 
-    - name: Checkout Projects
-      uses: actions/checkout@main
-
     - name: Initialization Environment
       shell: bash
       env:
