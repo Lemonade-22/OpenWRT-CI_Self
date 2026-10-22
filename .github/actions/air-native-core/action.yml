@@ -205,12 +205,24 @@ runs:
 
         cat "$GITHUB_WORKSPACE/upstream-ci/Config/GENERAL.txt" "$GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt" >> .config
         bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Settings.sh"
+        # Force /dev/mem + devmem applet for luci-app-airoha-npu overclock.
+        if [ -f "$GITHUB_WORKSPACE/Config/AIROHA-DEVMEM.txt" ]; then
+          while IFS= read -r option; do
+            case "$option" in
+              CONFIG_*=*) symbol="${option%%=*}" ;;
+              *) continue ;;
+            esac
+            sed -i -E "/^(# )?${symbol}(=| )/d" .config
+            printf '%s\n' "$option" >> .config
+          done < "$GITHUB_WORKSPACE/Config/AIROHA-DEVMEM.txt"
+        fi
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
         make defconfig -j$(nproc)
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
         grep -qx 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y' .config
         grep -qx 'CONFIG_PACKAGE_luci-app-airoha-npu=y' .config
         grep -qx 'CONFIG_BUSYBOX_CONFIG_DEVMEM=y' .config
+        grep -qx 'CONFIG_KERNEL_DEVMEM=y' .config
         make clean -j$(nproc)
 
     - name: Download Packages
@@ -238,7 +250,7 @@ runs:
         mapfile -t kernel_configs < <(find build_dir/target-*/linux-airoha_an7581/linux-* -maxdepth 1 -name .config -type f)
         test "${#kernel_configs[@]}" -eq 1
         kernel_config="${kernel_configs[0]}"
-        for symbol in BPF BPF_SYSCALL BPF_JIT CGROUPS CGROUP_BPF DEBUG_INFO_BTF KPROBES KPROBE_EVENTS BPF_EVENTS BPF_STREAM_PARSER XDP_SOCKETS NET_NS NET_CLS_ACT NET_INGRESS NET_EGRESS; do
+        for symbol in BPF BPF_SYSCALL BPF_JIT CGROUPS CGROUP_BPF DEBUG_INFO_BTF KPROBES KPROBE_EVENTS BPF_EVENTS BPF_STREAM_PARSER XDP_SOCKETS NET_NS NET_CLS_ACT NET_INGRESS NET_EGRESS DEVMEM; do
           grep -qx "CONFIG_${symbol}=y" "$kernel_config" || { echo "::error::Kernel missing $symbol"; exit 1; }
         done
         for symbol in NET_CLS_BPF NET_ACT_BPF NET_SCH_INGRESS VETH; do
