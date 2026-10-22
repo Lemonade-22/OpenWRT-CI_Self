@@ -1,0 +1,7 @@
+# Airoha overclock / devmem support for luci-app-airoha-npu
+# Force these so the kernel is built with /dev/mem and the devmem applet.
+# This enables the set_overclock path (raw PLL register writes via devmem).
+
+CONFIG_KERNEL_DEVMEM=y
+CONFIG_BUSYBOX_CUSTOM=y
+CONFIG_BUSYBOX_CONFIG_DEVMEM=y
