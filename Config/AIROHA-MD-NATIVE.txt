@@ -1,0 +1,11 @@
+# Native VIKINGYFY MD UBI profile; keep upstream DTS, partitions and network.
+CONFIG_TARGET_airoha=y
+CONFIG_TARGET_airoha_an7581=y
+# CONFIG_TARGET_ALL_PROFILES is not set
+CONFIG_TARGET_MULTI_PROFILE=y
+CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y
+CONFIG_PACKAGE_luci-app-airoha-npu=y
+CONFIG_KERNEL_DEVMEM=y
+CONFIG_BUSYBOX_CUSTOM=y
+CONFIG_BUSYBOX_CONFIG_DEVMEM=y
+# eBPF/BTF configuration is applied and verified through Scripts/DAEDE.sh.

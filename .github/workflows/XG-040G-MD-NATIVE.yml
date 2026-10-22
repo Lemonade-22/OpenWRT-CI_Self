@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: MIT
+name: XG-040G-MD-NATIVE
+
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: 'Optional package config overrides, one per line.'
+        required: false
+        type: string
+      TEST:
+        description: 'Generate and verify config only; do not compile firmware.'
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/AIR-NATIVE-CORE.yml
+    with:
+      WRT_CONFIG: AIROHA-MD-NATIVE
+      WRT_THEME: aurora
+      WRT_NAME: OWRT
+      WRT_SSID: OWRT
+      WRT_WORD: '12345678'
+      WRT_IP: 192.168.10.1
+      WRT_PW: none
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: owrt
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      WRT_PACKAGE: ${{inputs.PACKAGE}}
+      WRT_TEST: ${{inputs.TEST}}
