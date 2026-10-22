@@ -21,20 +21,23 @@ on:
 
 permissions: write-all
 
+
 jobs:
   config:
     name: XG-040G-MD / VIKING owrt / bingo NWRT
-    uses: ./.github/workflows/AIR-CORE.yml
-    with:
-      WRT_CONFIG: AIROHA-NWRT
-      WRT_THEME: aurora
-      WRT_NAME: XG-040G-Series
-      WRT_SSID: XG-040G
-      WRT_WORD: 12345678
-      WRT_IP: 192.168.1.1
-      WRT_PW: 无
-      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
-      WRT_BRANCH: owrt
-      WRT_SOURCE: VIKINGYFY/immortalwrt
-      WRT_PACKAGE: ${{inputs.PACKAGE}}
-      WRT_TEST: ${{inputs.TEST}}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/air-core
+        with:
+          WRT_CONFIG: AIROHA-NWRT
+          WRT_THEME: aurora
+          WRT_NAME: XG-040G-Series
+          WRT_SSID: XG-040G
+          WRT_WORD: 12345678
+          WRT_IP: 192.168.1.1
+          WRT_PW: 无
+          WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+          WRT_BRANCH: owrt
+          WRT_SOURCE: VIKINGYFY/immortalwrt
+          WRT_PACKAGE: ${{ inputs.PACKAGE }}
+          WRT_TEST: ${{ inputs.TEST }}

@@ -1,0 +1,352 @@
+# SPDX-License-Identifier: MIT
+# AIR Native Core
+
+# 本文件是复合 action，不会出现在 Actions 工作流列表中。
+name: AIR Native Core
+description: Airoha native-layout build core for XG-040G-MD-NATIVE.
+inputs:
+  WRT_CONFIG:
+    description: WRT_CONFIG
+    required: true
+  WRT_THEME:
+    description: WRT_THEME
+    required: true
+  WRT_NAME:
+    description: WRT_NAME
+    required: true
+  WRT_SSID:
+    description: WRT_SSID
+    required: true
+  WRT_WORD:
+    description: WRT_WORD
+    required: true
+  WRT_IP:
+    description: WRT_IP
+    required: true
+  WRT_PW:
+    description: WRT_PW
+    required: true
+  WRT_REPO:
+    description: WRT_REPO
+    required: true
+  WRT_BRANCH:
+    description: WRT_BRANCH
+    required: true
+  WRT_SOURCE:
+    description: WRT_SOURCE
+    required: true
+  WRT_PACKAGE:
+    description: WRT_PACKAGE
+    required: false
+  WRT_TEST:
+    description: WRT_TEST
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Export build inputs
+      shell: bash
+      env:
+        IN_WRT_CONFIG: ${{ inputs.WRT_CONFIG }}
+        IN_WRT_THEME: ${{ inputs.WRT_THEME }}
+        IN_WRT_NAME: ${{ inputs.WRT_NAME }}
+        IN_WRT_SSID: ${{ inputs.WRT_SSID }}
+        IN_WRT_WORD: ${{ inputs.WRT_WORD }}
+        IN_WRT_IP: ${{ inputs.WRT_IP }}
+        IN_WRT_PW: ${{ inputs.WRT_PW }}
+        IN_WRT_REPO: ${{ inputs.WRT_REPO }}
+        IN_WRT_BRANCH: ${{ inputs.WRT_BRANCH }}
+        IN_WRT_SOURCE: ${{ inputs.WRT_SOURCE }}
+        IN_WRT_PACKAGE: ${{ inputs.WRT_PACKAGE }}
+        IN_WRT_TEST: ${{ inputs.WRT_TEST }}
+      run: |
+        {
+          echo "GITHUB_TOKEN=${{ github.token }}"
+          echo "WRT_CONFIG=$IN_WRT_CONFIG"
+          echo "WRT_THEME=$IN_WRT_THEME"
+          echo "WRT_NAME=$IN_WRT_NAME"
+          echo "WRT_SSID=$IN_WRT_SSID"
+          echo "WRT_WORD=$IN_WRT_WORD"
+          echo "WRT_IP=$IN_WRT_IP"
+          echo "WRT_PW=$IN_WRT_PW"
+          echo "WRT_REPO=$IN_WRT_REPO"
+          echo "WRT_BRANCH=$IN_WRT_BRANCH"
+          echo "WRT_SOURCE=$IN_WRT_SOURCE"
+          echo "WRT_PACKAGE<<__WRT_PACKAGE_EOF__"
+          echo "$IN_WRT_PACKAGE"
+          echo "__WRT_PACKAGE_EOF__"
+          echo "WRT_TEST=$IN_WRT_TEST"
+        } >> "$GITHUB_ENV"
+
+    - name: Checkout Projects
+      uses: actions/checkout@main
+
+    - name: Checkout upstream CI defaults
+      uses: actions/checkout@main
+      with:
+        repository: VIKINGYFY/OpenWRT-CI
+        ref: main
+        path: upstream-ci
+
+    - name: Initialization Environment
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo -E apt -yqq purge firefox
+        sudo -E apt -yqq update
+        sudo -E apt -yqq full-upgrade
+        sudo -E apt -yqq autoremove --purge
+        sudo -E apt -yqq autoclean
+        sudo -E apt -yqq clean
+        sudo -E apt -yqq install dos2unix libfuse-dev
+        sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo -E systemctl daemon-reload
+        sudo -E timedatectl set-timezone "Asia/Shanghai"
+
+        sudo mkdir -p /mnt/build_wrt
+        sudo chown $USER:$USER /mnt/build_wrt
+        sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+
+    - name: Initialization Values
+      shell: bash
+      id: initialize-values
+      run: |
+        WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[^=_]+(?=\=y)' "./Config/$WRT_CONFIG.txt")
+        WRT_SUBTARGET=$(grep -m 1 -oP "^CONFIG_TARGET_${WRT_TARGET}_\K[^=_]+(?=\=y)" "./Config/$WRT_CONFIG.txt")
+        WRT_CACHE_SOURCE=${WRT_SOURCE//\//-}
+        WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
+        WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
+        WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
+        WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
+
+        {
+          echo "WRT_INFO=${WRT_SOURCE%%/*}"
+          echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}"
+          echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
+          echo "WRT_CACHE_PREFIX=$WRT_CACHE_PREFIX"
+          echo "WRT_CACHE_TARGET=$WRT_CACHE_TARGET"
+          echo "WRT_SUBTARGET=$WRT_SUBTARGET"
+          echo "WRT_TARGET=$WRT_TARGET"
+          echo "WRT_WIFI=$WRT_WIFI"
+          echo "WRT_KVER=none"
+          echo "WRT_LIST=none"
+        } >> "$GITHUB_ENV"
+        echo "cache_prefix=$WRT_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
+
+    - name: Clone Code
+      shell: bash
+      id: clone-code
+      run: |
+        git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
+
+        cd ./wrt/
+        WRT_HASH=$(git rev-parse HEAD)
+        echo "WRT_HASH=$WRT_HASH" >> $GITHUB_ENV
+        echo "WRT_CACHE_KEY=$WRT_CACHE_PREFIX-$WRT_HASH" >> $GITHUB_ENV
+        echo "cache_key=$WRT_CACHE_PREFIX-$WRT_HASH" >> "$GITHUB_OUTPUT"
+
+        # GitHub Action 移除国内下载源
+        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+        fi
+
+    - name: Check Scripts
+      shell: bash
+      run: |
+        find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+
+    - name: Restore Build Cache
+      id: cache-restore
+      if: ${{ inputs.WRT_TEST != 'true' }}
+      uses: actions/cache/restore@main
+      with:
+        key: ${{env.WRT_CACHE_KEY}}
+        restore-keys: ${{env.WRT_CACHE_PREFIX}}-
+        path: |
+          ./wrt/.ccache
+          ./wrt/staging_dir/host*
+          ./wrt/staging_dir/tool*
+
+    - name: Prepare Restored Build Cache
+      shell: bash
+      if: ${{ inputs.WRT_TEST != 'true' && steps.cache-restore.outputs.cache-matched-key != '' }}
+      run: |
+        find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
+          find "$DIR" -type f -exec touch {} +
+        done
+        mkdir -p ./wrt/tmp
+        echo "1" > ./wrt/tmp/.build
+        echo "restored build cache: ${{steps.cache-restore.outputs.cache-matched-key}}"
+
+    - name: Update Feeds
+      shell: bash
+      run: |
+        cd ./wrt/
+
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Custom Packages
+      shell: bash
+      run: |
+        cd ./wrt/
+
+        bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Packages.sh"
+        bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Handles.sh"
+        find ./feeds/luci/ ./feeds/packages/ -type d -name luci-app-airoha-npu -prune -exec rm -rf {} +
+        git clone --depth=1 --branch main https://github.com/luanmuc/luci-app-airoha-npu.git package/luci-app-airoha-npu
+        echo "WRT_NPU_HASH=$(git -C package/luci-app-airoha-npu rev-parse HEAD)" >> "$GITHUB_ENV"
+        echo "WRT_CI_HASH=$(git -C "$GITHUB_WORKSPACE/upstream-ci" rev-parse HEAD)" >> "$GITHUB_ENV"
+
+    - name: Custom Settings
+      shell: bash
+      run: |
+        cd ./wrt/
+
+        cat "$GITHUB_WORKSPACE/upstream-ci/Config/GENERAL.txt" "$GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt" >> .config
+        bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Settings.sh"
+        bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+        make defconfig -j$(nproc)
+        bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+        grep -qx 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y' .config
+        grep -qx 'CONFIG_PACKAGE_luci-app-airoha-npu=y' .config
+        grep -qx 'CONFIG_BUSYBOX_CONFIG_DEVMEM=y' .config
+        make clean -j$(nproc)
+
+    - name: Download Packages
+      shell: bash
+      if: ${{ inputs.WRT_TEST != 'true' }}
+      run: |
+        cd ./wrt/
+
+        make download -j$(nproc)
+
+    - name: Compile Firmware
+      shell: bash
+      if: ${{ inputs.WRT_TEST != 'true' }}
+      run: |
+        cd ./wrt/
+
+        make -j$(nproc) || make -j1 V=s
+
+    - name: Verify native image and eBPF kernel
+      shell: bash
+      if: ${{ inputs.WRT_TEST != 'true' }}
+      run: |
+        set -euo pipefail
+        cd ./wrt/
+        mapfile -t kernel_configs < <(find build_dir/target-*/linux-airoha_an7581/linux-* -maxdepth 1 -name .config -type f)
+        test "${#kernel_configs[@]}" -eq 1
+        kernel_config="${kernel_configs[0]}"
+        for symbol in BPF BPF_SYSCALL BPF_JIT CGROUPS CGROUP_BPF DEBUG_INFO_BTF KPROBES KPROBE_EVENTS BPF_EVENTS BPF_STREAM_PARSER XDP_SOCKETS NET_NS NET_CLS_ACT NET_INGRESS NET_EGRESS; do
+          grep -qx "CONFIG_${symbol}=y" "$kernel_config" || { echo "::error::Kernel missing $symbol"; exit 1; }
+        done
+        for symbol in NET_CLS_BPF NET_ACT_BPF NET_SCH_INGRESS VETH; do
+          grep -Eq "^CONFIG_${symbol}=(y|m)$" "$kernel_config" || { echo "::error::Kernel missing $symbol"; exit 1; }
+        done
+        test -n "$(find bin/targets/airoha/an7581 -name '*nokia_xg-040g-md-ubi-squashfs-sysupgrade.itb' -print -quit)"
+        grep -h '^luci-app-airoha-npu ' bin/targets/airoha/an7581/*.manifest
+        cp "$kernel_config" bin/targets/airoha/an7581/kernel-config.txt
+
+    - name: Save Build Cache
+      if: ${{ inputs.WRT_TEST != 'true' && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@main
+      with:
+        key: ${{env.WRT_CACHE_KEY}}
+        path: |
+          ./wrt/.ccache
+          ./wrt/staging_dir/host*
+          ./wrt/staging_dir/tool*
+
+    - name: Machine Information
+      shell: bash
+      run: |
+        cd ./wrt/
+
+        echo "======================="
+        lscpu | grep -E "name|Core|Thread"
+        echo "======================="
+        df -h
+        echo "======================="
+        du -h --max-depth=1
+        echo "======================="
+
+    - name: Package Firmware
+      shell: bash
+      run: |
+        cd ./wrt/ && mkdir ./upload/
+
+        cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
+
+        if [[ "$WRT_TEST" != 'true' ]]; then
+          echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
+          echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
+
+          find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+
+          for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
+            EXT=$(basename $FILE | cut -d '.' -f 2-)
+            NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+            NEW_FILE="$NAME"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_WIFI"-"$WRT_DATE"."$EXT"
+            mv -f $FILE ./upload/$NEW_FILE
+          done
+
+          find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+
+          make clean -j$(nproc)
+        fi
+
+    - name: Release Firmware
+      uses: softprops/action-gh-release@master
+      with:
+        tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+        files: ./wrt/upload/*.*
+        body: |
+          Nokia XG-040G-MD: native VIKINGYFY UBI layout.
+          Upstream network defaults: pon0 WAN, lan1-lan4 LAN.
+          This image does not use the bingo/NWRT partition layout.
+
+          Source: ${{env.WRT_REPO}} / ${{env.WRT_BRANCH}}
+          Source commit: ${{env.WRT_HASH}}
+          Upstream CI defaults: ${{env.WRT_CI_HASH}}
+          NPU LuCI commit: ${{env.WRT_NPU_HASH}}
+          Profile: ${{env.WRT_CONFIG}}
+          Kernel: ${{env.WRT_KVER}}
+          Address: ${{env.WRT_IP}}
+          Packages: ${{env.WRT_LIST}}
+
+
+    - name: Roll Build Cache
+      if: inputs.WRT_TEST != 'true'
+      shell: bash
+      env:
+        GH_REPO: ${{ github.repository }}
+        WRT_CACHE_PREFIX: ${{ steps.initialize-values.outputs.cache_prefix }}
+        WRT_CACHE_KEY: ${{ steps.clone-code.outputs.cache_key }}
+      run: |
+        set -euo pipefail
+
+        CURRENT_CACHE_KEYS=$(gh cache list --repo "$GH_REPO" --key "$WRT_CACHE_KEY" --ref "$GITHUB_REF" --limit 100 --json key --jq '.[].key')
+        CURRENT_CACHE_FOUND=0
+        while IFS= read -r CACHE_KEY; do
+          if [ "$CACHE_KEY" = "$WRT_CACHE_KEY" ]; then
+            CURRENT_CACHE_FOUND=1
+            break
+          fi
+        done <<< "$CURRENT_CACHE_KEYS"
+
+        if [ "$CURRENT_CACHE_FOUND" -ne 1 ]; then
+          echo "skip cache rollover: current cache is not available yet"
+          exit 0
+        fi
+
+        gh cache list --repo "$GH_REPO" --key "$WRT_CACHE_PREFIX-" --ref "$GITHUB_REF" --limit 100 --json id,key --jq '.[] | [.id, .key] | @tsv' |
+          while IFS=$'\t' read -r CACHE_ID CACHE_KEY; do
+            [ -n "$CACHE_ID" ] || continue
+            [ "$CACHE_KEY" = "$WRT_CACHE_KEY" ] && continue
+            gh cache delete "$CACHE_ID" --repo "$GH_REPO" ||
+              echo "warning: failed to delete cache $CACHE_ID ($CACHE_KEY)"
+          done
