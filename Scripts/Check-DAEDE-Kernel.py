@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the actual ophub kernel archive before packing a dae/daed image."""
+"""Check the actual ophub kernel archive before packing a dae/daed and fake-flow image."""
 import io
 import re
 import sys
@@ -11,6 +11,8 @@ BUILTIN = ("BPF", "BPF_SYSCALL", "BPF_JIT", "CGROUPS", "CGROUP_BPF",
            "NET_INGRESS", "NET_EGRESS", "NET_NS")
 MODULAR = {"NET_SCH_INGRESS": "sch_ingress", "NET_CLS_BPF": "cls_bpf",
            "NET_ACT_BPF": "act_bpf", "VETH": "veth"}
+if "--fakeflow" in sys.argv:
+    MODULAR.update({"DUMMY": "dummy", "TUN": "tun"})
 configs = []
 modules = set()
 panther_dtb = False
@@ -52,5 +54,5 @@ for key, module in MODULAR.items():
     elif values[key] == "m" and module not in modules:
         errors.append("module file " + module + ".ko")
 if errors:
-    sys.exit("::error::ophub kernel lacks dae/daed requirements: " + ", ".join(errors))
+    sys.exit("::error::ophub kernel lacks required features/modules: " + ", ".join(errors))
 print("Verified ophub kernel BTF, eBPF features and required module files:", name)

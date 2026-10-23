@@ -1,0 +1,12 @@
+# Runtime dependencies for fake-flow; the application is installed separately.
+# BPF/BPF_SYSCALL/BPF_JIT come from the firmware's generic kernel config.
+# sched-core supplies clsact; sched-bpf supplies the TC BPF classifier/action.
+CONFIG_PACKAGE_libbpf=y
+CONFIG_PACKAGE_libelf=y
+CONFIG_PACKAGE_zlib=y
+CONFIG_PACKAGE_ip-full=y
+CONFIG_PACKAGE_tc-full=y
+CONFIG_PACKAGE_kmod-sched-core=y
+CONFIG_PACKAGE_kmod-sched-bpf=y
+CONFIG_PACKAGE_kmod-dummy=y
+CONFIG_PACKAGE_kmod-tun=y

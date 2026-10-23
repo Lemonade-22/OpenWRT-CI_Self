@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply dae requirements to the pinned fork's existing RK3566-capable config."""
+"""Apply dae and fake-flow requirements to the pinned fork's existing RK3566-capable config."""
 import json
 from pathlib import Path
 import re
@@ -24,6 +24,7 @@ required = {
     "NET": "y", "NET_SCHED": "y", "NET_CLS": "y", "NET_CLS_ACT": "y",
     "NET_INGRESS": "y", "NET_EGRESS": "y", "NAMESPACES": "y", "NET_NS": "y",
     "NET_SCH_INGRESS": "m", "NET_CLS_BPF": "m", "NET_ACT_BPF": "m",
+    "DUMMY": "m", "TUN": "m",
     "VETH": "m", "NETKIT": "y", "XDP_SOCKETS_DIAG": "m",
 }
 for key, value in required.items():

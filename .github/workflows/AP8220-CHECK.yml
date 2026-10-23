@@ -6,11 +6,15 @@ on:
     paths:
       - 'patches/ap8220-1g-nand.patch'
       - 'Scripts/*AP8220*'
+      - 'Scripts/Fakeflow.sh'
+      - 'Config/FAKEFLOW.txt'
       - '.github/workflows/AP8220-CHECK.yml'
   pull_request:
     paths:
       - 'patches/ap8220-1g-nand.patch'
       - 'Scripts/*AP8220*'
+      - 'Scripts/Fakeflow.sh'
+      - 'Config/FAKEFLOW.txt'
       - 'Config/IPQ807X-AP8220-1G-WIFI-NO.txt'
       - '.github/workflows/AP8220-CHECK.yml'
       - '.github/workflows/AP8220-1G.yml'
@@ -42,6 +46,7 @@ jobs:
       - name: Check adaptation patch and shell syntax
         run: |
           set -euo pipefail
+          bash -n Scripts/Fakeflow.sh
           sh -n Scripts/Install-AP8220-1G-From-Transition.sh
           python3 -m py_compile Scripts/Check-AP8220-1G.py
           cd firmware-source

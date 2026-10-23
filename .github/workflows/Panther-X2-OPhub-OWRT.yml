@@ -7,6 +7,9 @@ on:
       - '.github/workflows/Panther-X2-OPhub-OWRT.yml'
       - 'Custom/Panther-X2-OPhub/**'
       - 'Config/Panther-X2-OPhub.txt'
+      - 'Config/FAKEFLOW.txt'
+      - 'Scripts/Fakeflow.sh'
+      - 'Scripts/Check-DAEDE-Kernel.py'
 
 permissions:
   contents: read
@@ -50,6 +53,7 @@ jobs:
           test "$(jq -r .packer_commit Custom/Panther-X2-OPhub/sources.json)" = "$OPHUB_COMMIT"
           python3 Custom/Panther-X2-OPhub/pin_ophub.py ophub/remake
           bash -n ophub/remake
+          bash -n Scripts/Fakeflow.sh
           for script in upstream-ci/Scripts/*.sh; do bash -n "$script"; done
 
   kernel:
@@ -73,7 +77,7 @@ jobs:
           repository: ${{ steps.settings.outputs.config_repository }}
           ref: ${{ steps.settings.outputs.config_commit }}
           path: kernel-fork
-      - name: Prepare BTF configuration and build directory
+      - name: Prepare BTF and fake-flow kernel configuration
         run: |
           set -euo pipefail
           python3 Custom/Panther-X2-OPhub/prepare_kernel.py
@@ -105,7 +109,7 @@ jobs:
           version=$(jq -r .kernel.version Custom/Panther-X2-OPhub/sources.json)
           archive="$PACKAGED_OUTPUTPATH/$version.tar.gz"
           test -s "$archive"
-          python3 Scripts/Check-DAEDE-Kernel.py "$archive" --panther-x2
+          python3 Scripts/Check-DAEDE-Kernel.py "$archive" --panther-x2 --fakeflow
           mkdir -p kernel-output
           cp "$archive" kernel-output/kernel.tar.gz
           cp kernel-fork/kernel-config/release/stable/config-6.18 kernel-output/requested-kernel.config
@@ -173,8 +177,10 @@ jobs:
           grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/Panther-X2-OPhub.txt" >> .config
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
           make defconfig
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
           while IFS= read -r option; do
             grep -Fxq "$option" .config || { echo "::error::Upstream LuCI package was dropped: $option"; exit 1; }
           done < "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
@@ -227,7 +233,7 @@ jobs:
           cp compiled-kernel/kernel.sha256 output/kernel.sha256
           cp compiled-kernel/requested-kernel.config output/requested-kernel.config
           mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
-          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --panther-x2
+          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --panther-x2 --fakeflow
           tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
           kernel=$(python3 Custom/Panther-X2-OPhub/stage_kernel.py ophub/make-openwrt/kernel/stable)
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"

@@ -150,7 +150,9 @@ runs:
           sed -i -E "/^(# )?${symbol}(=| )/d" .config
           printf '%s\n' "$option" >> .config
         done < "$required"
+        bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
         make defconfig
+        bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         while IFS= read -r option; do
           case "$option" in
             CONFIG_*=y)

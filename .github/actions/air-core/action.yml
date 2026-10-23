@@ -188,8 +188,10 @@ runs:
         fi
         $GITHUB_WORKSPACE/Scripts/Settings.sh
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+        bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
         make defconfig -j$(nproc)
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+        bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         make clean -j$(nproc)
 
     - name: Download Packages

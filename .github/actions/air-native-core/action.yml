@@ -217,8 +217,10 @@ runs:
           done < "$GITHUB_WORKSPACE/Config/AIROHA-DEVMEM.txt"
         fi
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+        bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
         make defconfig -j$(nproc)
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+        bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         grep -qx 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y' .config
         grep -qx 'CONFIG_PACKAGE_luci-app-airoha-npu=y' .config
         grep -qx 'CONFIG_BUSYBOX_CONFIG_DEVMEM=y' .config

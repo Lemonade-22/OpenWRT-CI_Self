@@ -208,8 +208,10 @@ jobs:
             printf '%s\n' 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' 'CONFIG_TARGET_ROOTFS_SQUASHFS=y' >> .config
           fi
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
           make defconfig -j$(nproc)
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
           if [[ "$WRT_CONFIG" == "IPQ807X-AP8220-1G-WIFI-NO" ]]; then
             grep -Eq '^CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y$' .config
             grep -Eq '^CONFIG_TARGET_ROOTFS_INITRAMFS=y$' .config
