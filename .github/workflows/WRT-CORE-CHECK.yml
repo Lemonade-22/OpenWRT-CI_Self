@@ -1,0 +1,30 @@
+name: Custom WRT core checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/*.yml'
+      - 'patches/wrt-core-self.patch'
+      - 'Scripts/Generate-Wrt-Core.py'
+      - 'tests/test_wrt_core_generation.py'
+  pull_request:
+    paths:
+      - '.github/workflows/*.yml'
+      - 'patches/wrt-core-self.patch'
+      - 'Scripts/Generate-Wrt-Core.py'
+      - 'tests/test_wrt_core_generation.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check generated workflow
+        run: python3 Scripts/Generate-Wrt-Core.py --check
+      - name: Test upstream patch regeneration
+        run: python3 -m unittest discover -s tests -p test_wrt_core_generation.py -v

@@ -202,7 +202,7 @@ The repository-owned patch is:
 patches/ap8220-1g-nand.patch
 ```
 
-`WRT-CORE.yml` applies it after cloning upstream, only for the isolated `IPQ807X-AP8220-1G-WIFI-NO` config. The normal multi-device QCA builds retain the original upstream AP8220 image.
+`WRT-CORE-SELF.yml` applies it after cloning upstream, only for the isolated `IPQ807X-AP8220-1G-WIFI-NO` config. The normal multi-device QCA builds retain the original upstream AP8220 image.
 
 This variant suppresses the upstream combined `factory.ubi`, which does not describe the two separate UBI partitions used here. Release filenames include `-1g-` so they cannot be mistaken for the stock AP8220 build.
 

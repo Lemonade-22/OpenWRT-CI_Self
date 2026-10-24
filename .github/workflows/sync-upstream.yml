@@ -52,8 +52,16 @@ jobs:
             fi
           fi
 
+          # Rebuild the committed custom workflow from the updated upstream core.
+          # A patch conflict stops synchronization before any commits are pushed.
+          python3 Scripts/Generate-Wrt-Core.py
+          git add .github/workflows/WRT-CORE-SELF.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: regenerate custom WRT core after upstream sync"
+          fi
+
           if ! git push origin HEAD:main; then
-            echo "::error::Push failed. Check concurrent changes, branch protection and workflow-file write permission. If required, configure UPSTREAM_SYNC_TOKEN as documented in Custom/Panther-X2/README.md."
+            echo "::error::Push failed. Check concurrent changes, branch protection and workflow-file write permission. If required, configure UPSTREAM_SYNC_TOKEN as documented in Custom/Panther-X2-OPhub/README.md."
             exit 1
           fi
 

@@ -19,7 +19,7 @@ permissions: write-all
 
 jobs:
   build:
-    uses: ./.github/workflows/WRT-CORE.yml
+    uses: ./.github/workflows/WRT-CORE-SELF.yml
     with:
       WRT_CONFIG: mt7621
       WRT_THEME: footstrap

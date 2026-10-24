@@ -9,6 +9,8 @@ on:
       - 'Scripts/Fakeflow.sh'
       - 'Config/FAKEFLOW.txt'
       - '.github/workflows/AP8220-CHECK.yml'
+      - '.github/workflows/WRT-CORE-SELF.yml'
+      - 'patches/wrt-core-self.patch'
   pull_request:
     paths:
       - 'patches/ap8220-1g-nand.patch'
@@ -18,7 +20,8 @@ on:
       - 'Config/IPQ807X-AP8220-1G-WIFI-NO.txt'
       - '.github/workflows/AP8220-CHECK.yml'
       - '.github/workflows/AP8220-1G.yml'
-      - '.github/workflows/WRT-CORE.yml'
+      - '.github/workflows/WRT-CORE-SELF.yml'
+      - 'patches/wrt-core-self.patch'
   workflow_dispatch:
 
 permissions:
