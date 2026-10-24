@@ -39,7 +39,7 @@ jobs:
       matrix:
         CONFIG: [IPQ807X-AP8220-1G-WIFI-NO]
         SOURCE: [VIKINGYFY/immortalwrt]
-    uses: ./.github/workflows/WRT-CORE-SELF.yml
+    uses: ./.github/workflows/AP8220-CORE.yml
     with:
       #编译配置
       WRT_CONFIG: ${{matrix.CONFIG}}
