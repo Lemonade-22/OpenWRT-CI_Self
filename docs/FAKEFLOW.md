@@ -5,7 +5,7 @@
 
 | Actions 工作流 | 配置 / 接入位置 |
 | --- | --- |
-| AP8220-1G（PPE / NSS） | IPQ807X-AP8220-1G-WIFI-NO / AP8220-CORE |
+| AP8220-1G（PPE / NSS） | IPQ807X-AP8220-1G-WIFI-NO / WRT-CORE-SELF + 设备钩子 |
 | ZN-M2-WIFI-NO（PPE / NSS） | ZN-M2-WIFI-NO / WRT-CORE-SELF |
 | N60 Pro 512M UBI-506M | N60-Pro-512M / n60-pro-512m-core |
 | XG-040G-MD-NATIVE | AIROHA-MD-NATIVE / air-native-core |

@@ -6,16 +6,20 @@ on:
     paths:
       - '.github/workflows/*.yml'
       - 'patches/wrt-core-self.patch'
-      - 'patches/wrt-core-ap8220.patch'
+      - 'Scripts/Device.sh'
+      - 'Scripts/Device-Hooks/**'
       - 'Scripts/Generate-Wrt-Core.py'
       - 'tests/test_wrt_core_generation.py'
+      - 'tests/test_device_hooks.py'
   pull_request:
     paths:
       - '.github/workflows/*.yml'
       - 'patches/wrt-core-self.patch'
-      - 'patches/wrt-core-ap8220.patch'
+      - 'Scripts/Device.sh'
+      - 'Scripts/Device-Hooks/**'
       - 'Scripts/Generate-Wrt-Core.py'
       - 'tests/test_wrt_core_generation.py'
+      - 'tests/test_device_hooks.py'
   workflow_dispatch:
 
 permissions:
@@ -30,3 +34,5 @@ jobs:
         run: python3 Scripts/Generate-Wrt-Core.py --check
       - name: Test upstream patch regeneration
         run: python3 -m unittest discover -s tests -p test_wrt_core_generation.py -v
+      - name: Test device hooks
+        run: python3 -m unittest discover -s tests -p test_device_hooks.py -v

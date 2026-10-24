@@ -45,17 +45,32 @@
            sudo apt-get -yqq purge firefox
            sudo apt-get -yqq update
            sudo apt-get -yqq full-upgrade
-@@ -190,8 +203,26 @@
+@@ -139,9 +152,12 @@
+             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+           fi
+ 
++          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" prepare
++
+       - name: Check Scripts
+         run: |
+           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
++          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" lint
+ 
+       - name: Restore Build Cache
+         id: cache-restore
+@@ -190,8 +206,28 @@
            fi
  
            $GITHUB_WORKSPACE/Scripts/Settings.sh
 -
 -          make defconfig -j$(nproc) && make clean -j$(nproc)
++          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
 +          make defconfig -j$(nproc)
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
++          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify
 +          if [[ "$WRT_BRANCH" == "main" && "$WRT_CONFIG" == "ZN-M2-WIFI-NO" ]]; then
 +            for pattern in \
 +              '^CONFIG_PACKAGE_nss-firmware=y$' \
@@ -74,7 +89,15 @@
  
        - name: Download Packages
          if: ${{ !inputs.WRT_TEST }}
-@@ -236,9 +267,8 @@
+@@ -206,6 +242,7 @@
+           cd ./wrt/
+ 
+           make -j$(nproc) || make -j1 V=s
++          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify-image
+ 
+       - name: Save Build Cache
+         if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
+@@ -236,9 +273,8 @@
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -86,3 +109,71 @@
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
+@@ -253,33 +289,45 @@
+             make clean -j$(nproc)
+           fi
+ 
++          cat > ./release-body.md <<EOF
++          这是个平台固件包，内含多个设备！
++          请注意选择你需要的设备固件！
++          不要问，刷就完事了！
++
++          全系带开源硬件加速，别问了！
++
++          源码：${WRT_REPO}
++          分支：${WRT_BRANCH}
++          提交：${WRT_HASH}
++
++          配置：${WRT_CONFIG}
++          平台：${WRT_TARGET}
++
++          登录地址：${WRT_IP}
++          登录密码：${WRT_PW}
++
++          WIFI名称：${WRT_SSID}
++          WIFI密码：${WRT_WORD}
++
++          内核版本：${WRT_KVER}
++          插件列表：${WRT_LIST}
++          EOF
++
++          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" package
++
++      - name: Upload Build Artifacts
++        if: ${{ env.WRT_ARTIFACT_NAME != '' }}
++        uses: actions/upload-artifact@v4
++        with:
++          name: ${{ env.WRT_ARTIFACT_NAME }}
++          path: ./wrt/upload/
++
+       - name: Release Firmware
+         uses: softprops/action-gh-release@master
+         with:
+           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+           files: ./wrt/upload/*.*
+-          body: |
+-            这是个平台固件包，内含多个设备！
+-            请注意选择你需要的设备固件！
+-            不要问，刷就完事了！
+-
+-            全系带开源硬件加速，别问了！
+-
+-            源码：${{env.WRT_REPO}}
+-            分支：${{env.WRT_BRANCH}}
+-            提交：${{env.WRT_HASH}}
+-
+-            配置：${{env.WRT_CONFIG}}
+-            平台：${{env.WRT_TARGET}}
+-
+-            登录地址：${{env.WRT_IP}}
+-            登录密码：${{env.WRT_PW}}
+-
+-            WIFI名称：${{env.WRT_SSID}}
+-            WIFI密码：${{env.WRT_WORD}}
+-
+-            内核版本：${{env.WRT_KVER}}
+-            插件列表：${{env.WRT_LIST}}
++          body_path: ./wrt/release-body.md
+ 
+   cache-rollover:
+     name: Roll cache generations

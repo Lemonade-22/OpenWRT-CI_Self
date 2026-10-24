@@ -52,12 +52,12 @@ jobs:
             fi
           fi
 
-          # Rebuild the common and AP8220 workflows from the updated upstream core.
+          # Rebuild the committed custom workflow from the updated upstream core.
           # A patch conflict stops synchronization before any commits are pushed.
           python3 Scripts/Generate-Wrt-Core.py
-          git add .github/workflows/WRT-CORE-SELF.yml .github/workflows/AP8220-CORE.yml
+          git add .github/workflows/WRT-CORE-SELF.yml
           if ! git diff --cached --quiet; then
-            git commit -m "chore: regenerate custom WRT cores after upstream sync"
+            git commit -m "chore: regenerate custom WRT core after upstream sync"
           fi
 
           if ! git push origin HEAD:main; then
