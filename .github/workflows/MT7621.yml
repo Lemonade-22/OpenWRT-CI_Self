@@ -1,10 +1,21 @@
 # SPDX-License-Identifier: MIT
 # Based on MTK-ALL.yml.
 name: MT7621
+run-name: MT7621 · ${{ inputs.DEVICE || 'ALL' }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
 on:
   workflow_dispatch:
     inputs:
+      DEVICE:
+        description: '编译设备（ALL 编译以下三台设备）'
+        type: choice
+        required: true
+        default: ALL
+        options:
+          - ALL
+          - xiaomi-R3G
+          - XY-C5
+          - JDCloud-RE-SP-01B
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false
@@ -21,7 +32,8 @@ jobs:
   build:
     uses: ./.github/workflows/WRT-CORE-SELF.yml
     with:
-      WRT_CONFIG: mt7621
+      WRT_CONFIG: ${{ fromJSON('{"ALL":"mt7621","xiaomi-R3G":"Xiaomi-Mi-Router-3G","XY-C5":"XY-C5-OWRT-WIFI-NO","JDCloud-RE-SP-01B":"JDCloud-RE-SP-01B"}')[inputs.DEVICE || 'ALL'] }}
+      # Use Footstrap for both ALL and individual device builds.
       WRT_THEME: footstrap
       WRT_NAME: OWRT
       WRT_SSID: OWRT
