@@ -1,0 +1,25 @@
+# Shared by N60 Pro and every WRT-CORE-SELF profile, including WIFI-NO/tests.
+CONFIG_PACKAGE_luci-app-mesh=y
+CONFIG_PACKAGE_luci-proto-batman-adv=y
+CONFIG_PACKAGE_wpad-openssl=y
+CONFIG_PACKAGE_batctl-full=y
+CONFIG_PACKAGE_dawn=y
+CONFIG_PACKAGE_umdns=y
+CONFIG_PACKAGE_uclient-fetch=y
+CONFIG_PACKAGE_rpcd=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_jsonfilter=y
+CONFIG_PACKAGE_iwinfo=y
+CONFIG_PACKAGE_iw=y
+CONFIG_PACKAGE_kmod-cfg80211=y
+CONFIG_PACKAGE_kmod-mac80211=y
+CONFIG_PACKAGE_MAC80211_MESH=y
+CONFIG_PACKAGE_kmod-batman-adv=y
+CONFIG_PACKAGE_kmod-lib-crc16=y
+CONFIG_PACKAGE_kmod-crypto-cmac=y
+CONFIG_PACKAGE_kmod-crypto-ccm=y
+CONFIG_PACKAGE_kmod-crypto-gcm=y
+CONFIG_BATMAN_ADV_BATMAN_V=y
+CONFIG_BATMAN_ADV_BLA=y
+CONFIG_BATMAN_ADV_DAT=y
+CONFIG_BATMAN_ADV_MCAST=y

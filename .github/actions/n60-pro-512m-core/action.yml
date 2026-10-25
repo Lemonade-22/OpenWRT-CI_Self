@@ -113,6 +113,7 @@ runs:
         cd ./wrt/
         $GITHUB_WORKSPACE/Scripts/Packages.sh
         $GITHUB_WORKSPACE/Scripts/Handles.sh
+        bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" prepare
 
     - name: Custom Settings
       shell: bash
@@ -151,7 +152,9 @@ runs:
           printf '%s\n' "$option" >> .config
         done < "$required"
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
+        bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
         make defconfig
+        bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         while IFS= read -r option; do
           case "$option" in

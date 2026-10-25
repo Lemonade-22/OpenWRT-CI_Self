@@ -194,6 +194,7 @@ jobs:
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
+          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" prepare
 
       - name: Custom Settings
         run: |
@@ -209,7 +210,9 @@ jobs:
           bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
+          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
           make defconfig -j$(nproc)
+          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
           bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify

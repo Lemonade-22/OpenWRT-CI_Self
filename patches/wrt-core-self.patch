@@ -58,7 +58,15 @@
  
        - name: Restore Build Cache
          id: cache-restore
-@@ -190,8 +206,28 @@
+@@ -178,6 +194,7 @@
+ 
+           $GITHUB_WORKSPACE/Scripts/Packages.sh
+           $GITHUB_WORKSPACE/Scripts/Handles.sh
++          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" prepare
+ 
+       - name: Custom Settings
+         run: |
+@@ -190,8 +207,30 @@
            fi
  
            $GITHUB_WORKSPACE/Scripts/Settings.sh
@@ -67,7 +75,9 @@
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
++          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
 +          make defconfig -j$(nproc)
++          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify
@@ -89,7 +99,7 @@
  
        - name: Download Packages
          if: ${{ !inputs.WRT_TEST }}
-@@ -206,6 +242,7 @@
+@@ -206,6 +245,7 @@
            cd ./wrt/
  
            make -j$(nproc) || make -j1 V=s
@@ -97,7 +107,7 @@
  
        - name: Save Build Cache
          if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
-@@ -236,9 +273,8 @@
+@@ -236,9 +276,8 @@
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -109,7 +119,7 @@
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -253,33 +289,45 @@
+@@ -253,33 +292,45 @@
              make clean -j$(nproc)
            fi
  

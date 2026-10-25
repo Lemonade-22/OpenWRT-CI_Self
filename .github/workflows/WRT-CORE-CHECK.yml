@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/actions/n60-pro-512m-core/action.yml'
       - '.github/workflows/*.yml'
       - 'patches/wrt-core-self.patch'
       - 'Scripts/Device.sh'
@@ -11,8 +12,12 @@ on:
       - 'Scripts/Generate-Wrt-Core.py'
       - 'tests/test_wrt_core_generation.py'
       - 'tests/test_device_hooks.py'
+      - 'Scripts/Mesh.sh'
+      - 'Config/MESH.txt'
+      - 'tests/test_mesh.py'
   pull_request:
     paths:
+      - '.github/actions/n60-pro-512m-core/action.yml'
       - '.github/workflows/*.yml'
       - 'patches/wrt-core-self.patch'
       - 'Scripts/Device.sh'
@@ -20,6 +25,9 @@ on:
       - 'Scripts/Generate-Wrt-Core.py'
       - 'tests/test_wrt_core_generation.py'
       - 'tests/test_device_hooks.py'
+      - 'Scripts/Mesh.sh'
+      - 'Config/MESH.txt'
+      - 'tests/test_mesh.py'
   workflow_dispatch:
 
 permissions:
@@ -36,3 +44,5 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_wrt_core_generation.py -v
       - name: Test device hooks
         run: python3 -m unittest discover -s tests -p test_device_hooks.py -v
+      - name: Test Mesh dependency selection
+        run: python3 -m unittest discover -s tests -p test_mesh.py -v
