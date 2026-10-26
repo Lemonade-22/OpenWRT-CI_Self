@@ -58,18 +58,18 @@
  
        - name: Restore Build Cache
          id: cache-restore
-@@ -178,6 +194,7 @@
- 
+@@ -179,6 +195,7 @@
            $GITHUB_WORKSPACE/Scripts/Packages.sh
            $GITHUB_WORKSPACE/Scripts/Handles.sh
+           $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
 +          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" prepare
  
        - name: Custom Settings
          run: |
-@@ -190,8 +207,30 @@
-           fi
+@@ -192,8 +209,30 @@
  
            $GITHUB_WORKSPACE/Scripts/Settings.sh
+           $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
 -
 -          make defconfig -j$(nproc) && make clean -j$(nproc)
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
@@ -97,17 +97,17 @@
 +          fi
 +          make clean -j$(nproc)
  
-       - name: Download Packages
+       - name: Prepare Rust Toolchain
          if: ${{ !inputs.WRT_TEST }}
-@@ -206,6 +245,7 @@
-           cd ./wrt/
- 
-           make -j$(nproc) || make -j1 V=s
+@@ -217,6 +256,7 @@
+           mkdir -p $GITHUB_WORKSPACE/build-reports
+           make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
+             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify-image
  
-       - name: Save Build Cache
-         if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
-@@ -236,9 +276,8 @@
+       - name: Collect Build Reports
+         if: ${{ !inputs.WRT_TEST && always() }}
+@@ -264,9 +304,8 @@
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -119,7 +119,7 @@
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -253,33 +292,45 @@
+@@ -281,33 +320,45 @@
              make clean -j$(nproc)
            fi
  

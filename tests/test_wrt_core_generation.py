@@ -42,6 +42,32 @@ class CoreGenerationTests(unittest.TestCase):
         self.assertEqual(self.source.read_bytes(), source)
         self.assertEqual(self.run_generator('--check').returncode, 0)
 
+    def test_upstream_build_preparation_and_reports_survive_customization(self):
+        result = self.run_generator()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        generated = self.output.read_text(encoding='utf-8')
+        ordered = (
+            'Scripts/Handles.sh',
+            '.github/scripts/prepare-i2c-tools.sh',
+            'Scripts/Mesh.sh" prepare',
+            'Scripts/Settings.sh',
+            '.github/scripts/prepare-build-host.sh',
+            'Scripts/Device.sh" configure',
+            'Scripts/Mesh.sh" configure',
+            'make defconfig',
+            'Scripts/Mesh.sh" verify',
+            '.github/scripts/prepare-rust.sh',
+            'make download',
+            'build-reports/parallel.tsv',
+            'build-reports/serial.tsv',
+            'Scripts/Device.sh" verify-image',
+            '.github/scripts/collect-build-reports.sh',
+            '- name: Upload Build Reports',
+            '- name: Save Build Cache',
+        )
+        positions = [generated.index(value) for value in ordered]
+        self.assertEqual(positions, sorted(positions))
+
     def test_upstream_change_outside_patch_is_propagated(self):
         content = self.source.read_text(encoding='utf-8')
         self.assertIn('            echo "WRT_KVER=none"', content)
