@@ -8,14 +8,13 @@ Actions → **ARM64-ALL** → Run workflow → `device`：
 - `panther-x2`：只打包 Panther X2。
 - `fine3399`：只打包 Fine3399。
 
-原 `Panther-X2-OPhub-OWRT` 入口保留为兼容入口，内部调用同一个 core。
+两台设备统一从 `ARM64-ALL` 进入，原 Panther 单独 workflow 已删除。
 推送相关文件和 PR 只运行 `ARM64 OPhub checks`；手动运行构建入口才编译、打包并发布正式 Release。
 
 ## 引用结构
 
 ```text
-ARM64-ALL.yml（all / panther-x2 / fine3399） ─┐
-Panther-X2-OPhub-OWRT.yml（兼容入口）       ─┴→ ARM64-OPhub-CORE.yml
+ARM64-ALL.yml（all / panther-x2 / fine3399） → ARM64-OPhub-CORE.yml
                                                 ├─ plan：共用验证 action，输出设备矩阵
                                                 ├─ kernel：共用内核、modules、DTBs
                                                 ├─ rootfs：共用 armsr/armv8 用户空间
@@ -23,7 +22,7 @@ Panther-X2-OPhub-OWRT.yml（兼容入口）       ─┴→ ARM64-OPhub-CORE.yml
 ARM64-CHECK.yml → .github/actions/arm64-ophub-validate/action.yml
 ```
 
-`kernel` 与 `rootfs` 在 plan 通过后并行运行；package 等待两者成功。矩阵中的设备各有独立工作目录、Artifact 和 Release，一台打包失败不取消另一台。两个构建入口使用相同并发组，避免重复提交同一分支的 Arm64 构建。
+`kernel` 与 `rootfs` 在 plan 通过后并行运行；package 等待两者成功。矩阵中的设备各有独立工作目录、Artifact 和 Release，一台打包失败不取消另一台。统一入口按分支串行调度 Arm64 构建。
 
 | 位置 | 职责 |
 | --- | --- |
