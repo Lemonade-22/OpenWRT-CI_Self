@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply dae and fake-flow requirements to the pinned fork's existing RK3566-capable config."""
+"""Apply dae and fake-flow requirements to the pinned fork's existing Rockchip ARM64 config."""
 import json
 from pathlib import Path
 import re

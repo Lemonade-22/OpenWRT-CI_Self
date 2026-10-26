@@ -2,7 +2,7 @@
 # Run from the firmware source root, after user overrides and around defconfig.
 set -euo pipefail
 case "${WRT_CONFIG:?WRT_CONFIG required}" in
-  IPQ807X-AP8220-1G-WIFI-NO|ZN-M2-WIFI-NO|N60-Pro-512M|AIROHA-MD-NATIVE|AIROHA-NWRT|Panther-X2-OPhub) ;;
+  IPQ807X-AP8220-1G-WIFI-NO|ZN-M2-WIFI-NO|N60-Pro-512M|AIROHA-MD-NATIVE|AIROHA-NWRT|Panther-X2-OPhub|ARM64-OPhub) ;;
   *) exit 0 ;;
 esac
 ci_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

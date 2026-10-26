@@ -1,0 +1,65 @@
+name: Validate ARM64 OPhub integration
+description: Select devices and validate locked board recipes, boot resources and shared helpers.
+inputs:
+  device:
+    description: all, panther-x2 or fine3399
+    default: all
+outputs:
+  matrix:
+    description: Resolved matrix
+    value: ${{ steps.profiles.outputs.matrix }}
+  dtbs:
+    description: Resolved dtbs
+    value: ${{ steps.profiles.outputs.dtbs }}
+  packer_commit:
+    description: Resolved packer_commit
+    value: ${{ steps.profiles.outputs.packer_commit }}
+  uboot_commit:
+    description: Resolved uboot_commit
+    value: ${{ steps.profiles.outputs.uboot_commit }}
+  kernel_config_path:
+    description: Resolved kernel_config_path
+    value: ${{ steps.profiles.outputs.kernel_config_path }}
+  kernel_config_file:
+    description: Resolved kernel_config_file
+    value: ${{ steps.profiles.outputs.kernel_config_file }}
+runs:
+  using: composite
+  steps:
+    - name: Select device profiles
+      id: profiles
+      env:
+        DEVICE: ${{ inputs.device }}
+      shell: bash
+      run: python3 Custom/ARM64-OPhub/profiles.py --device "$DEVICE" --github-output "$GITHUB_OUTPUT"
+    - uses: actions/checkout@v4
+      with:
+        repository: ophub/amlogic-s9xxx-openwrt
+        ref: ${{ steps.profiles.outputs.packer_commit }}
+        path: ophub
+    - uses: actions/checkout@v4
+      with:
+        repository: ophub/u-boot
+        ref: ${{ steps.profiles.outputs.uboot_commit }}
+        path: boot-resources
+        sparse-checkout: |
+          u-boot/rockchip/panther-x2
+          u-boot/rockchip/fine3399
+    - name: Checkout upstream plugin configuration
+      uses: actions/checkout@v4
+      with:
+        repository: VIKINGYFY/OpenWRT-CI
+        ref: main
+        path: upstream-ci
+    - name: Check locked dependency integration and device recipes
+      env:
+        DEVICE: ${{ inputs.device }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 Custom/ARM64-OPhub/profiles.py --device "$DEVICE" --database ophub/make-openwrt/openwrt-files/common-files/etc/model_database.conf --boot-root boot-resources/u-boot
+        python3 Custom/ARM64-OPhub/pin_ophub.py ophub/remake
+        bash -n ophub/remake
+        bash -n Scripts/Fakeflow.sh
+        for script in upstream-ci/Scripts/*.sh; do bash -n "$script"; done
+        python3 -m unittest discover -s tests -p test_arm64_ophub.py -v

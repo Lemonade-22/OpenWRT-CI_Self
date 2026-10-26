@@ -1,0 +1,43 @@
+name: ARM64 OPhub checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ARM64-*.yml'
+      - '.github/workflows/Panther-X2-OPhub-OWRT.yml'
+      - 'Custom/ARM64-OPhub/**'
+      - '.github/actions/arm64-ophub-validate/**'
+      - 'Config/ARM64-OPhub.txt'
+      - 'Config/DAEDE.txt'
+      - 'Config/FAKEFLOW.txt'
+      - 'Scripts/DAEDE.sh'
+      - 'Scripts/Fakeflow.sh'
+      - 'Scripts/Check-DAEDE-Kernel.py'
+      - 'tests/test_arm64_ophub.py'
+  pull_request:
+    paths:
+      - '.github/workflows/ARM64-*.yml'
+      - '.github/workflows/Panther-X2-OPhub-OWRT.yml'
+      - 'Custom/ARM64-OPhub/**'
+      - '.github/actions/arm64-ophub-validate/**'
+      - 'Config/ARM64-OPhub.txt'
+      - 'Config/DAEDE.txt'
+      - 'Config/FAKEFLOW.txt'
+      - 'Scripts/DAEDE.sh'
+      - 'Scripts/Fakeflow.sh'
+      - 'Scripts/Check-DAEDE-Kernel.py'
+      - 'tests/test_arm64_ophub.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/arm64-ophub-validate
+        with:
+          device: all

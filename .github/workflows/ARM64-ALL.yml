@@ -1,0 +1,27 @@
+name: ARM64-ALL
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: 'ARM64 device (all builds both from one kernel/rootfs)'
+        type: choice
+        options:
+          - all
+          - panther-x2
+          - fine3399
+        default: all
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arm64-ophub-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  arm64:
+    uses: ./.github/workflows/ARM64-OPhub-CORE.yml
+    with:
+      device: ${{ inputs.device }}
+      build: true

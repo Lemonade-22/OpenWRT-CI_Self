@@ -1,0 +1,22 @@
+{
+  "panther-x2": {
+    "name": "Panther X2",
+    "soc": "rk3566",
+    "dtb": "rk3566-panther-x2.dtb",
+    "bootloader": "idbloader.img",
+    "uboot": "u-boot.itb",
+    "trust": "NA",
+    "partition_size": "384/1280",
+    "release_prefix": "Panther-X2-OPhub-OWRT"
+  },
+  "fine3399": {
+    "name": "Fine3399",
+    "soc": "rk3399",
+    "dtb": "rk3399-fine3399.dtb",
+    "bootloader": "idbloader.bin",
+    "uboot": "uboot.img",
+    "trust": "trust.bin",
+    "partition_size": "384/1280",
+    "release_prefix": "Fine3399-OPhub-OWRT"
+  }
+}

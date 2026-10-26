@@ -61,7 +61,7 @@ jobs:
           fi
 
           if ! git push origin HEAD:main; then
-            echo "::error::Push failed. Check concurrent changes, branch protection and workflow-file write permission. If required, configure UPSTREAM_SYNC_TOKEN as documented in Custom/Panther-X2-OPhub/README.md."
+            echo "::error::Push failed. Check concurrent changes, branch protection and workflow-file write permission. If required, configure UPSTREAM_SYNC_TOKEN as documented in Custom/ARM64-OPhub/README.md."
             exit 1
           fi
 
