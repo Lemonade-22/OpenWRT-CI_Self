@@ -35,6 +35,7 @@ jobs:
       dtbs: ${{ steps.profiles.outputs.dtbs }}
       packer_commit: ${{ steps.profiles.outputs.packer_commit }}
       uboot_commit: ${{ steps.profiles.outputs.uboot_commit }}
+      userspace_commit: ${{ steps.profiles.outputs.userspace_commit }}
       kernel_config_path: ${{ steps.profiles.outputs.kernel_config_path }}
       kernel_config_file: ${{ steps.profiles.outputs.kernel_config_file }}
     steps:
@@ -57,8 +58,13 @@ jobs:
         run: |
           set -euo pipefail
           lock=Custom/ARM64-OPhub/sources.json
-          for key in version config_repository config_commit config_path source sign; do
-            echo "$key=$(jq -er ".kernel.$key" "$lock")" >> "$GITHUB_OUTPUT"
+          for key in version config_repository config_commit config_path source source_repository source_commit userspace_commit sign; do
+            if [[ "$key" == "userspace_commit" ]]; then
+              jqpath=".userspace.commit"
+            else
+              jqpath=".kernel.$key"
+            fi
+            echo "$key=$(jq -er "$jqpath" "$lock")" >> "$GITHUB_OUTPUT"
           done
       - name: Checkout your kernel configuration
         uses: actions/checkout@v4
@@ -66,13 +72,32 @@ jobs:
           repository: ${{ steps.settings.outputs.config_repository }}
           ref: ${{ steps.settings.outputs.config_commit }}
           path: kernel-fork
-      - name: Prepare BTF and fake-flow kernel configuration
+      - name: Checkout pinned userspace SONiC kernel patches
+        uses: actions/checkout@v4
+        with:
+          repository: VIKINGYFY/immortalwrt
+          ref: ${{ steps.settings.outputs.userspace_commit }}
+          path: sonic-patches
+          sparse-checkout: |
+            target/linux/generic/hack-6.18/984-add-sonic-fullcone-support.patch
+            target/linux/generic/hack-6.18/985-add-sonic-fullcone-to-ipt.patch
+            target/linux/generic/hack-6.18/986-add-sonic-fullcone-to-nft.patch
+          sparse-checkout-cone-mode: false
+      - name: Prepare pinned kernel source and apply SONiC patches
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /mnt/arm64-ophub-kernel
+          sudo chown "$USER:$USER" /mnt/arm64-ophub-kernel
+          mkdir -p kernel-output
+          python3 Custom/ARM64-OPhub/prepare_kernel_source.py \
+            --patch-root sonic-patches \
+            --destination /mnt/arm64-ophub-kernel/compile-kernel/kernel/linux-6.18.y \
+            --record kernel-output/source-preparation.json
+          df -h /mnt/arm64-ophub-kernel
+      - name: Prepare BTF, fake-flow and SONiC kernel configuration
         run: |
           set -euo pipefail
           python3 Custom/ARM64-OPhub/prepare_kernel.py
-          sudo mkdir -p /mnt/arm64-ophub-kernel
-          sudo chown "$USER:$USER" /mnt/arm64-ophub-kernel
-          df -h
       - uses: actions/cache@v4
         with:
           path: /mnt/arm64-ophub-kernel/ccache
@@ -95,12 +120,16 @@ jobs:
       - name: Validate and record kernel artifact
         env:
           REQUIRED_DTBS: ${{ needs.plan.outputs.dtbs }}
+          DEVICE_MATRIX: ${{ needs.plan.outputs.matrix }}
         run: |
           set -euo pipefail
           version=$(jq -r .kernel.version Custom/ARM64-OPhub/sources.json)
           archive="$PACKAGED_OUTPUTPATH/$version.tar.gz"
           test -s "$archive"
-          args=(--fakeflow)
+          args=(--fakeflow --sonic)
+          if jq -e 'any(.include[]; .board == "fine3399")' <<< "$DEVICE_MATRIX" >/dev/null; then
+            args+=(--device fine3399)
+          fi
           while IFS= read -r dtb; do args+=(--dtb "$dtb"); done < <(jq -r '.[]' <<< "$REQUIRED_DTBS")
           python3 Scripts/Check-DAEDE-Kernel.py "$archive" "${args[@]}"
           mkdir -p kernel-output
@@ -146,11 +175,22 @@ jobs:
           repository: VIKINGYFY/OpenWRT-CI
           ref: main
           path: upstream-ci
-      - name: Clone VIKINGYFY userspace source
+      - name: Clone pinned VIKINGYFY userspace source
         run: |
           set -euo pipefail
-          git clone --depth=1 --single-branch --branch "$SOURCE_BRANCH" "https://github.com/$SOURCE_REPO.git" wrt
-          echo "SOURCE_HASH=$(git -C wrt rev-parse HEAD)" >> "$GITHUB_ENV"
+          lock=Custom/ARM64-OPhub/sources.json
+          repo=$(jq -er '.userspace.repository' "$lock")
+          branch=$(jq -er '.userspace.branch' "$lock")
+          commit=$(jq -er '.userspace.commit' "$lock")
+          [[ "https://github.com/$SOURCE_REPO" == "$repo" ]] || { echo "::error::SOURCE_REPO does not match sources.json"; exit 1; }
+          [[ "$SOURCE_BRANCH" == "$branch" ]] || { echo "::error::SOURCE_BRANCH does not match sources.json"; exit 1; }
+          git init --quiet wrt
+          git -C wrt remote add origin "$repo"
+          git -C wrt fetch --quiet --depth=1 origin "$commit"
+          git -C wrt checkout --quiet --detach FETCH_HEAD
+          actual=$(git -C wrt rev-parse HEAD)
+          [[ "$actual" == "$commit" ]] || { echo "::error::Userspace checkout does not match the locked commit"; exit 1; }
+          echo "SOURCE_HASH=$actual" >> "$GITHUB_ENV"
           echo "WRT_DATE=$(TZ=Asia/Shanghai date +'%y.%m.%d-%H.%M.%S')" >> "$GITHUB_ENV"
           mkdir -p output
           echo "UPSTREAM_CI_HASH=$(git -C upstream-ci rev-parse HEAD)" >> "$GITHUB_ENV"
@@ -176,9 +216,28 @@ jobs:
           make defconfig
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
-          while IFS= read -r option; do
-            grep -Fxq "$option" .config || { echo "::error::Upstream LuCI package was dropped: $option"; exit 1; }
-          done < "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
+          test -s tmp/.config-package.in
+          python3 "$GITHUB_WORKSPACE/Custom/ARM64-OPhub/verify_packages.py" \
+            --requested "$GITHUB_WORKSPACE/output/upstream-luci-selected.config" \
+            --actual .config \
+            --definitions tmp/.config-package.in \
+            --theme "$WRT_THEME"
+          lock="$GITHUB_WORKSPACE/Custom/ARM64-OPhub/sources.json"
+          grep -qx "$(jq -r .userspace.sonic_package_config "$lock")" .config || {
+            echo "::error::SONiC fullcone userspace package was not selected"; exit 1; }
+          while IFS= read -r package; do
+            if grep -qx "CONFIG_PACKAGE_${package}=y" .config; then
+              echo "::error::Legacy fullcone package selected: $package"; exit 1
+            fi
+          done < <(jq -r '.userspace.sonic_legacy_packages[]' "$lock")
+          for package in firewall4 kmod-nft-nat; do
+            grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
+              echo "::error::Missing firewall/nftables userspace package: $package"; exit 1; }
+          done
+          if ! grep -qE '^(CONFIG_DEFAULT_nftables|CONFIG_PACKAGE_nftables-json|CONFIG_PACKAGE_nftables-nojson)=y$' .config; then
+            echo "::error::Missing nftables userspace provider (DEFAULT_nftables/nftables-json/nftables-nojson)"
+            exit 1
+          fi
           grep -qx 'CONFIG_TARGET_armsr=y' .config
           grep -qx 'CONFIG_TARGET_armsr_armv8=y' .config
           grep -qx 'CONFIG_TARGET_ROOTFS_TARGZ=y' .config
@@ -187,6 +246,7 @@ jobs:
             exit 1
           fi
           cp .config "$GITHUB_WORKSPACE/output/rootfs-build.config"
+          cp tmp/.config-package.in "$GITHUB_WORKSPACE/output/package-definitions.config"
       - name: Build generic rootfs
         working-directory: wrt
         run: |
@@ -275,7 +335,7 @@ jobs:
           cp compiled-kernel/kernel.sha256 output/kernel.sha256
           cp compiled-kernel/requested-kernel.config output/requested-kernel.config
           mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
-          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --dtb "$BOARD_DTB" --fakeflow
+          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --dtb "$BOARD_DTB" --fakeflow --sonic --device "$BOARD"
           tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
           kernel=$(python3 Custom/ARM64-OPhub/stage_kernel.py ophub/make-openwrt/kernel/stable)
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"

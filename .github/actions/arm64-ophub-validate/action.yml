@@ -17,6 +17,9 @@ outputs:
   uboot_commit:
     description: Resolved uboot_commit
     value: ${{ steps.profiles.outputs.uboot_commit }}
+  userspace_commit:
+    description: Resolved userspace_commit
+    value: ${{ steps.profiles.outputs.userspace_commit }}
   kernel_config_path:
     description: Resolved kernel_config_path
     value: ${{ steps.profiles.outputs.kernel_config_path }}
@@ -51,9 +54,26 @@ runs:
         repository: VIKINGYFY/OpenWRT-CI
         ref: main
         path: upstream-ci
+    - name: Checkout pinned userspace SONiC sources
+      uses: actions/checkout@v4
+      with:
+        repository: VIKINGYFY/immortalwrt
+        ref: ${{ steps.profiles.outputs.userspace_commit }}
+        path: sonic-source
+        sparse-checkout: |
+          target/linux/generic/hack-6.18
+          package/network/utils/fullconenat-sonic
+          package/network/config/firewall4/patches/001-sonic-fullcone.patch
+          package/network/config/firewall/patches/001-sonic-fullcone.patch
+          package/network/utils/nftables/patches/002-nftables-add-fullcone-expression-support.patch
+          package/network/utils/iptables/patches/901-sonic-fullcone.patch
+          package/libs/libnftnl/patches/001-libnftnl-add-fullcone-expression-support.patch
+          package/emortal/luci-app-fullconenat-sonic
+        sparse-checkout-cone-mode: false
     - name: Check locked dependency integration and device recipes
       env:
         DEVICE: ${{ inputs.device }}
+        SONIC_SOURCE: ${{ github.workspace }}/sonic-source
       shell: bash
       run: |
         set -euo pipefail
@@ -61,5 +81,11 @@ runs:
         python3 Custom/ARM64-OPhub/pin_ophub.py ophub/remake
         bash -n ophub/remake
         bash -n Scripts/Fakeflow.sh
+        bash -n Custom/ARM64-OPhub/fine3399-direct-lan
         for script in upstream-ci/Scripts/*.sh; do bash -n "$script"; done
-        python3 -m unittest discover -s tests -p test_arm64_ophub.py -v
+        python3 -m py_compile Custom/ARM64-OPhub/verify_packages.py \
+          Custom/ARM64-OPhub/prepare_kernel.py \
+          Custom/ARM64-OPhub/prepare_kernel_source.py \
+          Custom/ARM64-OPhub/stage_kernel.py
+        python3 -m unittest discover -s tests -p 'test_arm64_*.py' -v
+        python3 -m unittest tests.test_fine3399_network -v

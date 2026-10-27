@@ -56,6 +56,9 @@ def main():
         'dtbs': json.dumps([p['dtb'] for p in profiles], separators=(',', ':')),
         'packer_commit': lock['packer_commit'],
         'uboot_commit': lock['repositories']['https://github.com/ophub/u-boot'],
+        'userspace_commit': lock['userspace']['commit'],
+        'userspace_repository': lock['userspace']['repository'],
+        'userspace_branch': lock['userspace']['branch'],
         **{'kernel_' + key: value for key, value in lock['kernel'].items()},
         'kernel_config_file': 'config-' + '.'.join(lock['kernel']['version'].split('.')[:2]),
     }

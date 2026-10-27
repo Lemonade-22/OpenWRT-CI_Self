@@ -13,7 +13,8 @@ on:
       - 'Scripts/DAEDE.sh'
       - 'Scripts/Fakeflow.sh'
       - 'Scripts/Check-DAEDE-Kernel.py'
-      - 'tests/test_arm64_ophub.py'
+      - 'tests/test_arm64_*.py'
+      - 'tests/test_fine3399_network.py'
   pull_request:
     paths:
       - '.github/workflows/ARM64-*.yml'
@@ -25,7 +26,8 @@ on:
       - 'Scripts/DAEDE.sh'
       - 'Scripts/Fakeflow.sh'
       - 'Scripts/Check-DAEDE-Kernel.py'
-      - 'tests/test_arm64_ophub.py'
+      - 'tests/test_arm64_*.py'
+      - 'tests/test_fine3399_network.py'
   workflow_dispatch:
 
 permissions:
