@@ -1,0 +1,16 @@
+#!/bin/sh
+# Fine3399 has one native LAN port. A one-member br-lan bridge is unnecessary
+# and did not forward LAN traffic on the tested image.
+
+uci -q delete network.lan.ifname
+uci set network.lan.device='eth0'
+uci set network.lan.proto='static'
+
+# Remove the generated one-port br-lan device while leaving unrelated devices.
+for section in $(uci show network | sed -n "s/^network\.\(@device\[[0-9]*\]\)\.name='br-lan'$/\1/p"); do
+	uci -q delete "network.$section"
+done
+
+uci commit network
+
+exit 0

@@ -86,6 +86,8 @@ Panther 旧版 `2026.09.17-10.44.03` 有维护者确认可用的历史记录；�
 
 镜像是压缩的整盘 `.img.gz`，应按 OPhub 对应设备安装流程使用，不能当作 OpenWrt 原生 sysupgrade 镜像。默认 LAN 地址沿用 `192.168.10.1`；账号密码以最终 rootfs/OPhub 设置为准。
 
+Fine3399 首次启动时将 LAN 直接绑定到原生 `eth0`，不创建只用单网口的 `br-lan` 桥。实测该镜像经过 `br-lan` 时 LAN 入站流量不能正常到达，直接使用 `eth0` 后 DHCP 和后台恢复正常；WAN 仍使用 USB RTL8153 对应的 `eth1`。
+
 ## 维护
 
 设备差异改 devices.json；共用 rootfs 选项改 Config/ARM64-OPhub.txt；依赖更新改 sources.json 并重跑 ARM64 OPhub checks。涉及内核 builder 更新时同步 workflow 的固定 SHA。若以后设备需要不同内核系列或用户空间，再拆分对应构建组；目前两台均使用同一个 stable 配置。

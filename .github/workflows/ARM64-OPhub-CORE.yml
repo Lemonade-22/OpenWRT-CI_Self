@@ -281,6 +281,12 @@ jobs:
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
           cp "$lock" output/ophub-sources.json
+          if [ "$BOARD" = fine3399 ]; then
+            fine_rootfs="ophub/make-openwrt/openwrt-files/different-files/fine3399/rootfs"
+            mkdir -p "$fine_rootfs/etc/uci-defaults"
+            install -m 0755 Custom/ARM64-OPhub/fine3399-direct-lan \
+              "$fine_rootfs/etc/uci-defaults/99-fine3399-direct-lan"
+          fi
           echo "KERNEL_VERSION=$kernel" >> "$GITHUB_ENV"
       - name: Assemble device using ophub hardware support
         working-directory: ophub

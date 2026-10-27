@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -125,6 +126,34 @@ class Arm64Tests(unittest.TestCase):
         lock = json.loads((COMMON / 'sources.json').read_text())
         workflow = (ROOT / '.github/workflows/ARM64-OPhub-CORE.yml').read_text(encoding='utf-8')
         self.assertIn('uses: ophub/amlogic-s9xxx-armbian@' + lock['kernel']['builder_commit'], workflow)
+
+    def test_fine3399_direct_lan_overlay_removes_only_generated_bridge(self):
+        bin_dir = self.root / 'bin'
+        bin_dir.mkdir()
+        calls = self.root / 'uci.calls'
+        fake_uci = bin_dir / 'uci'
+        fake_uci.write_text(
+            '#!/bin/sh\n'
+            'if [ "$1" = show ]; then\n'
+            '  printf "%s\\n" "network.@device[0].name='"'"'br-lan'"'"'" "network.@device[1].name='"'"'other'"'"'"\n'
+            '  exit 0\n'
+            'fi\n'
+            'printf "%s\\n" "$*" >> "$UCI_CALLS"\n',
+            encoding='utf-8',
+        )
+        os.chmod(fake_uci, 0o755)
+        environment = os.environ.copy()
+        environment['PATH'] = str(bin_dir) + os.pathsep + environment['PATH']
+        environment['UCI_CALLS'] = str(calls)
+        result = subprocess.run(
+            ['/bin/sh', str(COMMON / 'fine3399-direct-lan')],
+            env=environment, capture_output=True, text=True, encoding='utf-8',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        recorded = calls.read_text(encoding='utf-8').splitlines()
+        self.assertIn("set network.lan.device=eth0", recorded)
+        self.assertIn("-q delete network.@device[0]", recorded)
+        self.assertNotIn("-q delete network.@device[1]", recorded)
 
 
 if __name__ == '__main__':
