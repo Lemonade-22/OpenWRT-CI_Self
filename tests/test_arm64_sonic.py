@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import shutil
+import signal
 import sys
 import tarfile
 import tempfile
@@ -305,7 +307,9 @@ class PrepareKernelSourceTests(unittest.TestCase):
         patches = {}
         for index, (relative, marker) in enumerate(SONIC_MARKER_FILES):
             patches[f'target/linux/generic/hack-6.18/{984 + index}-fixture.patch'] = make_patch(
-                source, relative, base[relative] + marker + '\n')
+                source, relative, base[relative] + marker + '\n' + (
+                    (ROOT / 'tests/fixtures/sonic-fullcone-init.c').read_text()
+                    if relative.endswith('nft_masq.c') else ''))
         patch_root = self.root / 'patch-checkout'
         patch_head = init_git_repository(patch_root, patches)
         lock = {
@@ -392,6 +396,37 @@ class PrepareKernelSourceTests(unittest.TestCase):
         plain.mkdir()
         with self.assertRaisesRegex(prepare_kernel_source.SourcePreparationError, 'git checkout'):
             prepare_kernel_source.prepare(plain, source, lock=lock)
+
+
+class FullconeAttributeRegressionTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux' and shutil.which('cc'),
+                         'Linux C compiler required for guard-page regression')
+    def test_original_faults_and_translation_preserves_arguments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / 'net/netfilter/nft_masq.c'
+            target.parent.mkdir(parents=True)
+            target.write_text((ROOT / 'tests/fixtures/sonic-fullcone-init.c').read_text())
+            harness = (ROOT / 'tests/fixtures/fullcone-attributes-harness.c').read_text()
+
+            def run_init():
+                content = target.read_text()
+                start = content.index('static int nft_fullcone_init(')
+                end = content.index('static int nft_fullcone_validate(')
+                source = root / 'regression.c'
+                source.write_text(harness.replace('/* INSERT_KERNEL_INIT */', content[start:end]))
+                executable = root / 'regression'
+                subprocess.run(['cc', '-O0', '-Wall', '-Wextra', '-Werror',
+                                str(source), '-o', str(executable)], check=True)
+                return subprocess.run([str(executable)], capture_output=True).returncode
+
+            self.assertEqual(run_init(), -signal.SIGSEGV)
+            prepare_kernel_source.apply_ophub_compatibility(root)
+            self.assertEqual(run_init(), 0)
+            fixed = target.read_bytes()
+            prepare_kernel_source.apply_ophub_compatibility(root)
+            self.assertEqual(target.read_bytes(), fixed)
+            prepare_kernel_source.apply_ophub_compatibility(root, check=True)
 
 
 class LockAndWorkflowTests(unittest.TestCase):

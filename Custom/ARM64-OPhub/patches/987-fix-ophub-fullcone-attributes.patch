@@ -1,0 +1,24 @@
+--- a/net/netfilter/nft_masq.c
++++ b/net/netfilter/nft_masq.c
+@@ -169,11 +169,20 @@
+ 			     const struct nft_expr *expr,
+ 			     const struct nlattr * const tb[])
+ {
++	/* OPhub MASQ has extra attributes absent from the fullcone policy.
++	 * Translate explicitly so nft_masq_init never reads past fullcone tb.
++	 */
++	const struct nlattr *masq_tb[NFTA_MASQ_MAX + 1] = {};
++
++	masq_tb[NFTA_MASQ_FLAGS] = tb[NFTA_FULLCONE_FLAGS];
++	masq_tb[NFTA_MASQ_REG_PROTO_MIN] = tb[NFTA_FULLCONE_REG_PROTO_MIN];
++	masq_tb[NFTA_MASQ_REG_PROTO_MAX] = tb[NFTA_FULLCONE_REG_PROTO_MAX];
++
+ 	switch (ctx->family) {
+ 	case NFPROTO_IPV4:
+ 	case NFPROTO_IPV6:
+ 	case NFPROTO_INET:
+-		return nft_masq_init(ctx, expr, tb);
++		return nft_masq_init(ctx, expr, masq_tb);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
