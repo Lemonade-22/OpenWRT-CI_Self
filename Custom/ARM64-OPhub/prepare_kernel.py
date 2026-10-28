@@ -35,6 +35,16 @@ SONIC = {
     "NETFILTER_XT_NAT": "m",
 }
 
+# fw4 generates a bridge-family flowtable for the Fine3399 LAN bridge. The
+# module and bridge conntrack support come from the same OPhub kernel build.
+FLOWTABLE = {
+    "BRIDGE_NETFILTER": "m",
+    "NF_CONNTRACK_BRIDGE": "m",
+    "NF_FLOW_TABLE": "m",
+    "NF_FLOW_TABLE_INET": "m",
+    "NFT_FLOW_OFFLOAD": "m",
+}
+
 # Fine3399 (RK3399) networking: onboard stmmac GMAC plus the RTL8152 USB NIC.
 DEVICE = {
     "STMMAC_ETH": "y",
@@ -121,6 +131,7 @@ def prepare(root, lock):
         )
     required = dict(FAKEFLOW)
     required.update(SONIC)
+    required.update(FLOWTABLE)
     required.update(DEVICE)
     text = remove_legacy_fullcone(text)
     config.write_text(set_symbols(text, required), encoding="utf-8", newline="\n")

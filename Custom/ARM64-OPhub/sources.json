@@ -24,6 +24,26 @@
       "target/linux/generic/hack-6.18/986-add-sonic-fullcone-to-nft.patch"
     ]
   },
+  "bridge_flowtable": {
+    "source_repository": "https://github.com/VIKINGYFY/immortalwrt",
+    "source_commit": "de149751183f3c10cff427b7efb1ed5cbcb4b761",
+    "marker": "flow_offload_bridge_init",
+    "marker_file": "include/net/netfilter/nf_flow_table.h",
+    "patches": [
+      "675-01-netfilter-utils-nf_ip-6-_checksum-_partial-correct-d.patch",
+      "675-02-netfilter-bridge-Add-conntrack-double-vlan-and-pppoe.patch",
+      "675-03-netfilter-nft_flow_offload-Add-DEV_PATH_MTK_WDMA-to-.patch",
+      "675-04-bridge-Introduce-DEV_PATH_BR_VLAN_KEEP_HW.patch",
+      "675-05-bridge-Add-filling-forward-path-from-port-to-port.patch",
+      "675-06-net-core-dev-Add-dev_fill_bridge_path.patch",
+      "675-07-netfilter-nf_flow_table_offload-Add-nf_flow_rule_bri.patch",
+      "675-08-netfilter-nf_flow_table_inet-Add-nf_flowtable_type-f.patch",
+      "675-09-netfilter-nft_flow_offload-nft_flow_offload_eval-che.patch",
+      "675-10-netfilter-nft_flow_offload-Add-NFPROTO_BRIDGE-to-val.patch",
+      "675-11-netfilter-nft_flow_offload-Add-bridgeflow-to-nft_flo.patch",
+      "675-13-netfilter-nft_flow_offload-Set-hw_ifidx-in-nft_dev_f.patch"
+    ]
+  },
   "kernel": {
     "mode": "build",
     "version": "6.18.59",
