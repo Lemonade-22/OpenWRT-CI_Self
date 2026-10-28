@@ -234,6 +234,8 @@ jobs:
             grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
               echo "::error::Missing firewall/nftables userspace package: $package"; exit 1; }
           done
+          grep -qx 'CONFIG_PACKAGE_r8152-firmware=y' .config || {
+            echo '::error::Missing RTL8152/RTL8153 firmware package'; exit 1; }
           if ! grep -qE '^(CONFIG_DEFAULT_nftables|CONFIG_PACKAGE_nftables-json|CONFIG_PACKAGE_nftables-nojson)=y$' .config; then
             echo "::error::Missing nftables userspace provider (DEFAULT_nftables/nftables-json/nftables-nojson)"
             exit 1
@@ -260,6 +262,8 @@ jobs:
           test "${#roots[@]}" -eq 1
           tar -tzf "${roots[0]}" > "$GITHUB_WORKSPACE/output/rootfs-contents.txt"
           grep -Eq '^(\./)?etc/openwrt_release$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt"
+          grep -Eq '^(\./)?(usr/)?lib/firmware/rtl_nic/rtl8153b-2\.fw$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
+            echo '::error::Rootfs is missing rtl_nic/rtl8153b-2.fw'; exit 1; }
           cp "${roots[0]}" "$GITHUB_WORKSPACE/output/immortalwrt-armsr-armv8-generic-rootfs.tar.gz"
           git rev-parse HEAD > "$GITHUB_WORKSPACE/output/immortalwrt-commit.txt"
           for feed in feeds/*; do
