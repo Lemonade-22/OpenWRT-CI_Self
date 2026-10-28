@@ -100,6 +100,8 @@ Fine3399 的硬件描述（GMAC、RGMII 时延、USB、eMMC 等）完全由 OPhu
 - `target/linux/generic/hack-6.18/985-add-sonic-fullcone-to-ipt.patch`
 - `target/linux/generic/hack-6.18/986-add-sonic-fullcone-to-nft.patch`
 
+OPhub 6.18.59 的 `nft_masq.c` 已扩展 MASQ 属性，`NFTA_MASQ_MAX` 为 4，而 SONiC 的 `masq_tb` 只有 3 项，且 `nft_fullcone_init()` 原样转发该表。OPhub 的 `nft_masq_init()` 会读取 `tb[NFTA_MASQ_REG_FULLCONE]`（索引 4），越界读取相邻栈内容时可在启动防火墙阶段触发 `nft_masq_init` Oops，并让 fw4 无法建立规则。仓库内 `Custom/ARM64-OPhub/patches/987-fix-ophub-fullcone-attributes.patch` 为 fullcone 建立独立 MASQ 属性表，只复制 FLAGS、REG_PROTO_MIN、REG_PROTO_MAX，避免越界；`prepare_kernel_source.py` 在应用三个 SONiC 补丁后继续应用该兼容补丁，重复准备时会反向检查跳过，并写入 preparation record。测试用 guard page 验证原代码必然触发 SIGSEGV、修复后返回正确错误码且参数完整传递。
+
 kernel job 先把固定 OPhub 内核源码 `a0592d712c819c3571d19ad15ec2d55bd8733a02` 放入 builder 实际复用的 `/mnt/arm64-ophub-kernel/compile-kernel/kernel/linux-6.18.y`，对每个补丁执行 `git apply --check` 后再应用，任何失败立即终止，并输出 patch sha256、diff stat 和 diff sha256 记录。没有使用 builder 的 `kernel_patch` 机制，因为既有编译脚本对 patch 失败只打印 warning，不能作为可靠门禁。
 
 需要报告的构建链限制：`ophub/amlogic-s9xxx-armbian` 的 action 只固定到 `d7ad8779...`；其容器内 `/usr/sbin/armbian-kernel -u` 在每次构建时会从上游 main 更新 `compile-kernel` 脚本。已准备的固定内核源码目录不会被该更新清理，且 `kernel_auto=false` 会复用该源码；但容器内编译脚本本身不是按提交冻结的，这是现有 builder 的锁定边界，不能宣称整条内核构建完全可复现。

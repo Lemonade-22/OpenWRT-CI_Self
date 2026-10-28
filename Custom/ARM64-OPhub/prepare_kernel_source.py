@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 SOURCES = Path(__file__).with_name("sources.json")
+LOCAL_PATCH = (Path(__file__).with_name("patches") / "987-fix-ophub-fullcone-attributes.patch").resolve()
 
 # Explicit source markers written by the three SONiC kernel patches. The marker
 # files are part of the pinned kernel source, so their presence identifies an
@@ -111,6 +112,20 @@ def _apply_patch(destination, patch):
          error=f"Cannot apply SONiC kernel patch: {patch.name}")
 
 
+def apply_ophub_compatibility(destination, check=False):
+    """Apply the attribute translation, including to previously prepared trees."""
+    reverse = subprocess.run(
+        ["git", "-C", str(destination), "apply", "--reverse", "--check", str(LOCAL_PATCH)],
+        capture_output=True, text=True)
+    if reverse.returncode == 0:
+        return
+    if check:
+        _git("-C", destination, "apply", "--check", LOCAL_PATCH,
+             error="OPhub fullcone compatibility patch does not apply")
+    else:
+        _apply_patch(destination, LOCAL_PATCH)
+
+
 def _sha256(path):
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -140,7 +155,8 @@ def prepare(patch_root, destination, lock=None, check=False, record=None):
         if any(states) and not all(states):
             raise SourcePreparationError("Kernel source is partially patched: " + describe_markers(states))
         if all(states):
-            print("Kernel source already contains the SONiC fullcone patches; nothing to apply")
+            apply_ophub_compatibility(destination, check=True)
+            print("Checked SONiC patches and OPhub attribute compatibility")
             return None
         for patch in patches:
             _git("-C", destination, "apply", "--check", patch,
@@ -159,6 +175,7 @@ def prepare(patch_root, destination, lock=None, check=False, record=None):
             _apply_patch(destination, patch)
             print("Applied SONiC kernel patch:", patch.name)
 
+    apply_ophub_compatibility(destination)
     final_states = marker_state(destination)
     if not all(final_states):
         raise SourcePreparationError(
@@ -172,6 +189,7 @@ def prepare(patch_root, destination, lock=None, check=False, record=None):
         "userspace_commit": userspace["commit"],
         "patches": [{"path": relative, "sha256": _sha256(Path(patch_root) / relative)}
                     for relative in userspace["kernel_patches"]],
+        "compatibility_patches": [{"path": LOCAL_PATCH.name, "sha256": _sha256(LOCAL_PATCH)}],
         "applied": True,
         "diff_stat": _git("-C", destination, "diff", "--stat").splitlines(),
         "diff_sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest(),
