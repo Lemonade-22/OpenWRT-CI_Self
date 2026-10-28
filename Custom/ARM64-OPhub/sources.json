@@ -6,14 +6,34 @@
     "https://github.com/ophub/firmware": "b1b8bcdfa6d6d7e964663e3d85622d569457d271",
     "https://github.com/ophub/luci-app-amlogic": "8fe2b60b4d63e2d83fbe5eb12c37c77a892c0117"
   },
+  "userspace": {
+    "repository": "https://github.com/VIKINGYFY/immortalwrt",
+    "branch": "owrt",
+    "commit": "de149751183f3c10cff427b7efb1ed5cbcb4b761",
+    "sonic_package": "fullconenat-sonic",
+    "sonic_package_config": "CONFIG_PACKAGE_fullconenat-sonic=y",
+    "sonic_legacy_packages": [
+      "kmod-nft-fullcone",
+      "kmod-ipt-fullconenat",
+      "iptables-mod-fullconenat",
+      "ip6tables-mod-fullconenat"
+    ],
+    "kernel_patches": [
+      "target/linux/generic/hack-6.18/984-add-sonic-fullcone-support.patch",
+      "target/linux/generic/hack-6.18/985-add-sonic-fullcone-to-ipt.patch",
+      "target/linux/generic/hack-6.18/986-add-sonic-fullcone-to-nft.patch"
+    ]
+  },
   "kernel": {
     "mode": "build",
-    "version": "6.18.51",
+    "version": "6.18.59",
     "config_repository": "Lemonade-22/ophub-kernel",
     "config_commit": "35527918391e697f994d9efa02948d4308a7a766",
     "config_path": "kernel-config/release/stable",
     "builder_commit": "d7ad87797c2c3f60108082b0f84bf315a9fb6b63",
     "source": "ophub",
+    "source_repository": "https://github.com/ophub/linux-6.18.y",
+    "source_commit": "a0592d712c819c3571d19ad15ec2d55bd8733a02",
     "sign": "-ophub"
   }
 }

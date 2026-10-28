@@ -1,16 +1,50 @@
 #!/bin/sh
-# Fine3399 has one native LAN port. A one-member br-lan bridge is unnecessary
-# and did not forward LAN traffic on the tested image.
+# Fine3399 first-boot network defaults (staged only for the fine3399 board).
+#
+# eth0 is the native RTL8211F GMAC (LAN) and eth1 is the RTL8153 USB NIC (WAN).
+# The tested-good image used LAN directly on eth0: a one-member br-lan bridge
+# broke LAN/DHCP, so the native GMAC is not bridged.
+#
+# This runs once from /etc/uci-defaults on first boot. WAN is configured even
+# when the USB NIC has not enumerated yet; netifd brings wan/wan6 up when eth1
+# appears, so no extra runtime handling is needed here.
 
+# LAN: static address directly on the native GMAC.
 uci -q delete network.lan.ifname
 uci set network.lan.device='eth0'
 uci set network.lan.proto='static'
+uci set network.lan.ipaddr='192.168.10.1'
+uci set network.lan.netmask='255.255.255.0'
 
-# Remove the generated one-port br-lan device while leaving unrelated devices.
+# Delete only the generated one-port br-lan device, leaving other devices alone.
 for section in $(uci show network | sed -n "s/^network\.\(@device\[[0-9]*\]\)\.name='br-lan'$/\1/p"); do
 	uci -q delete "network.$section"
 done
 
+# WAN: DHCP client on the USB NIC, configured before eth1 exists.
+# Declare the section types explicitly so a first boot that has no wan/wan6
+# section still gets netifd-managed interfaces rather than typeless sections.
+uci set network.wan='interface'
+uci set network.wan.device='eth1'
+uci -q delete network.wan.ifname
+uci set network.wan.proto='dhcp'
+uci set network.wan.ipv6='1'
+uci set network.wan6='interface'
+uci set network.wan6.device='@wan'
+uci set network.wan6.proto='dhcpv6'
+
 uci commit network
+
+# DHCP server: explicit values for the LAN interface so it is never left disabled.
+uci set dhcp.lan='dhcp'
+uci set dhcp.lan.interface='lan'
+uci -q delete dhcp.lan.ignore
+uci set dhcp.lan.start='100'
+uci set dhcp.lan.limit='150'
+uci set dhcp.lan.leasetime='12h'
+uci set dhcp.lan.dhcpv6='server'
+uci set dhcp.lan.ra='server'
+
+uci commit dhcp
 
 exit 0
