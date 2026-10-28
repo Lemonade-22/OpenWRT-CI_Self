@@ -88,7 +88,7 @@ Fine3399 的硬件描述（GMAC、RGMII 时延、USB、eMMC 等）完全由 OPhu
 
 插件沿用 Panther：每次获取 VIKINGYFY/OpenWRT-CI main 的 GENERAL.txt、Packages.sh、Handles.sh、Settings.sh，主题读取同一快照的 OWRT-ALL.yml；记录上游实际提交。随后应用共用 ARM64 配置，再运行 DAEDE 和 Fakeflow 配置及检查。
 
-上游 `Settings.sh` 会无条件追加 `luci-theme-$WRT_THEME`、`luci-app-$WRT_THEME`、`luci-app-$WRT_THEME-config`。当前主题 `vantage` 只有 `luci-theme-vantage` 和 `luci-app-vantage`，没有 `luci-app-vantage-config`；`make defconfig` 会丢弃未定义的包。`verify_packages.py` 以实际 `tmp/.config-package.in` 为准确认：只有两个主题伴随包（`luci-app-<theme>`、`luci-app-<theme>-config`）确实未被任何 feed 定义时才允许跳过；已经定义却被丢弃、以及任何非主题插件被丢弃都仍然失败。不会取消全部包检查。
+上游 `Settings.sh` 会无条件追加 `luci-theme-$WRT_THEME`、`luci-app-$WRT_THEME`、`luci-app-$WRT_THEME-config`。当前主题 `vantage` 只有 `luci-theme-vantage` 和 `luci-app-vantage`，没有 `luci-app-vantage-config`；`make defconfig` 会丢弃未定义的包。`verify_packages.py` 以实际 `tmp/.config-package.in` 为准确认：只有已确认不存在的 `luci-app-vantage-config` 在确实未被任何 feed 定义时才允许跳过；已经定义却被丢弃、以及任何非主题插件被丢弃都仍然失败。不会取消全部包检查。
 
 ## SONiC fullcone 的内核/用户空间配套
 

@@ -21,12 +21,15 @@ SONIC = {
     "NF_CT_PROTO_SCTP": ("y",),
     "NF_NAT": ("y", "m"),
     "NF_NAT_MASQUERADE": ("y", "m"),
+    "NF_TABLES": ("y", "m"),
     "NFT_NAT": ("y", "m"),
     "NFT_MASQ": ("y", "m"),
     "NETFILTER_XT_TARGET_MASQUERADE": ("y", "m"),
 }
 SONIC_MODULES = {
     "NF_NAT": "nf_nat",
+    "NF_TABLES": "nf_tables",
+    "NFT_NAT": ("nft_nat", "nft_chain_nat"),
     "NFT_MASQ": "nft_masq",
     "NETFILTER_XT_TARGET_MASQUERADE": "xt_MASQUERADE",
 }
@@ -90,8 +93,10 @@ def check_requirement(values, required, modules, module_files, label, errors):
             errors.append(f"{key}=" + "/".join(allowed) + f" ({label})")
             continue
         module = module_files.get(key)
-        if actual == "m" and module and module not in modules:
-            errors.append(f"module file {module}.ko ({label})")
+        required_modules = (module,) if isinstance(module, str) else (module or ())
+        for filename in required_modules:
+            if actual == "m" and filename not in modules:
+                errors.append(f"module file {filename}.ko ({label})")
 
 
 def main(argv=None):

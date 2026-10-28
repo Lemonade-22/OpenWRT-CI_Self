@@ -44,7 +44,7 @@ SONIC_CONFIG = {
     'NF_NAT': 'm', 'NF_NAT_MASQUERADE': 'y', 'NF_TABLES': 'm', 'NFT_NAT': 'm',
     'NFT_MASQ': 'm', 'NETFILTER_XT_TARGET_MASQUERADE': 'm', 'NETFILTER_XT_NAT': 'm',
 }
-SONIC_MODULES = {'NF_NAT': 'nf_nat', 'NFT_MASQ': 'nft_masq',
+SONIC_MODULES = {'NF_TABLES': 'nf_tables', 'NFT_NAT': 'nft_nat', 'NF_NAT': 'nf_nat', 'NFT_MASQ': 'nft_masq',
                  'NETFILTER_XT_TARGET_MASQUERADE': 'xt_MASQUERADE'}
 DEVICE_CONFIG = {
     'STMMAC_ETH': 'y', 'STMMAC_PLATFORM': 'y', 'DWMAC_ROCKCHIP': 'y',
@@ -117,6 +117,8 @@ class SonicKernelGateTests(unittest.TestCase):
         modules.update(SONIC_MODULES)
         modules.update(DEVICE_MODULES)
         names = {module for symbol, module in modules.items() if config.get(symbol) == 'm'}
+        if config.get('NFT_NAT') == 'm':
+            names.add('nft_chain_nat')
         names.update(extra_modules)
         names -= set(omit_modules)
         for module in names:
@@ -166,6 +168,13 @@ class SonicKernelGateTests(unittest.TestCase):
         result = self.check(archive, '--fakeflow', '--sonic')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('nft_masq.ko', result.stderr)
+
+    def test_sonic_gate_rejects_missing_nat_or_tables_modules(self):
+        for module in ('nft_nat', 'nft_chain_nat', 'nf_tables'):
+            with self.subTest(module=module):
+                result = self.check(self.archive(omit_modules=(module,)), '--sonic')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(module + '.ko', result.stderr)
 
     def test_sonic_gate_rejects_legacy_fullcone_config_symbol(self):
         for symbol in ('NFT_FULLCONE', 'NETFILTER_XT_TARGET_FULLCONENAT'):

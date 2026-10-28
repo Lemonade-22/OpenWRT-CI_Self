@@ -15,7 +15,7 @@ theme packages exist (`luci-app-vantage` and `luci-theme-vantage` from
 https://github.com/anothaDev/luci-theme-vantage); `luci-app-vantage-config`
 does not, so buildroot legitimately drops that one selection.
 
-The exception must stay narrow: a theme companion is tolerated as absent only
+The exception is limited to luci-app-vantage-config, and only tolerated absent
 when its `PACKAGE_` symbol is genuinely missing from `tmp/.config-package.in`.
 A companion that IS defined but got dropped is a real error (the theme would
 be installed without its dashboard/configuration), and every non-theme package
@@ -68,8 +68,8 @@ def _defined_packages(definitions: str) -> set[str]:
 
 
 def _theme_companions(theme: str) -> set[str]:
-    """The two optional per-theme companion packages upstream selects."""
-    return {"luci-app-%s" % theme, "luci-app-%s-config" % theme}
+    """Only the confirmed nonexistent vantage config package is optional."""
+    return {"luci-app-vantage-config"} if theme == "vantage" else set()
 
 
 def evaluate(
@@ -107,8 +107,7 @@ def missing(requested: str, actual: str, definitions: str, theme: str) -> list[s
     """Return requested lines dropped by buildroot (input order).
 
     A line is satisfied when the identical stripped line exists in ``actual``.
-    The only tolerated absences are the two theme companion packages when
-    their ``PACKAGE_`` symbol is not defined in ``definitions``.
+    The only tolerated absence is luci-app-vantage-config when its ``PACKAGE_`` symbol is not defined in ``definitions``.
     """
     return evaluate(requested, actual, definitions, theme)[0]
 

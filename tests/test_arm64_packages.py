@@ -12,6 +12,14 @@ spec.loader.exec_module(packages)
 
 
 class PackageTests(unittest.TestCase):
+    def test_undefined_dashboard_and_other_theme_companions_fail(self):
+        for theme, package in (('vantage', 'luci-app-vantage'),
+                               ('argon', 'luci-app-argon-config')):
+            with self.subTest(package=package):
+                requested = 'CONFIG_PACKAGE_' + package + '=y\n'
+                self.assertEqual(packages.evaluate(requested, '', '', theme),
+                                 (requested.splitlines(), []))
+
     def test_vantage_has_dashboard_but_no_config_package(self):
         requested = 'CONFIG_PACKAGE_luci-app-vantage=y\nCONFIG_PACKAGE_luci-app-vantage-config=y\n'
         defined = 'config PACKAGE_luci-app-vantage\n'
