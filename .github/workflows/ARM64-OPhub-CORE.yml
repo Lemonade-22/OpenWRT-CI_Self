@@ -211,6 +211,10 @@ jobs:
           GITHUB_WORKSPACE="$upstream" bash "$upstream/Scripts/Settings.sh"
           grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/ARM64-OPhub.txt" >> .config
+          # OPhub runtime dependencies shared by every ARM64 device.
+          for package in r8152-firmware perl perlbase-essential perlbase-utf8 perlbase-time perlbase-xsloader ethtool uuidgen pv; do
+            echo "CONFIG_PACKAGE_${package}=y" >> .config
+          done
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
           make defconfig
@@ -236,9 +240,13 @@ jobs:
           done
           grep -qx 'CONFIG_PACKAGE_r8152-firmware=y' .config || {
             echo '::error::Missing RTL8152/RTL8153 firmware package'; exit 1; }
-          for package in perl perlbase-essential perlbase-utf8 perlbase-time; do
+          for package in perl perlbase-essential perlbase-utf8 perlbase-time perlbase-xsloader; do
             grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
               echo "::error::Missing OPhub sysinfo Perl dependency: $package"; exit 1; }
+          done
+          for package in ethtool uuidgen pv; do
+            grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
+              echo "::error::Missing OPhub runtime tool: $package"; exit 1; }
           done
           if ! grep -qE '^(CONFIG_DEFAULT_nftables|CONFIG_PACKAGE_nftables-json|CONFIG_PACKAGE_nftables-nojson)=y$' .config; then
             echo "::error::Missing nftables userspace provider (DEFAULT_nftables/nftables-json/nftables-nojson)"
@@ -270,7 +278,7 @@ jobs:
             echo '::error::Rootfs is missing rtl_nic/rtl8153b-2.fw'; exit 1; }
           grep -Eq '^(\./)?usr/bin/perl$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
             echo '::error::Rootfs is missing the Perl interpreter required by cpustat'; exit 1; }
-          for module in strict utf8 Time/HiRes; do
+          for module in strict utf8 Time/HiRes XSLoader; do
             grep -Eq "^(\./)?usr/lib/perl5/[^/]+/${module}\.pm$" "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
               echo "::error::Rootfs is missing Perl module: $module"; exit 1; }
           done
