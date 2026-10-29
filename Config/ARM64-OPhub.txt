@@ -30,4 +30,5 @@ CONFIG_PACKAGE_perl=y
 CONFIG_PACKAGE_perlbase-essential=y
 CONFIG_PACKAGE_perlbase-utf8=y
 CONFIG_PACKAGE_perlbase-time=y
+CONFIG_PACKAGE_perlbase-xsloader=y
 
