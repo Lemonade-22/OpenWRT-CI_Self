@@ -372,6 +372,15 @@ jobs:
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
           cp "$lock" output/ophub-sources.json
+          # Probe bridge offload independently so a rejected fb does not block LAN updates.
+          common_rootfs="ophub/make-openwrt/openwrt-files/common-files"
+          mkdir -p "$common_rootfs/usr/share/ucode"
+          rootfs=$(find output -maxdepth 1 -name '*-generic-rootfs.tar.gz' -type f)
+          test -n "$rootfs"
+          tar -xOf "$rootfs" ./usr/share/ucode/fw4.uc \
+            > "$common_rootfs/usr/share/ucode/fw4.uc"
+          python3 Custom/ARM64-OPhub/patch_bridge_flowtable.py \
+            "$common_rootfs/usr/share/ucode/fw4.uc"
           if [ "$BOARD" = fine3399 ]; then
             fine_rootfs="ophub/make-openwrt/openwrt-files/different-files/fine3399/rootfs"
             mkdir -p "$fine_rootfs/etc/uci-defaults" "$fine_rootfs/usr/share/libiwinfo"
