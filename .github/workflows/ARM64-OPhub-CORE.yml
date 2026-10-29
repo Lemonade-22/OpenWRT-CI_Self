@@ -240,6 +240,10 @@ jobs:
             grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
               echo "::error::Missing OPhub sysinfo Perl dependency: $package"; exit 1; }
           done
+          for package in ethtool uuidgen pv; do
+            grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
+              echo "::error::Missing OPhub runtime tool: $package"; exit 1; }
+          done
           if ! grep -qE '^(CONFIG_DEFAULT_nftables|CONFIG_PACKAGE_nftables-json|CONFIG_PACKAGE_nftables-nojson)=y$' .config; then
             echo "::error::Missing nftables userspace provider (DEFAULT_nftables/nftables-json/nftables-nojson)"
             exit 1
