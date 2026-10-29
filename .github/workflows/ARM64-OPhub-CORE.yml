@@ -283,6 +283,10 @@ jobs:
             echo '::error::Rootfs is missing rtl_nic/rtl8153b-2.fw'; exit 1; }
           grep -Eq '^(\./)?usr/bin/perl$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
             echo '::error::Rootfs is missing the Perl interpreter required by cpustat'; exit 1; }
+          grep -Eq '^(\./)?usr/share/wifi_devices.json$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
+            echo '::error::Rootfs is missing the Wi-Fi hardware database'; exit 1; }
+          grep -Eq '^(\./)?usr/share/libiwinfo/devices.txt$' "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
+            echo '::error::Rootfs is missing the libiwinfo hardware database'; exit 1; }
           for module in strict utf8 Time/HiRes XSLoader File/Glob; do
             grep -Eq "^(\./)?usr/lib/perl5/[^/]+/${module}\.pm$" "$GITHUB_WORKSPACE/output/rootfs-contents.txt" || {
               echo "::error::Rootfs is missing Perl module: $module"; exit 1; }
@@ -370,7 +374,17 @@ jobs:
           cp "$lock" output/ophub-sources.json
           if [ "$BOARD" = fine3399 ]; then
             fine_rootfs="ophub/make-openwrt/openwrt-files/different-files/fine3399/rootfs"
-            mkdir -p "$fine_rootfs/etc/uci-defaults"
+            mkdir -p "$fine_rootfs/etc/uci-defaults" "$fine_rootfs/usr/share/libiwinfo"
+            rootfs=$(find output -maxdepth 1 -name '*-generic-rootfs.tar.gz' -type f)
+            test -n "$rootfs"
+            tar -xOf "$rootfs" ./usr/share/wifi_devices.json \
+              > "$fine_rootfs/usr/share/wifi_devices.json"
+            python3 Custom/ARM64-OPhub/fix_wifi_model.py \
+              "$fine_rootfs/usr/share/wifi_devices.json"
+            tar -xOf "$rootfs" ./usr/share/libiwinfo/devices.txt \
+              > "$fine_rootfs/usr/share/libiwinfo/devices.txt"
+            python3 Custom/ARM64-OPhub/fix_wifi_model.py \
+              "$fine_rootfs/usr/share/libiwinfo/devices.txt"
             install -m 0755 Custom/ARM64-OPhub/fine3399-direct-lan \
               "$fine_rootfs/etc/uci-defaults/99-fine3399-direct-lan"
           fi
