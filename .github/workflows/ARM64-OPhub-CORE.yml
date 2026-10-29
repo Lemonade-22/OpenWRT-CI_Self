@@ -372,6 +372,15 @@ jobs:
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
           cp "$lock" output/ophub-sources.json
+          # Wireless configuration may be generated after LuCI caches its menu.
+          common_rootfs="ophub/make-openwrt/openwrt-files/common-files"
+          mkdir -p "$common_rootfs/usr/share/luci/menu.d"
+          rootfs=$(find output -maxdepth 1 -name '*-generic-rootfs.tar.gz' -type f)
+          test -n "$rootfs"
+          tar -xOf "$rootfs" ./usr/share/luci/menu.d/luci-mod-network.json \
+            > "$common_rootfs/usr/share/luci/menu.d/luci-mod-network.json"
+          python3 Custom/ARM64-OPhub/patch_wireless_menu.py \
+            "$common_rootfs/usr/share/luci/menu.d/luci-mod-network.json"
           if [ "$BOARD" = fine3399 ]; then
             fine_rootfs="ophub/make-openwrt/openwrt-files/different-files/fine3399/rootfs"
             mkdir -p "$fine_rootfs/etc/uci-defaults" "$fine_rootfs/usr/share/libiwinfo"
