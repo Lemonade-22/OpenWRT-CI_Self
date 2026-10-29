@@ -211,6 +211,10 @@ jobs:
           GITHUB_WORKSPACE="$upstream" bash "$upstream/Scripts/Settings.sh"
           grep -E '^CONFIG_PACKAGE_luci[^=]*=y$' .config | sort -u > "$GITHUB_WORKSPACE/output/upstream-luci-selected.config"
           cat "$GITHUB_WORKSPACE/Config/ARM64-OPhub.txt" >> .config
+          # OPhub runtime dependencies shared by every ARM64 device.
+          for package in r8152-firmware perl perlbase-essential perlbase-utf8 perlbase-time perlbase-xsloader ethtool uuidgen pv; do
+            echo "CONFIG_PACKAGE_${package}=y" >> .config
+          done
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
           make defconfig
