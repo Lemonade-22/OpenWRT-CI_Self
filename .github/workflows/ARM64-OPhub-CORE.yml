@@ -381,6 +381,12 @@ jobs:
             > "$common_rootfs/usr/share/luci/menu.d/luci-mod-network.json"
           python3 Custom/ARM64-OPhub/patch_wireless_menu.py \
             "$common_rootfs/usr/share/luci/menu.d/luci-mod-network.json"
+          # Probe bridge offload independently so a rejected fb does not block LAN updates.
+          mkdir -p "$common_rootfs/usr/share/ucode"
+          tar -xOf "$rootfs" ./usr/share/ucode/fw4.uc \
+            > "$common_rootfs/usr/share/ucode/fw4.uc"
+          python3 Custom/ARM64-OPhub/patch_bridge_flowtable.py \
+            "$common_rootfs/usr/share/ucode/fw4.uc"
           if [ "$BOARD" = fine3399 ]; then
             fine_rootfs="ophub/make-openwrt/openwrt-files/different-files/fine3399/rootfs"
             mkdir -p "$fine_rootfs/etc/uci-defaults" "$fine_rootfs/usr/share/libiwinfo"
