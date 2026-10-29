@@ -372,11 +372,17 @@ jobs:
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"
           cp output/*-generic-rootfs.tar.gz ophub/openwrt-armsr/
           cp "$lock" output/ophub-sources.json
-          # Probe bridge offload independently so a rejected fb does not block LAN updates.
+          # Wireless configuration may be generated after LuCI caches its menu.
           common_rootfs="ophub/make-openwrt/openwrt-files/common-files"
-          mkdir -p "$common_rootfs/usr/share/ucode"
+          mkdir -p "$common_rootfs/usr/share/luci/menu.d"
           rootfs=$(find output -maxdepth 1 -name '*-generic-rootfs.tar.gz' -type f)
           test -n "$rootfs"
+          tar -xOf "$rootfs" ./usr/share/luci/menu.d/luci-mod-network.json \
+            > "$common_rootfs/usr/share/luci/menu.d/luci-mod-network.json"
+          python3 Custom/ARM64-OPhub/patch_wireless_menu.py \
+            "$common_rootfs/usr/share/luci/menu.d/luci-mod-network.json"
+          # Probe bridge offload independently so a rejected fb does not block LAN updates.
+          mkdir -p "$common_rootfs/usr/share/ucode"
           tar -xOf "$rootfs" ./usr/share/ucode/fw4.uc \
             > "$common_rootfs/usr/share/ucode/fw4.uc"
           python3 Custom/ARM64-OPhub/patch_bridge_flowtable.py \
