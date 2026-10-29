@@ -261,6 +261,17 @@ jobs:
           fi
           cp .config "$GITHUB_WORKSPACE/output/rootfs-build.config"
           cp tmp/.config-package.in "$GITHUB_WORKSPACE/output/package-definitions.config"
+      - name: Ensure wireless configuration exists on every ARM64 device
+        working-directory: wrt
+        run: |
+          set -euo pipefail
+          mkdir -p files/etc/uci-defaults
+          cat > files/etc/uci-defaults/99-arm64-wireless-config <<'EOF'
+          #!/bin/sh
+          # LuCI loads wireless together with network when saving interfaces.
+          [ -e /etc/config/wireless ] || touch /etc/config/wireless
+          EOF
+          chmod 0755 files/etc/uci-defaults/99-arm64-wireless-config
       - name: Build generic rootfs
         working-directory: wrt
         run: |
