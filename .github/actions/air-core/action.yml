@@ -189,7 +189,9 @@ runs:
         $GITHUB_WORKSPACE/Scripts/Settings.sh
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
         make defconfig -j$(nproc)
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         make clean -j$(nproc)
@@ -207,6 +209,7 @@ runs:
       run: |
         cd ./wrt/
         make -j$(nproc) || make -j1 V=s
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify-kernel
 
     - name: Machine Information
       shell: bash

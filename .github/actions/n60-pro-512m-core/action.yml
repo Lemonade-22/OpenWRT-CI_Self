@@ -153,7 +153,9 @@ runs:
         done < "$required"
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
         bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
         make defconfig
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
         bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         while IFS= read -r option; do
@@ -244,6 +246,7 @@ runs:
         cd ./wrt/
         set -o pipefail
         make -j"$(nproc)" V=s 2>&1 | tee logs/firmware.log
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify-kernel
 
     - name: Save Compiler Cache
       if: always() && inputs.TEST != 'true' && steps.build-toolchain.outcome == 'success'

@@ -104,7 +104,7 @@ class CoreGenerationTests(unittest.TestCase):
             if 'uses: ./.github/workflows/WRT-CORE-SELF.yml' in path.read_text(encoding='utf-8')
         }
         self.assertEqual(callers, {
-            'AP8220-1G.yml', 'MT7621.yml', 'MTK-ALL.yml', 'OWRT-ALL.yml',
+            'AIROHA-ALL.yml', 'AP8220-1G.yml', 'MT7621.yml', 'MTK-ALL.yml', 'OWRT-ALL.yml',
             'QCA-ALL.yml', 'QCB-ALL.yml', 'WRT-TEST.yml', 'ZN-M2-WIFI-NO.yml',
         })
         self.assertFalse((workflows / 'AP8220-CORE.yml').exists())

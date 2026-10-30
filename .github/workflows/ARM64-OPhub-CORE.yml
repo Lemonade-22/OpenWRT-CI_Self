@@ -218,7 +218,9 @@ jobs:
           done
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
           bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
+          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
           make defconfig
+          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
           grep -qx 'CONFIG_PACKAGE_wifi-scripts=y' .config || {
             echo '::error::Missing wifi-scripts required for boot-time wifi config'; exit 1; }
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify

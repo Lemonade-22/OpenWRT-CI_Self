@@ -218,7 +218,9 @@ runs:
         fi
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
         make defconfig -j$(nproc)
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
         grep -qx 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y' .config
@@ -242,6 +244,7 @@ runs:
         cd ./wrt/
 
         make -j$(nproc) || make -j1 V=s
+        python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify-kernel
 
     - name: Verify native image and eBPF kernel
       shell: bash

@@ -4,8 +4,11 @@
 `patches/wrt-core-self.patch`，由 `Scripts/Generate-Wrt-Core.py` 应用到临时副本，
 生成统一的 `.github/workflows/WRT-CORE-SELF.yml`。
 
-AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL 和 WRT-TEST
-都调用这一份定制核心。Airoha、N60 Pro、Panther-X2 的独立构建方式不变。
+AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL 和 WRT-TEST
+都调用这一份定制核心。N60 Pro、Airoha NWRT/原生、ARM64 OPhub 使用各自的专用构建路径。
+
+所有入口共用 [内核兼容支持](KERNEL-COMPAT.md)：ARM64 启用 `CONFIG_COMPAT`，并启用原厂 ARM32
+运行环境需要的 SysV IPC、命名空间、packet socket 等功能；编译后核查实际内核配置，缺项则停止发布。
 
 通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE/Fakeflow 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。

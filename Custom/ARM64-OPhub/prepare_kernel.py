@@ -4,6 +4,10 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
+from kernel_compat import ARM64
 
 FAKEFLOW = {
     "BPF": "y", "BPF_SYSCALL": "y", "BPF_JIT": "y",
@@ -122,6 +126,7 @@ def prepare(root, lock):
     required = dict(FAKEFLOW)
     required.update(SONIC)
     required.update(DEVICE)
+    required.update(dict.fromkeys(ARM64, "y"))
     text = remove_legacy_fullcone(text)
     config.write_text(set_symbols(text, required), encoding="utf-8", newline="\n")
     print("Prepared kernel config:", config)

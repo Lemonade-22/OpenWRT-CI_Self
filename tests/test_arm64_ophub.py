@@ -68,14 +68,16 @@ class Arm64Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'upstream dtb differs'):
             profiles.validate(selected, database, self.root)
 
-    def archive(self, dtbs, omit_module=None):
+    def archive(self, dtbs, omit_module=None, omit_symbol=None):
         builtin = ('BPF BPF_SYSCALL BPF_JIT CGROUPS CGROUP_BPF KPROBES KPROBE_EVENTS '
                    'BPF_EVENTS DEBUG_INFO_BTF BPF_STREAM_PARSER XDP_SOCKETS NET_CLS_ACT '
-                   'NET_INGRESS NET_EGRESS NET_NS').split()
+                   'NET_INGRESS NET_EGRESS NET_NS COMPAT SYSVIPC NAMESPACES IPC_NS PACKET TMPFS BINFMT_ELF').split()
         modular = {'NET_SCH_INGRESS': 'sch_ingress', 'NET_CLS_BPF': 'cls_bpf',
                    'NET_ACT_BPF': 'act_bpf', 'VETH': 'veth', 'DUMMY': 'dummy', 'TUN': 'tun'}
         config = ''.join(f'CONFIG_{key}=y\n' for key in builtin)
         config += ''.join(f'CONFIG_{key}=m\n' for key in modular)
+        if omit_symbol:
+            config = config.replace(f'CONFIG_{omit_symbol}=y\n', '')
         files = {'config-6.18.51-ophub': config.encode()}
         files.update({f'rockchip/{name}': b'dtb fixture' for name in dtbs})
         files.update({f'lib/modules/6.18.51-ophub/{name}.ko': b'module fixture'
@@ -113,6 +115,12 @@ class Arm64Tests(unittest.TestCase):
         result = self.check(archive, '--dtb', 'rk3399-fine3399.dtb')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('tun.ko', result.stderr)
+
+    def test_kernel_archive_rejects_missing_arm32_compat(self):
+        archive = self.archive(['rk3399-fine3399.dtb'], omit_symbol='COMPAT')
+        result = self.check(archive, '--dtb', 'rk3399-fine3399.dtb')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('COMPAT=y', result.stderr)
 
     def test_kernel_staging_requires_matching_modules_and_dtbs(self):
         folder = self.root / 'compiled'

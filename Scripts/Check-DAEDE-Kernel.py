@@ -5,6 +5,7 @@ import io
 import re
 import sys
 import tarfile
+from kernel_compat import ARM64
 
 BUILTIN = ("BPF", "BPF_SYSCALL", "BPF_JIT", "CGROUPS", "CGROUP_BPF",
            "KPROBES", "KPROBE_EVENTS", "BPF_EVENTS", "DEBUG_INFO_BTF",
@@ -124,7 +125,7 @@ def main(argv=None):
         sys.exit("::error::Cannot uniquely verify ophub kernel config; expected one kernel config in archive")
     name, config = configs[0]
     values = dict(re.findall(r"^CONFIG_(\w+)=(\S+)$", config, re.M))
-    errors = [key + "=y" for key in BUILTIN if values.get(key) != "y"]
+    errors = [key + "=y" for key in BUILTIN + ARM64 if values.get(key) != "y"]
     for key, module in modular.items():
         if values.get(key) not in ("y", "m"):
             errors.append(key + "=y/m")

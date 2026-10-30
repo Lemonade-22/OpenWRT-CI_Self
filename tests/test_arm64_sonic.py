@@ -38,7 +38,7 @@ prepare_kernel_source = load('prepare_kernel_source')
 
 BASE_BUILTIN = ('BPF BPF_SYSCALL BPF_JIT CGROUPS CGROUP_BPF KPROBES KPROBE_EVENTS '
                 'BPF_EVENTS DEBUG_INFO_BTF BPF_STREAM_PARSER XDP_SOCKETS NET_CLS_ACT '
-                'NET_INGRESS NET_EGRESS NET_NS').split()
+                'NET_INGRESS NET_EGRESS NET_NS COMPAT SYSVIPC NAMESPACES IPC_NS PACKET TMPFS BINFMT_ELF').split()
 BASE_MODULES = {'NET_SCH_INGRESS': 'sch_ingress', 'NET_CLS_BPF': 'cls_bpf',
                 'NET_ACT_BPF': 'act_bpf', 'VETH': 'veth', 'DUMMY': 'dummy', 'TUN': 'tun'}
 SONIC_CONFIG = {
@@ -264,6 +264,8 @@ class PrepareKernelTests(unittest.TestCase):
         text = config.read_text(encoding='utf-8')
         self.assertNotIn('\r', text)
         values = prepare_kernel.config_values(text)
+        for symbol in prepare_kernel.ARM64:
+            self.assertEqual(values.get(symbol), 'y', symbol)
         for symbol, value in {**SONIC_CONFIG, **DEVICE_CONFIG}.items():
             self.assertEqual(values.get(symbol), value, symbol)
         for symbol in SONIC_CONFIG:
