@@ -3,6 +3,8 @@
 所有固件构建入口通过 `Scripts/kernel_compat.py` 共用以下要求：
 
 - ARM64：`CONFIG_COMPAT=y`，为支持 AArch32 的 CPU 提供 ARM32 用户态兼容。
+- 明确启用 `KUSER_HELPERS`、`COMPAT_ALIGNMENT_FIXUPS`，避免 COMPAT 打开后 Linux
+  `syncconfig` 遇到新选项向 CI 提问并退出；较老内核没有的 alignment fixups 符号由 Kconfig 丢弃。
 - 所有架构：`SYSVIPC`、`NAMESPACES`、`IPC_NS`、`NET_NS`、`PACKET`、`TMPFS`、`BINFMT_ELF` 内建启用。
 
 OpenWrt 配置在设备与私有设置之后、`make defconfig` 之前应用，随后检查是否保留。部分源码没有

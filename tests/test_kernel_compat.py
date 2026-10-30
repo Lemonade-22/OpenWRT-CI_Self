@@ -50,6 +50,16 @@ class CompatTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('COMPAT=y', result.stderr)
 
+    def test_compat_children_have_explicit_answers_before_linux_syncconfig(self):
+        self.assertEqual(self.run_phase('configure').returncode, 0)
+        text = (self.root / '.config').read_text()
+        definitions = (self.root / 'config/Config-kernel.in').read_text()
+        # Regression: enabling COMPAT exposes this prompt and Linux syncconfig
+        # exits in non-interactive CI when no answer was provided.
+        for symbol in ('KUSER_HELPERS', 'COMPAT_ALIGNMENT_FIXUPS'):
+            self.assertIn('CONFIG_KERNEL_' + symbol + '=y\n', text)
+            self.assertIn('config KERNEL_' + symbol + '\n', definitions)
+
     def test_final_kernel_gate_catches_dropped_compat_and_ipc(self):
         self.run_phase('configure')
         path = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'

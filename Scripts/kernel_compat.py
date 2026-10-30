@@ -7,6 +7,10 @@ import re
 
 RUNTIME = ("SYSVIPC", "NAMESPACES", "IPC_NS", "NET_NS", "PACKET", "TMPFS", "BINFMT_ELF")
 ARM64 = ("COMPAT",) + RUNTIME
+# Explicitly answer newly visible COMPAT prompts before Linux syncconfig.
+# Alignment fixups are absent on older kernels, so they are a requested
+# setting rather than a universally required final-kernel symbol.
+COMPAT_OPTIONS = ("KUSER_HELPERS", "COMPAT_ALIGNMENT_FIXUPS")
 
 
 def set_symbols(text, symbols, prefix="CONFIG_"):
@@ -29,13 +33,13 @@ def configure(root):
     # missing selectors, then let include/kernel-defaults.mk pass them to Linux.
     path = root / "config/Config-kernel.in"
     text = path.read_text(encoding="utf-8")
-    for symbol in ARM64:
+    for symbol in ARM64 + COMPAT_OPTIONS:
         if not re.search(r"^\s*(?:menu)?config KERNEL_" + symbol + r"\s*$", text, re.M):
-            dependency = "\tdepends on aarch64\n" if symbol == "COMPAT" else ""
+            dependency = "\tdepends on aarch64\n" if symbol in ("COMPAT",) + COMPAT_OPTIONS else ""
             text += f"\nconfig KERNEL_{symbol}\n\tbool\n{dependency}\tdefault y\n"
     path.write_text(text, encoding="utf-8", newline="\n")
     config = root / ".config"
-    config.write_text(set_symbols(config.read_text(encoding="utf-8"), ARM64, "CONFIG_KERNEL_"),
+    config.write_text(set_symbols(config.read_text(encoding="utf-8"), ARM64 + COMPAT_OPTIONS, "CONFIG_KERNEL_"),
                       encoding="utf-8", newline="\n")
 
 
