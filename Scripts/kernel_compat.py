@@ -11,13 +11,16 @@ ARM64 = ("COMPAT",) + RUNTIME
 # Alignment fixups are absent on older kernels, so they are a requested
 # setting rather than a universally required final-kernel symbol.
 COMPAT_OPTIONS = ("KUSER_HELPERS", "COMPAT_ALIGNMENT_FIXUPS")
+# COMPAT also exposes this prompt. Keep Linux's default (no legacy instruction
+# emulation), explicitly, so syncconfig never asks for an interactive answer.
+COMPAT_DISABLED = ("ARMV8_DEPRECATED",)
 
 
-def set_symbols(text, symbols, prefix="CONFIG_"):
+def set_symbols(text, symbols, prefix="CONFIG_", value="y"):
     for symbol in symbols:
         name = prefix + symbol
         text = re.sub(r"^(?:# )?" + name + r"(?:=.*| is not set)\n?", "", text, flags=re.M)
-        text += name + "=y\n"
+        text += (f"# {name} is not set" if value == "n" else f"{name}={value}") + "\n"
     return text
 
 
@@ -33,14 +36,16 @@ def configure(root):
     # missing selectors, then let include/kernel-defaults.mk pass them to Linux.
     path = root / "config/Config-kernel.in"
     text = path.read_text(encoding="utf-8")
-    for symbol in ARM64 + COMPAT_OPTIONS:
+    for symbol in ARM64 + COMPAT_OPTIONS + COMPAT_DISABLED:
         if not re.search(r"^\s*(?:menu)?config KERNEL_" + symbol + r"\s*$", text, re.M):
-            dependency = "\tdepends on aarch64\n" if symbol in ("COMPAT",) + COMPAT_OPTIONS else ""
-            text += f"\nconfig KERNEL_{symbol}\n\tbool\n{dependency}\tdefault y\n"
+            dependency = "\tdepends on aarch64\n" if symbol in ("COMPAT",) + COMPAT_OPTIONS + COMPAT_DISABLED else ""
+            default = "n" if symbol in COMPAT_DISABLED else "y"
+            text += f"\nconfig KERNEL_{symbol}\n\tbool\n{dependency}\tdefault {default}\n"
     path.write_text(text, encoding="utf-8", newline="\n")
     config = root / ".config"
-    config.write_text(set_symbols(config.read_text(encoding="utf-8"), ARM64 + COMPAT_OPTIONS, "CONFIG_KERNEL_"),
-                      encoding="utf-8", newline="\n")
+    selections = set_symbols(config.read_text(encoding="utf-8"), ARM64 + COMPAT_OPTIONS, "CONFIG_KERNEL_")
+    selections = set_symbols(selections, COMPAT_DISABLED, "CONFIG_KERNEL_", value="n")
+    config.write_text(selections, encoding="utf-8", newline="\n")
 
 
 def main():

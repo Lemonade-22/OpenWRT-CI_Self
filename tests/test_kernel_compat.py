@@ -60,6 +60,22 @@ class CompatTests(unittest.TestCase):
             self.assertIn('CONFIG_KERNEL_' + symbol + '=y\n', text)
             self.assertIn('config KERNEL_' + symbol + '\n', definitions)
 
+    def test_deprecated_instruction_prompt_has_an_explicit_default_answer(self):
+        # COMPAT exposes ARMV8_DEPRECATED even after its two direct child
+        # options are answered. OpenWrt copies disabled CONFIG_KERNEL_* lines
+        # into Linux .config.target as well as enabled ones.
+        config = self.root / '.config'
+        config.write_text(config.read_text() + 'CONFIG_KERNEL_ARMV8_DEPRECATED=y\n')
+        self.assertEqual(self.run_phase('configure').returncode, 0)
+        text = config.read_text()
+        self.assertIn('# CONFIG_KERNEL_ARMV8_DEPRECATED is not set\n', text)
+        self.assertNotIn('CONFIG_KERNEL_ARMV8_DEPRECATED=y', text)
+        definitions = (self.root / 'config/Config-kernel.in').read_text()
+        self.assertIn('config KERNEL_ARMV8_DEPRECATED\n\tbool\n'
+                      '\tdepends on aarch64\n\tdefault n\n', definitions)
+        self.assertEqual(self.run_phase('configure').returncode, 0)
+        self.assertEqual(config.read_text(), text)
+
     def test_final_kernel_gate_catches_dropped_compat_and_ipc(self):
         self.run_phase('configure')
         path = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'
