@@ -76,11 +76,47 @@ class CompatTests(unittest.TestCase):
         self.assertEqual(self.run_phase('configure').returncode, 0)
         self.assertEqual(config.read_text(), text)
 
+    def test_compat_integer_prompt_is_answered_before_syncconfig(self):
+        # Regression: enabling COMPAT exposes ARCH_MMAP_RND_COMPAT_BITS, which
+        # is a range-limited integer prompt. Answering only booleans leaves it
+        # unanswered, so Linux syncconfig turns interactive and aborts the
+        # kernel build in CI.
+        self.assertEqual(self.run_phase('configure').returncode, 0)
+        text = (self.root / '.config').read_text()
+        definitions = (self.root / 'config/Config-kernel.in').read_text()
+        self.assertIn('CONFIG_KERNEL_ARCH_MMAP_RND_COMPAT_BITS=11\n', text)
+        self.assertIn('config KERNEL_ARCH_MMAP_RND_COMPAT_BITS\n\tint\n'
+                      '\tdepends on aarch64\n\tdefault 11\n', definitions)
+        self.assertEqual(self.run_phase('verify').returncode, 0)
+
+    def test_defconfig_dropping_compat_aslr_value_fails_on_arm64(self):
+        self.run_phase('configure')
+        config = self.root / '.config'
+        config.write_text(config.read_text().replace(
+            'CONFIG_KERNEL_ARCH_MMAP_RND_COMPAT_BITS=11\n', ''))
+        result = self.run_phase('verify')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('ARCH_MMAP_RND_COMPAT_BITS=11', result.stderr)
+
+    def test_final_kernel_gate_catches_dropped_aslr_value(self):
+        self.run_phase('configure')
+        path = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'
+        path.parent.mkdir(parents=True)
+        full = ''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.ARM64)
+        full += 'CONFIG_ARCH_MMAP_RND_COMPAT_BITS=11\n'
+        path.write_text(full.replace('CONFIG_ARCH_MMAP_RND_COMPAT_BITS=11\n', ''))
+        result = self.run_phase('verify-kernel')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('ARCH_MMAP_RND_COMPAT_BITS=11', result.stderr)
+        path.write_text(full)
+        self.assertEqual(self.run_phase('verify-kernel').returncode, 0)
+
     def test_final_kernel_gate_catches_dropped_compat_and_ipc(self):
         self.run_phase('configure')
         path = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'
         path.parent.mkdir(parents=True)
         full = ''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.ARM64)
+        full += 'CONFIG_ARCH_MMAP_RND_COMPAT_BITS=11\n'
         for symbol in ('COMPAT', 'SYSVIPC', 'IPC_NS'):
             path.write_text(full.replace('CONFIG_' + symbol + '=y\n', ''))
             result = self.run_phase('verify-kernel')

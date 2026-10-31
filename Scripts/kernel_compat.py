@@ -14,6 +14,12 @@ COMPAT_OPTIONS = ("KUSER_HELPERS", "COMPAT_ALIGNMENT_FIXUPS")
 # COMPAT also exposes this prompt. Keep Linux's default (no legacy instruction
 # emulation), explicitly, so syncconfig never asks for an interactive answer.
 COMPAT_DISABLED = ("ARMV8_DEPRECATED",)
+# COMPAT additionally exposes a range-limited integer prompt for the 32-bit
+# ASLR entropy. Filogic pins ARCH_MMAP_RND_COMPAT_BITS_MIN=11 and generic pins
+# ARCH_MMAP_RND_COMPAT_BITS_MAX=16, so 11 sits inside the 11..16 range and is
+# the value Linux itself defaults to. It has to be selected as an integer, not
+# as a boolean selector, or the prompt survives into syncconfig.
+COMPAT_VALUES = {"ARCH_MMAP_RND_COMPAT_BITS": "11"}
 
 
 def set_symbols(text, symbols, prefix="CONFIG_", value="y"):
@@ -24,6 +30,14 @@ def set_symbols(text, symbols, prefix="CONFIG_", value="y"):
     return text
 
 
+def set_values(text, values, prefix="CONFIG_"):
+    for symbol, value in values.items():
+        name = prefix + symbol
+        text = re.sub(r"^(?:# )?" + name + r"(?:=.*| is not set)\n?", "", text, flags=re.M)
+        text += f"{name}={value}\n"
+    return text
+
+
 def check(text, symbols, label):
     missing = ["CONFIG_" + symbol + "=y" for symbol in symbols
                if not re.search(r"^CONFIG_" + symbol + r"=y$", text, re.M)]
@@ -31,20 +45,42 @@ def check(text, symbols, label):
         raise SystemExit("::error::" + label + " missing " + ", ".join(missing))
 
 
+def check_values(text, values, label):
+    missing = [f"CONFIG_{symbol}={value}" for symbol, value in values.items()
+               if not re.search(r"^CONFIG_" + symbol + "=" + re.escape(value) + r"$", text, re.M)]
+    if missing:
+        raise SystemExit("::error::" + label + " missing " + ", ".join(missing))
+
+
+def kernel_option(symbol, kind, default):
+    # Integer selections need their own type and an explicit default so that
+    # defconfig keeps them instead of dropping the symbol.
+    text = f"\nconfig KERNEL_{symbol}\n\t{kind}\n"
+    if symbol in ("COMPAT",) + COMPAT_OPTIONS + COMPAT_DISABLED + tuple(COMPAT_VALUES):
+        text += "\tdepends on aarch64\n"
+    return text + f"\tdefault {default}\n"
+
+
+def declarations():
+    entries = [(symbol, "bool", "y") for symbol in ARM64 + COMPAT_OPTIONS]
+    entries += [(symbol, "bool", "n") for symbol in COMPAT_DISABLED]
+    entries += [(symbol, "int", value) for symbol, value in COMPAT_VALUES.items()]
+    return entries
+
+
 def configure(root):
     # OpenWrt strips unknown CONFIG_KERNEL_* options at defconfig. Register
     # missing selectors, then let include/kernel-defaults.mk pass them to Linux.
     path = root / "config/Config-kernel.in"
     text = path.read_text(encoding="utf-8")
-    for symbol in ARM64 + COMPAT_OPTIONS + COMPAT_DISABLED:
+    for symbol, kind, default in declarations():
         if not re.search(r"^\s*(?:menu)?config KERNEL_" + symbol + r"\s*$", text, re.M):
-            dependency = "\tdepends on aarch64\n" if symbol in ("COMPAT",) + COMPAT_OPTIONS + COMPAT_DISABLED else ""
-            default = "n" if symbol in COMPAT_DISABLED else "y"
-            text += f"\nconfig KERNEL_{symbol}\n\tbool\n{dependency}\tdefault {default}\n"
+            text += kernel_option(symbol, kind, default)
     path.write_text(text, encoding="utf-8", newline="\n")
     config = root / ".config"
     selections = set_symbols(config.read_text(encoding="utf-8"), ARM64 + COMPAT_OPTIONS, "CONFIG_KERNEL_")
     selections = set_symbols(selections, COMPAT_DISABLED, "CONFIG_KERNEL_", value="n")
+    selections = set_values(selections, COMPAT_VALUES, "CONFIG_KERNEL_")
     config.write_text(selections, encoding="utf-8", newline="\n")
 
 
@@ -59,14 +95,19 @@ def main():
     config = (root / ".config").read_text(encoding="utf-8")
     arm64 = bool(re.search(r"^CONFIG_aarch64=y$", config, re.M))
     required = ARM64 if arm64 else RUNTIME
+    required_values = COMPAT_VALUES if arm64 else {}
     if args.phase == "verify":
-        check(config.replace("CONFIG_KERNEL_", "CONFIG_"), required, "OpenWrt kernel selections")
+        selections = config.replace("CONFIG_KERNEL_", "CONFIG_")
+        check(selections, required, "OpenWrt kernel selections")
+        check_values(selections, required_values, "OpenWrt kernel selections")
     else:
         configs = sorted(root.glob("build_dir/target-*/linux-*/linux-*/.config"))
         if not configs:
             raise SystemExit("::error::No compiled Linux .config found for compatibility verification")
         for path in configs:
-            check(path.read_text(encoding="utf-8"), required, str(path))
+            text = path.read_text(encoding="utf-8")
+            check(text, required, str(path))
+            check_values(text, required_values, str(path))
             print("Verified kernel runtime compatibility:", path)
     if not arm64:
         print("Non-ARM64 target: ARM32 COMPAT is not required; runtime prerequisites verified.")
