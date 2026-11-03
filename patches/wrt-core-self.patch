@@ -66,7 +66,7 @@
  
        - name: Custom Settings
          run: |
-@@ -192,8 +209,32 @@
+@@ -192,8 +209,34 @@
  
            $GITHUB_WORKSPACE/Scripts/Settings.sh
            $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
@@ -77,7 +77,9 @@
 +          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
++          bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
 +          make defconfig -j$(nproc)
++          bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
@@ -101,7 +103,7 @@
  
        - name: Prepare Rust Toolchain
          if: ${{ !inputs.WRT_TEST }}
-@@ -217,6 +258,8 @@
+@@ -217,6 +260,8 @@
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
              make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
@@ -110,7 +112,7 @@
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +307,8 @@
+@@ -264,9 +309,8 @@
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -122,7 +124,7 @@
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,33 +323,45 @@
+@@ -281,33 +325,45 @@
              make clean -j$(nproc)
            fi
  

@@ -13,6 +13,13 @@ AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL �
 通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE/Fakeflow 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。
 
+## 全设备静态地址绑定
+
+通用定制核心、N60 Pro、Airoha NWRT/原生和 ARM64 OPhub 都调用
+`Scripts/Static-Gateway.sh`，从 `Lemonade-22/luci-app-static-gw` 的 main
+分支拉取插件并记录提交号。脚本在设备配置和手动包选项之后将插件设为内置，
+在 `make defconfig` 后确认仍然选中，避免构建出缺少插件的固件。
+
 ## 所有定制核心机型及 N60 Pro 的 Mesh 支持
 
 `Scripts/Mesh.sh prepare` 在软件包处理完成后拉取

@@ -154,7 +154,9 @@ runs:
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
         bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
         python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
+        bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
         make defconfig
+        bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
         python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
         bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
