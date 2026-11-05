@@ -7,6 +7,7 @@ set -euo pipefail
 git clone --depth=1 --filter=blob:none --sparse https://github.com/immortalwrt/luci.git "$RUNNER_TEMP/sr1010-luci"
 git -C "$RUNNER_TEMP/sr1010-luci" sparse-checkout set themes/luci-theme-footstrap
 cp -a "$RUNNER_TEMP/sr1010-luci/themes/luci-theme-footstrap" feeds/luci/themes/
+./scripts/feeds update -i luci
 ./scripts/feeds install luci-theme-footstrap
 
 # These are the extra applications selected by MT7621 after its exclusions.
