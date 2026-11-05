@@ -28,6 +28,8 @@ with open('.config', 'a') as config:
     config.write('\n' + '\n'.join(line for line in overrides.splitlines()
                                  if line.startswith('CONFIG_')) + '\n')
 PY
+cat "$GITHUB_WORKSPACE/Config/ZTE-SR1010-EXTRA.txt" >> .config
+printf 'CONFIG_BPF_TOOLCHAIN_HOST_PATH="%s"\n' "$(llvm-config --prefix)" >> .config
 # User input adjusts packages only; it cannot silently switch the target.
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
@@ -51,7 +53,9 @@ cp .config "$RUNNER_TEMP/sr1010-requested.config"
 make defconfig
 for symbol in TARGET_zte TARGET_zte_zx279133 TARGET_DEVICE_zte_zx279133_DEVICE_zte_zxslc-sr1010 \
   PACKAGE_kmod-zte-npu PACKAGE_kmod-zte-fnoffload PACKAGE_kmod-zte-rtl8372n \
-  PACKAGE_luci-theme-footstrap; do
+  PACKAGE_luci-theme-footstrap KERNEL_DEBUG_INFO_BTF KERNEL_BPF_EVENTS \
+  KERNEL_CGROUP_BPF KERNEL_BPF_STREAM_PARSER PACKAGE_kmod-sched-bpf \
+  PACKAGE_kmod-nft-offload; do
   grep -qx "CONFIG_${symbol}=y" .config || { echo "Missing required configuration: $symbol" >&2; exit 1; }
 done
 python3 - <<'PY'
@@ -61,11 +65,14 @@ def selections(path):
                 if line.startswith('CONFIG_') and '=' in line)
 requested = selections(pathlib.Path(os.environ['RUNNER_TEMP']) / 'sr1010-requested.config')
 actual = selections('.config')
-for name in ('autoreboot', 'mini-diskmanager', 'natmapt', 'partexp', 'upnp'):
+for name in ('autoreboot', 'mini-diskmanager', 'natmapt', 'partexp', 'upnp',
+             'samba4', 'mwan3', 'syncdial', 'zte-mesh'):
     key = 'CONFIG_PACKAGE_luci-app-' + name
     if requested.get(key) in ('y', 'm') and actual.get(key) != requested[key]:
         raise SystemExit('Requested application was dropped: ' + key)
 PY
+grep -q "flow_offloading='1'" target/linux/zte/zx279133/base-files/etc/uci-defaults/98-sr1010-defaults
+grep -q "flow_offloading_hw='1'" target/linux/zte/zx279133/base-files/etc/uci-defaults/98-sr1010-defaults
 mkdir -p "$GITHUB_WORKSPACE/sr1010-output"
 cp .config "$GITHUB_WORKSPACE/sr1010-output/config.txt"
 ./scripts/diffconfig.sh > "$GITHUB_WORKSPACE/sr1010-output/diffconfig.txt"

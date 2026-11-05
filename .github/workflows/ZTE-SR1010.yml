@@ -43,6 +43,14 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          # Same mirror workaround already available in WRT-CORE-SELF.
+          sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) \
+            -exec sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' {} +
+          sudo tee /etc/apt/apt.conf.d/99-sr1010-network >/dev/null <<'EOF'
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          Acquire::Retries "3";
+          EOF
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential clang llvm lld flex bison g++ gawk gcc-multilib \
@@ -85,7 +93,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: wrt/.ccache
-          key: sr1010-ccache-${{ runner.os }}-${{ steps.source.outputs.sha }}-${{ hashFiles('Config/ZTE-SR1010.txt', 'Config/GENERAL.txt', 'Scripts/SR1010-Prepare.sh') }}
+          key: sr1010-ccache-${{ runner.os }}-${{ steps.source.outputs.sha }}-${{ hashFiles('Config/ZTE-SR1010*.txt', 'Config/GENERAL.txt', 'Scripts/SR1010-Prepare.sh') }}
           restore-keys: sr1010-ccache-${{ runner.os }}-
 
       - name: Download source packages
@@ -109,6 +117,12 @@ jobs:
         run: |
           image=bin/targets/zte/zx279133/immortalwrt-zte-zx279133-zte_zxslc-sr1010-squashfs-sysupgrade.bin
           test -s "$image"
+          kernel_config=$(find build_dir/target-*/linux-zte_zx279133/linux-* -maxdepth 1 -name .config -type f)
+          test -n "$kernel_config"
+          for symbol in BPF BPF_SYSCALL BPF_JIT DEBUG_INFO_BTF BPF_EVENTS CGROUP_BPF COMPAT; do
+            grep -qx "CONFIG_${symbol}=y" "$kernel_config"
+          done
+          cp "$kernel_config" "$GITHUB_WORKSPACE/sr1010-output/kernel.config"
           cp "$image" "$GITHUB_WORKSPACE/sr1010-output/"
           find bin/targets/zte/zx279133 -maxdepth 1 -type f \
             \( -name '*.manifest' -o -name '*.buildinfo' -o -name 'profiles.json' \) \
@@ -140,6 +154,7 @@ jobs:
             CI 提交：${{ github.sha }}
             默认地址：192.168.10.1；主机名：OWRT；初始 root 密码为空。
             默认主题：Footstrap；软件选择参考 MT7621。
+            增加 Samba4、mwan3 多 WAN、SyncDial 和 ZTE-MESH；启用 eBPF/BTF 与 TC BPF 模块。
             保留中兴 NPU、硬件转发和固件槽位管理。此适配不提供无线驱动。
             镜像为上游 SR1010 专用容器，内含上游修补过的 U-Boot；不适用于其他机型。
             构建产物不代表已完成实机启动验证。
