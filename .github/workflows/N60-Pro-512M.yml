@@ -133,6 +133,7 @@ jobs:
           cd ./wrt/
           cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
           eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
+          bash "$GITHUB_WORKSPACE/Scripts/Check-Preinstalled.sh" prepare
           $GITHUB_WORKSPACE/Scripts/Settings.sh
           # Use Ubuntu's LLVM for BPF instead of building LLVM from source.
           for tool in clang llc llvm-dis opt llvm-strip; do

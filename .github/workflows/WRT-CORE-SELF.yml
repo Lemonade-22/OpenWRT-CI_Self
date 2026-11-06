@@ -213,6 +213,7 @@ jobs:
           fi
 
           eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
+          bash "$GITHUB_WORKSPACE/Scripts/Check-Preinstalled.sh" prepare
           $GITHUB_WORKSPACE/Scripts/Settings.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
           bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
