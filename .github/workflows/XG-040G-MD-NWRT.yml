@@ -32,7 +32,7 @@ jobs:
       - uses: ./.github/actions/air-core
         with:
           WRT_CONFIG: AIROHA-NWRT
-          WRT_THEME: aurora
+          WRT_THEME: auto
           WRT_NAME: XG-040G-Series
           WRT_SSID: XG-040G
           WRT_WORD: 12345678

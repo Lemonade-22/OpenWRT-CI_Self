@@ -19,7 +19,7 @@ runs:
       shell: bash
       env:
         IN_WRT_CONFIG: "N60-Pro-512M"
-        IN_WRT_THEME: "aurora"
+        IN_WRT_THEME: "auto"
         IN_WRT_NAME: "N60-Pro"
         IN_WRT_SSID: "N60-Pro"
         IN_WRT_WORD: "12345678"
@@ -120,6 +120,7 @@ runs:
       run: |
         cd ./wrt/
         cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
+        eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
         $GITHUB_WORKSPACE/Scripts/Settings.sh
         # Use Ubuntu's LLVM for BPF instead of building LLVM from source.
         for tool in clang llc llvm-dis opt llvm-strip; do

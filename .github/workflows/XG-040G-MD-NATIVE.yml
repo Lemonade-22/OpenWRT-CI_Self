@@ -27,7 +27,7 @@ jobs:
       - uses: ./.github/actions/air-native-core
         with:
           WRT_CONFIG: AIROHA-MD-NATIVE
-          WRT_THEME: aurora
+          WRT_THEME: auto
           WRT_NAME: OWRT
           WRT_SSID: OWRT
           WRT_WORD: '12345678'

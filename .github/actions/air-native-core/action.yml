@@ -204,6 +204,7 @@ runs:
         cd ./wrt/
 
         cat "$GITHUB_WORKSPACE/upstream-ci/Config/GENERAL.txt" "$GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt" >> .config
+        eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
         bash "$GITHUB_WORKSPACE/upstream-ci/Scripts/Settings.sh"
         # Force /dev/mem + devmem applet for luci-app-airoha-npu overclock.
         if [ -f "$GITHUB_WORKSPACE/Config/AIROHA-DEVMEM.txt" ]; then

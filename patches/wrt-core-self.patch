@@ -79,7 +79,7 @@
              cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
            fi
  
-+          bash "$GITHUB_WORKSPACE/Scripts/Theme.sh"
++          eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
            $GITHUB_WORKSPACE/Scripts/Settings.sh
            $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
 -

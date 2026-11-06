@@ -186,6 +186,7 @@ runs:
         else
           cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
         fi
+        eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
         $GITHUB_WORKSPACE/Scripts/Settings.sh
         bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
         bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
