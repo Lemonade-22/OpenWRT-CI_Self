@@ -1,4 +1,4 @@
-# Preinstalled package checks
+# Preinstalled theme source
 
 `Scripts/Check-Preinstalled.sh prepare` runs in the OpenWrt source tree after
 package customization and theme resolution, before Settings.sh and defconfig.
@@ -11,25 +11,9 @@ selected theme. Existing sources are reused. Unknown external sources must be
 added explicitly rather than guessed. To add automatic recovery for another
 external theme, add its repository to the prepare case statement.
 
-The script installs a hook in OpenWrt's package/Makefile on opkg trees.
-Immediately before the rootfs package transaction, it runs the same command with
-OPKG --noaction. This uses the exact generated install list, local package
-index/files, architecture, ABI versions and signing keys used by OpenWrt.
-The package manager reports missing packages and dependency conflicts. A failed
-check prevents installation; a successful check proceeds with the original
-command. No runtime install scripts execute during the dry run.
-
-APK rootfs transactions are deliberately left unhooked. APK --simulate skips the
-database bootstrap that --initdb performs, so it cannot read a fresh rootfs, and
-seeding the database layout by hand did not survive a real build. Apk trees
-therefore install without the dry run; a dependency problem there surfaces at
-install time instead.
-
-This does not fetch prebuilt packages from unrelated binary repositories.
-A missing source can be recovered before compilation; missing build outputs or
-unknown dependencies at packaging time require correcting and rebuilding their
-sources. A source branch whose installation command no longer matches the hook
-fails during preparation rather than silently omitting the check.
-
-A valid cached rootfs may be restored without a new install transaction; the
-OpenWrt cache key includes its package index and package/Makefile.
+There is no rootfs package dry run. An earlier version installed a hook in
+OpenWrt's package/Makefile that re-ran the rootfs transaction with APK
+--simulate or OPKG --noaction. That hook was removed: APK --simulate skips the
+database bootstrap that --initdb performs and cannot read a fresh rootfs, and
+seeding the layout by hand did not survive a real build. A missing package or
+dependency now surfaces at install time rather than before it.
