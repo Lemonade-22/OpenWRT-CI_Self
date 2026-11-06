@@ -30,10 +30,19 @@
  
  jobs:
    core:
-@@ -75,6 +80,14 @@
+@@ -72,9 +77,22 @@
+         uses: actions/checkout@main
+ 
+       - name: Initialization Environment
++        timeout-minutes: 35
          env:
            DEBIAN_FRONTEND: noninteractive
-         run: |
+-        run: |
++          NEEDRESTART_SUSPEND: "1"
++        run: |
++          # apt 定时任务与 needrestart 是这一步最常见的挂死原因
++          sudo systemctl stop unattended-upgrades.service apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
++          sudo pkill -f apt.systemd.daily 2>/dev/null || true
 +          if [ "$WRT_APT_FIX" = "true" ]; then
 +            sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) -exec sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' {} +
 +            sudo tee /etc/apt/apt.conf.d/99-wrt-network >/dev/null <<'EOF'
@@ -45,7 +54,7 @@
            sudo apt-get -yqq purge firefox
            sudo apt-get -yqq update
            sudo apt-get -yqq full-upgrade
-@@ -139,9 +152,12 @@
+@@ -139,9 +157,12 @@
              sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
            fi
  
@@ -58,7 +67,7 @@
  
        - name: Restore Build Cache
          id: cache-restore
-@@ -179,6 +195,7 @@
+@@ -179,6 +200,7 @@
            $GITHUB_WORKSPACE/Scripts/Packages.sh
            $GITHUB_WORKSPACE/Scripts/Handles.sh
            $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
@@ -66,7 +75,7 @@
  
        - name: Custom Settings
          run: |
-@@ -192,8 +209,34 @@
+@@ -192,8 +214,34 @@
  
            $GITHUB_WORKSPACE/Scripts/Settings.sh
            $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
@@ -103,7 +112,7 @@
  
        - name: Prepare Rust Toolchain
          if: ${{ !inputs.WRT_TEST }}
-@@ -217,6 +260,8 @@
+@@ -217,6 +265,8 @@
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
              make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
@@ -112,7 +121,7 @@
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +309,8 @@
+@@ -264,9 +314,8 @@
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -124,7 +133,7 @@
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,33 +325,45 @@
+@@ -281,33 +330,45 @@
              make clean -j$(nproc)
            fi
  
