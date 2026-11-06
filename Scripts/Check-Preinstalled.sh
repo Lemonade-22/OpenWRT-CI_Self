@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run prepare in the OpenWrt source root, after package customization and before defconfig.
-# The installed hook checks the real rootfs package transaction, including dependencies.
+# The installed opkg hook checks the real rootfs package transaction, including dependencies.
 set -euo pipefail
 
 case "${1:-}" in
@@ -32,8 +32,9 @@ path = Path('package/Makefile')
 text = path.read_text()
 # Preserve OpenWrt's exact package list, ABI versions, keys and architecture.
 # env handles the variable assignments at the start of its package-manager command.
+# APK is deliberately left alone: its --simulate rejects the fresh-root check.
 hooks = 0
-for manager, verb in [('apk', 'add'), ('opkg', 'install')]:
+for manager, verb in [('opkg', 'install')]:
     original = '\t$(call ' + manager + ',$(TARGET_DIR)) ' + verb + ' '
     wrapped = '\tbash "$(TOPDIR)/scripts/check-preinstalled.sh" ' + manager + ' env $(call ' + manager + ',$(TARGET_DIR)) ' + verb + ' '
     if wrapped in text:
@@ -50,32 +51,16 @@ if not hooks:
 path.write_text(text, newline='\n')
 PY
     ;;
-  apk|opkg)
+  opkg)
     manager="$1"; shift
     [[ $# -gt 0 ]] || { echo "::error::Missing package installation command" >&2; exit 2; }
-    if [[ "$manager" == apk ]]; then
-      # APK simulation disables --initdb, so seed the empty database layout first.
-      # Preserve an existing world file; never mark any packages as installed.
-      root=""
-      previous=""
-      for argument in "$@"; do
-        if [[ "$previous" == --root ]]; then root="$argument"; break; fi
-        case "$argument" in --root=*) root="${argument#--root=}"; break ;; esac
-        previous="$argument"
-      done
-      [[ -n "$root" ]] || { echo "::error::APK rootfs command has no --root" >&2; exit 2; }
-      mkdir -p "$root/etc/apk" "$root/lib/apk/db"
-      [[ -e "$root/etc/apk/world" ]] || touch "$root/etc/apk/world"
-    fi
-    option=--simulate
-    [[ "$manager" == apk ]] || option=--noaction
     echo "Checking preinstalled packages and dependencies ($manager)..."
-    if ! "$@" "$option"; then
+    if ! "$@" --noaction; then
       echo "::error::Preinstalled package check failed; see missing packages or dependency conflicts above. Build their sources before packaging." >&2
       exit 1
     fi
     echo "Preinstalled package check passed; installing rootfs packages."
     exec "$@"
     ;;
-  *) echo "Usage: $0 prepare|apk COMMAND...|opkg COMMAND..." >&2; exit 2 ;;
+  *) echo "Usage: $0 prepare|opkg COMMAND..." >&2; exit 2 ;;
 esac

@@ -11,16 +11,19 @@ selected theme. Existing sources are reused. Unknown external sources must be
 added explicitly rather than guessed. To add automatic recovery for another
 external theme, add its repository to the prepare case statement.
 
-The script installs a hook in OpenWrt's package/Makefile. Immediately before the
-rootfs package transaction, it runs the same command with APK --simulate or
+The script installs a hook in OpenWrt's package/Makefile on opkg trees.
+Immediately before the rootfs package transaction, it runs the same command with
 OPKG --noaction. This uses the exact generated install list, local package
 index/files, architecture, ABI versions and signing keys used by OpenWrt.
-For a fresh APK rootfs the hook first creates the empty database directories
-and world file, because APK disables --initdb during --simulate. Existing world
-contents are preserved and no packages are marked installed by this bootstrap.
 The package manager reports missing packages and dependency conflicts. A failed
 check prevents installation; a successful check proceeds with the original
 command. No runtime install scripts execute during the dry run.
+
+APK rootfs transactions are deliberately left unhooked. APK --simulate skips the
+database bootstrap that --initdb performs, so it cannot read a fresh rootfs, and
+seeding the database layout by hand did not survive a real build. Apk trees
+therefore install without the dry run; a dependency problem there surfaces at
+install time instead.
 
 This does not fetch prebuilt packages from unrelated binary repositories.
 A missing source can be recovered before compilation; missing build outputs or
