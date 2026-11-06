@@ -1,3 +1,5 @@
+diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
+index c57e99d..94486e7 100644
 --- a/.github/workflows/WRT-CORE.yml
 +++ b/.github/workflows/WRT-CORE.yml
 @@ -1,8 +1,9 @@
@@ -12,17 +14,17 @@
  
  on:
    workflow_call:
-@@ -43,6 +44,9 @@
-       WRT_TEST:
+@@ -44,6 +45,9 @@ on:
          required: false
          default: false
-+        type: boolean
+         type: boolean
 +      WRT_APT_FIX:
 +        required: false
-         type: boolean
++        type: boolean
  
  env:
-@@ -59,6 +63,7 @@
+   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+@@ -59,11 +63,12 @@ env:
    WRT_SOURCE: ${{inputs.WRT_SOURCE}}
    WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
    WRT_TEST: ${{inputs.WRT_TEST}}
@@ -30,16 +32,21 @@
  
  jobs:
    core:
-@@ -72,9 +77,22 @@
+     name: ${{inputs.WRT_SOURCE}}
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-26.04
+     outputs:
+       cache_prefix: ${{steps.initialize-values.outputs.cache_prefix}}
+       cache_key: ${{steps.clone-code.outputs.cache_key}}
+@@ -72,9 +77,22 @@ jobs:
          uses: actions/checkout@main
  
        - name: Initialization Environment
 +        timeout-minutes: 35
          env:
            DEBIAN_FRONTEND: noninteractive
--        run: |
 +          NEEDRESTART_SUSPEND: "1"
-+        run: |
+         run: |
 +          # apt 定时任务与 needrestart 是这一步最常见的挂死原因
 +          sudo systemctl stop unattended-upgrades.service apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
 +          sudo pkill -f apt.systemd.daily 2>/dev/null || true
@@ -54,7 +61,7 @@
            sudo apt-get -yqq purge firefox
            sudo apt-get -yqq update
            sudo apt-get -yqq full-upgrade
-@@ -139,9 +157,12 @@
+@@ -139,9 +157,12 @@ jobs:
              sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
            fi
  
@@ -67,7 +74,7 @@
  
        - name: Restore Build Cache
          id: cache-restore
-@@ -179,6 +200,7 @@
+@@ -179,6 +200,7 @@ jobs:
            $GITHUB_WORKSPACE/Scripts/Packages.sh
            $GITHUB_WORKSPACE/Scripts/Handles.sh
            $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
@@ -75,7 +82,7 @@
  
        - name: Custom Settings
          run: |
-@@ -190,10 +212,36 @@
+@@ -190,10 +212,36 @@ jobs:
              cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
            fi
  
@@ -114,7 +121,7 @@
  
        - name: Prepare Rust Toolchain
          if: ${{ !inputs.WRT_TEST }}
-@@ -217,6 +265,8 @@
+@@ -217,6 +265,8 @@ jobs:
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
              make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
@@ -123,7 +130,7 @@
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +314,8 @@
+@@ -264,9 +314,8 @@ jobs:
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -135,10 +142,19 @@
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,33 +330,45 @@
+@@ -281,39 +330,51 @@ jobs:
              make clean -j$(nproc)
            fi
  
+-      - name: Release Firmware
+-        uses: softprops/action-gh-release@master
+-        with:
+-          tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+-          files: ./wrt/upload/*.*
+-          body: |
+-            这是个平台固件包，内含多个设备！
+-            请注意选择你需要的设备固件！
+-            不要问，刷就完事了！
 +          cat > ./release-body.md <<EOF
 +          这是个平台固件包，内含多个设备！
 +          请注意选择你需要的设备固件！
@@ -149,57 +165,54 @@
 +          源码：${WRT_REPO}
 +          分支：${WRT_BRANCH}
 +          提交：${WRT_HASH}
-+
+ 
+-            全系带开源硬件加速，别问了！
 +          配置：${WRT_CONFIG}
 +          平台：${WRT_TARGET}
-+
+ 
+-            源码：${{env.WRT_REPO}}
+-            分支：${{env.WRT_BRANCH}}
+-            提交：${{env.WRT_HASH}}
 +          登录地址：${WRT_IP}
 +          登录密码：${WRT_PW}
-+
+ 
+-            配置：${{env.WRT_CONFIG}}
+-            平台：${{env.WRT_TARGET}}
 +          WIFI名称：${WRT_SSID}
 +          WIFI密码：${WRT_WORD}
-+
+ 
+-            登录地址：${{env.WRT_IP}}
+-            登录密码：${{env.WRT_PW}}
 +          内核版本：${WRT_KVER}
 +          插件列表：${WRT_LIST}
 +          EOF
-+
+ 
+-            WIFI名称：${{env.WRT_SSID}}
+-            WIFI密码：${{env.WRT_WORD}}
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" package
 +
 +      - name: Upload Build Artifacts
 +        if: ${{ env.WRT_ARTIFACT_NAME != '' }}
-+        uses: actions/upload-artifact@v4
++        uses: actions/upload-artifact@v7
 +        with:
 +          name: ${{ env.WRT_ARTIFACT_NAME }}
 +          path: ./wrt/upload/
-+
-       - name: Release Firmware
-         uses: softprops/action-gh-release@master
-         with:
-           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
-           files: ./wrt/upload/*.*
--          body: |
--            这是个平台固件包，内含多个设备！
--            请注意选择你需要的设备固件！
--            不要问，刷就完事了！
--
--            全系带开源硬件加速，别问了！
--
--            源码：${{env.WRT_REPO}}
--            分支：${{env.WRT_BRANCH}}
--            提交：${{env.WRT_HASH}}
--
--            配置：${{env.WRT_CONFIG}}
--            平台：${{env.WRT_TARGET}}
--
--            登录地址：${{env.WRT_IP}}
--            登录密码：${{env.WRT_PW}}
--
--            WIFI名称：${{env.WRT_SSID}}
--            WIFI密码：${{env.WRT_WORD}}
--
+ 
 -            内核版本：${{env.WRT_KVER}}
 -            插件列表：${{env.WRT_LIST}}
++      - name: Release Firmware
++        uses: softprops/action-gh-release@master
++        with:
++          tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
++          files: ./wrt/upload/*.*
 +          body_path: ./wrt/release-body.md
  
    cache-rollover:
      name: Roll cache generations
+     needs: core
+     if: ${{ !inputs.WRT_TEST && needs.core.result == 'success' }}
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-26.04
+     concurrency:
+       group: wrt-cache-rollover-${{github.ref}}-${{needs.core.outputs.cache_prefix}}
+       cancel-in-progress: false
