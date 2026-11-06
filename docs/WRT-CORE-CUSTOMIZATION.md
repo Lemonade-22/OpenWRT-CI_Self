@@ -5,7 +5,8 @@
 生成统一的 `.github/workflows/WRT-CORE-SELF.yml`。
 
 AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL 和 WRT-TEST
-都调用这一份定制核心。N60 Pro、Airoha NWRT/原生、ARM64 OPhub 使用各自的专用构建路径。
+都调用这一份定制核心。N60 Pro 也走这一份（见“N60 Pro 512M”一节）；只有 Airoha NWRT/原生
+和 ARM64 OPhub 用自己的专用构建路径。
 
 ARM32 兼容层见 [内核兼容支持](KERNEL-COMPAT.md)：只有选了 `zte-mesh` 的构建才会启用
 `CONFIG_COMPAT` 和原厂运行环境需要的 SysV IPC、命名空间，未选该包的固件整体跳过、`.config` 不动。
@@ -99,7 +100,7 @@ wpad/hostapd/supplicant 提供者；`verify` 在 `make defconfig` 后核对每�
 
 WIFI-NO、X86 和测试配置同样包含这些包，但不会修改 DTS、恢复被禁用的无线
 设备或自动启用组网。实际无线 Mesh 仍需要可工作的无线设备及支持 mesh point
-的驱动。N60 Pro 的独立核心也调用同一套 prepare/configure/verify 流程，
+的驱动。N60 Pro 也走同一套 prepare/configure/verify 流程，
 在现有 eBPF（DAEDE）配置之后应用 Mesh 配置，在配置哈希计算前完成验证。
 使用独立核心的 XG-040G 和 Panther-X2 不在此次修改范围内。
 
@@ -132,6 +133,18 @@ ZN-M2、AP8220（单分区）和 N60 Pro 各出两版。手动触发时用一个
 
 AP8220 单分区的分区与产物逻辑在 `Scripts/Device-Hooks/IPQ807X-AP8220-1G-SINGLE-WIFI-NO.sh`，
 WIFI-YES 用薄壳钩子转发过去，两个版本不会分叉。
+
+
+## N60 Pro 512M
+
+Netcore N60 Pro 有 512 MB NAND，但设备树把 ubi 分区写死在 122.5 MiB（`0x7a80000`），固件因此
+只认这么点空间。`patches/n60pro-512m-ubi-5065m.patch` 把该分区改成 `0x1fa80000`（约 506.5 MiB），
+由 `Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO}.sh` 在 `prepare` 阶段应用，`verify` 与
+`verify-image` 阶段分别核对分区没被打回、产物不超过整片 NAND。
+
+除此之外没有专用逻辑：主题、Mesh、DAEDE、静态地址、内核兼容、缓存和发布全部由
+`WRT-CORE-SELF.yml` 提供。早先那份 321 行的独立工作流把通用核心的步骤抄了一份，
+既容易漂移，也让每次改动要改两处，已删除。
 
 ## 设备专用脚本
 
