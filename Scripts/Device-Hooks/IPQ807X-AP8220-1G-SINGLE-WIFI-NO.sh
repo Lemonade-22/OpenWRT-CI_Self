@@ -41,10 +41,16 @@ case "${1:-}" in
 		;;
 	configure)
 		# WIFI-NO 完全沿用上游 Config/IPQ807X-WIFI-NO.txt 的行为，此处不额外裁剪。
+		# 但必须产出 initramfs：ubiformat 整片 NAND 只能在内存系统里做，
+		# 而且单分区布局下它是唯一的救砖入口。
+		sed -i '/^CONFIG_TARGET_ROOTFS_INITRAMFS=/d; /^# CONFIG_TARGET_ROOTFS_INITRAMFS is not set$/d; /^CONFIG_TARGET_ROOTFS_SQUASHFS=/d; /^# CONFIG_TARGET_ROOTFS_SQUASHFS is not set$/d' .config
+		printf '%s\n' 'CONFIG_TARGET_ROOTFS_INITRAMFS=y' 'CONFIG_TARGET_ROOTFS_SQUASHFS=y' >> .config
 		;;
 	verify)
 		grep -Eq "^CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y$" .config || {
 			echo "::error::AP8220 device is not selected" >&2; exit 1; }
+		grep -Eq "^CONFIG_TARGET_ROOTFS_INITRAMFS=y$" .config || {
+			echo "::error::AP8220 initramfs output is not enabled" >&2; exit 1; }
 		if [ "${WRT_BRANCH:-}" = "main" ]; then
 			for pattern in \
 				"^CONFIG_PACKAGE_nss-firmware=y$" \
