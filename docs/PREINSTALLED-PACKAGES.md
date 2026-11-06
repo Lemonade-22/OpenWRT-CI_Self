@@ -1,15 +1,25 @@
 # Preinstalled theme source
 
-`Scripts/Check-Preinstalled.sh prepare` runs in the OpenWrt source tree after
-package customization and theme resolution, before Settings.sh and defconfig.
-All shared build routes and the three standalone device workflows call it,
-including MT7621 and OPhub rootfs builds.
+`Scripts/Check-Preinstalled.sh prepare` runs in the OpenWrt source tree right
+after `Scripts/Theme.sh`, before Settings.sh and defconfig. All shared build
+routes and the three standalone device workflows call it.
 
-If the selected theme has no Makefile, the script downloads vantage from
-anothaDev/luci-theme-vantage (main), or asks the configured feeds to install the
-selected theme. Existing sources are reused. Unknown external sources must be
-added explicitly rather than guessed. To add automatic recovery for another
-external theme, add its repository to the prepare case statement.
+`Scripts/Theme.sh` resolves `WRT_THEME=auto` by reading the `WRT_THEME` value
+from VIKINGYFY/OpenWRT-CI, so every device follows whatever theme upstream
+ships. A concrete name in a workflow pins that device and skips the lookup.
+
+This script makes the resolved theme buildable:
+
+1. If `package/` or `feeds/luci` already has `luci-theme-<theme>`, it is used.
+2. Otherwise the repository is looked up in `Scripts/themes.txt` and cloned
+   into `package/`.
+3. Otherwise the configured feeds are asked to install it.
+4. Otherwise the run stops with an error naming the theme and telling you to add
+   its repository to `Scripts/themes.txt`.
+
+So an upstream theme change needs no workflow edit: the new theme is fetched and
+built into the firmware. The only manual step, when the theme lives in a
+repository nobody has recorded yet, is one line in `Scripts/themes.txt`.
 
 There is no rootfs package dry run. An earlier version installed a hook in
 OpenWrt's package/Makefile that re-ran the rootfs transaction with APK

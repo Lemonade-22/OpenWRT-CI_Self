@@ -1,0 +1,10 @@
+# Theme source table: <theme> <github repo> <branch>
+# Used when the selected theme is neither in package/ nor in the LuCI feed.
+# Add one line when upstream starts using a theme from a new repository.
+vantage  anothaDev/luci-theme-vantage          main
+argon    sbwml/luci-theme-argon                openwrt-25.12
+aurora   eamonxg/luci-theme-aurora             master
+footstrap VizzleTF/luci-theme-footstrap        main
+kucat    sirpdboy/luci-theme-kucat             master
+shadcn   eamonxg/luci-theme-shadcn             main
+fluent   LazuliKao/luci-theme-fluent           main

@@ -1,4 +1,4 @@
-"""Check theme source recovery without cross-compiling."""
+"""Check theme source provisioning without cross-compiling."""
 import os
 from pathlib import Path
 import shutil
@@ -19,37 +19,62 @@ class PreinstalledPackages(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.script = ROOT / "Scripts/Check-Preinstalled.sh"
+        for directory in ["scripts", "package", "feeds/luci/themes"]:
+            (self.root / directory).mkdir(parents=True, exist_ok=True)
 
     def run_script(self, *args, **kwargs):
+        env = dict(os.environ)
+        env["WRT_THEME"] = "vantage"
+        env.update(kwargs.pop("env", {}))
         return subprocess.run([BASH, str(self.script), *args], cwd=self.root,
-                              capture_output=True, text=True, **kwargs)
+                              capture_output=True, text=True, env=env, **kwargs)
 
-    def test_prepare_reuses_existing_theme_source(self):
-        for directory in ["scripts", "feeds/luci/themes/luci-theme-vantage", "package"]:
-            (self.root / directory).mkdir(parents=True, exist_ok=True)
-        (self.root / "feeds/luci/themes/luci-theme-vantage/Makefile").touch()
-        makefile = self.root / "package/Makefile"
-        original = '\t$(call apk,$(TARGET_DIR)) add packages\n' \
-                   '\t$(call opkg,$(TARGET_DIR)) install packages\n'
-        makefile.write_text(original)
-        for _ in range(2):
-            result = self.run_script("prepare", env=dict(os.environ, WRT_THEME="vantage"))
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("luci-theme-vantage", result.stdout)
-        # No package-manager hook is installed any more.
-        self.assertEqual(makefile.read_text(), original)
-        self.assertFalse((self.root / "scripts/check-preinstalled.sh").exists())
+    def add_feed_theme(self, theme="vantage"):
+        directory = self.root / f"feeds/luci/themes/luci-theme-{theme}"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "Makefile").touch()
 
-    def test_missing_theme_source_fails_before_defconfig(self):
-        for directory in ["scripts", "feeds", "package"]:
-            (self.root / directory).mkdir(parents=True, exist_ok=True)
-        # A feed that installs nothing must still fail loudly instead of dropping the theme.
+    def test_theme_already_in_the_feed_is_used_as_is(self):
+        self.add_feed_theme()
+        result = self.run_script("prepare")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("luci-theme-vantage", result.stdout)
+        self.assertFalse((self.root / "package/luci-theme-vantage").exists())
+
+    def test_missing_theme_is_cloned_from_the_table(self):
+        table = self.root / "themes.txt"
+        table.write_text("# theme repo branch\nvantage anothaDev/luci-theme-vantage main\n")
+        fake_bin = self.root / "bin"
+        fake_bin.mkdir()
+        fake_git = fake_bin / "git"
+        fake_git.write_text(
+            '#!/bin/bash\n'
+            'dest="${@: -1}"\n'
+            'mkdir -p "$dest/luci-theme-vantage"\n'
+            'touch "$dest/luci-theme-vantage/Makefile"\n'
+        )
+        fake_git.chmod(0o755)
+        result = self.run_script("prepare", env={"THEME_TABLE": str(table),
+                                                 "PATH": f"{fake_bin}:{os.environ.get('PATH','')}"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("cloning anothaDev/luci-theme-vantage", result.stderr)
+        self.assertTrue((self.root / "package/luci-theme-vantage/luci-theme-vantage/Makefile").exists())
+
+    def test_theme_without_any_source_fails_before_defconfig(self):
+        table = self.root / "themes.txt"
+        table.write_text("# nothing useful\n")
         feeds = self.root / "scripts/feeds"
-        feeds.write_text('#!/bin/bash\nexit 0\n')
+        feeds.write_text("#!/bin/bash\nexit 0\n")
         feeds.chmod(0o755)
-        result = self.run_script("prepare", env=dict(os.environ, WRT_THEME="nonesuch"))
+        result = self.run_script("prepare", env={"THEME_TABLE": str(table), "WRT_THEME": "newtheme"})
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Missing luci-theme-nonesuch", result.stderr)
+        self.assertIn("Cannot build luci-theme-newtheme", result.stderr)
+        self.assertIn("Scripts/themes.txt", result.stderr)
+
+    def test_unresolved_auto_theme_is_rejected(self):
+        result = self.run_script("prepare", env={"WRT_THEME": "auto"})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be resolved first", result.stderr)
 
     def test_usage_rejects_the_removed_hook_mode(self):
         result = self.run_script("opkg", "true")
