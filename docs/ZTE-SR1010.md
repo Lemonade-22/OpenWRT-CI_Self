@@ -5,6 +5,7 @@
 - 固件源码：`Lemonade-22/immortalwrt` 的 `sr1010-zx279133` 分支。
 - 本次同步基线：`cnjn/immortalwrt@ac68c3f8ecb2924c3b763a955e8c9820713c1e7e`。
 - 平台：`zte/zx279133`，设备：`zte_zxslc-sr1010`，内核来自该分支的 Linux 7.3 补丁系列。
+- 内核版本核对：原作者 v1.2.0 发布二进制 `sr1010-owrt-r38045-5996412461.bin` 的内核版本为 **6.18.38+**，该发布标签的 README 标记外部 Linux 6.18.38。当前构建则基于 `master` 的 **7.3.1 开发源码**；上游 2026-10-31 同步提交 `0ec9427d` 明确不声称新整包或实机验证。二者不是同一条发布路线。
 - 默认地址 `192.168.10.1`，主机名 `OWRT`，初始 root 密码为空；不提供无线驱动。
 - Footstrap 主题；继承 `Config/GENERAL.txt` 和 MT7621 workflow 的包覆盖项，再应用 `Config/ZTE-SR1010-EXTRA.txt`。预装自动重启、磁盘管理、NATMapT、分区扩容、UPnP；排除 HomeProxy、GecoosAC、WolUltra 和 Aurora。
 - SR1010 专用增加 Samba4（关闭 ksmbd）、mwan3 多 WAN 负载均衡/故障切换、SyncDial 多拨，以及 ZTE-MESH 有线主控和原生 launcher。多 WAN 与 Mesh 的接口、线路和组网参数需要部署时配置。

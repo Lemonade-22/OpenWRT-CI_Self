@@ -109,7 +109,7 @@ jobs:
         run: |
           set -o pipefail
           make -j"$(nproc)" BUILD_LOG=1 2>&1 | tee "$GITHUB_WORKSPACE/build.log" || \
-            make -j1 V=s BUILD_LOG=1 2>&1 | tee "$GITHUB_WORKSPACE/build-serial.log"
+            make -k -j1 V=s BUILD_LOG=1 2>&1 | tee "$GITHUB_WORKSPACE/build-serial.log"
 
       - name: Verify and collect SR1010 image
         if: ${{ !inputs.TEST }}
@@ -168,5 +168,6 @@ jobs:
           path: |
             *.log
             wrt/.config
+            wrt/build_dir/target-*/linux-zte_zx279133/linux-*/.config
             wrt/logs/
           if-no-files-found: warn
