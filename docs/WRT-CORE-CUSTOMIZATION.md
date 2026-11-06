@@ -7,11 +7,19 @@
 AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL 和 WRT-TEST
 都调用这一份定制核心。N60 Pro、Airoha NWRT/原生、ARM64 OPhub 使用各自的专用构建路径。
 
-所有入口共用 [内核兼容支持](KERNEL-COMPAT.md)：ARM64 启用 `CONFIG_COMPAT`，并启用原厂 ARM32
-运行环境需要的 SysV IPC、命名空间、packet socket 等功能；编译后核查实际内核配置，缺项则停止发布。
+ARM32 兼容层见 [内核兼容支持](KERNEL-COMPAT.md)：只有选了 `zte-mesh` 的构建才会启用
+`CONFIG_COMPAT` 和原厂运行环境需要的 SysV IPC、命名空间，未选该包的固件整体跳过、`.config` 不动。
 
 通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。
+
+## daed 代理后端
+
+除 MT7621 外的所有构建入口都调用 `Scripts/DAEDE.sh`：拉取
+[openwrt-daede](https://github.com/kenzok8/openwrt-daede) 到 `package/openwrt-daede`，
+选中 `daed` 与 `luci-app-daede`，**不选 `dae`**（daed 已内嵌同一内核，界面也共用一套 UCI）。
+`v2ray-geoip`/`v2ray-geosite` 由 `daed` 的依赖带入，设备上再由 `geo-cron.sh` 更新。
+`dae/` 目录必须留在树里：`luci-app-daede` 的 install 读取 `../dae/files/dae.config`。
 
 ## 全设备静态地址绑定
 
