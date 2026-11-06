@@ -94,8 +94,13 @@ check_sha() {
 unpack_ipk() {
   local ipk="$1" dest="$2" inner
   inner="$(mktemp -d)"
-  tar -xf "$ipk" -C "$inner" data.tar.gz 2>/dev/null \
-    || die "$(basename "$ipk") is not an ipk (no data.tar.gz)"
+  # Extract everything: the member is "./data.tar.gz", and GNU tar does not
+  # match that with a bare "data.tar.gz" argument (MSYS tar does, which is how
+  # this shipped broken once).
+  tar -xf "$ipk" -C "$inner" 2>/dev/null \
+    || die "$(basename "$ipk") is not an ipk"
+  [ -f "$inner/data.tar.gz" ] \
+    || die "$(basename "$ipk") has no data.tar.gz"
   mkdir -p "$dest"
   tar -xzf "$inner/data.tar.gz" -C "$dest" \
     || die "$(basename "$ipk") payload failed to extract"
