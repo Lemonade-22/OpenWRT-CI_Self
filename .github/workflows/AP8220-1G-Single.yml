@@ -6,12 +6,20 @@
 #   · 分区由 MIBIB 决定，刷机前 MIBIB 必须已是单分区版本
 #   · 同时产出 factory.ubi（uboot 可直刷）和 sysupgrade.bin（系统内升级）
 name: AP8220-1G-Single rootfs
-run-name: 编译单分区固件 · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
+run-name: ${{ inputs.FIRMWARE || '编译PPE固件' }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
 on:
-  # 手动编译
+  #手动编译
   workflow_dispatch:
     inputs:
+      FIRMWARE:
+        description: '固件类型'
+        type: choice
+        required: true
+        default: '编译PPE固件'
+        options:
+          - '编译PPE固件'
+          - '编译NSS固件'
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false
@@ -51,8 +59,8 @@ jobs:
       WRT_PW: 无
       #源码链接
       WRT_REPO: https://github.com/${{ matrix.SOURCE }}.git
-      #源码分支：单分区补丁只跟踪 owrt
-      WRT_BRANCH: owrt
+      #源码分支：PPE 用 owrt，NSS 用 main（同一份补丁两个分支都验证过）
+      WRT_BRANCH: ${{ inputs.FIRMWARE == '编译NSS固件' && 'main' || 'owrt' }}
       #源码名称
       WRT_SOURCE: ${{ matrix.SOURCE }}
       #插件调整

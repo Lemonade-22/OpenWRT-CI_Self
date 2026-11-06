@@ -17,8 +17,12 @@ case "${1:-}" in
 	prepare)
 		[ "${WRT_SOURCE:-}" = "VIKINGYFY/immortalwrt" ] || {
 			echo "::error::AP8220 single-rootfs must build VIKINGYFY/immortalwrt" >&2; exit 1; }
-		[ "${WRT_BRANCH:-}" = "owrt" ] || {
-			echo "::error::the single-rootfs patch only tracks the owrt branch" >&2; exit 1; }
+		case "${WRT_BRANCH:-}" in
+			owrt|main) ;;
+			*)
+				echo "::error::unsupported branch ${WRT_BRANCH:-} for the AP8220 single-rootfs build" >&2
+				exit 1 ;;
+		esac
 		git apply --check "$patch_file"
 		git apply "$patch_file"
 		git diff --check
@@ -36,10 +40,24 @@ case "${1:-}" in
 		python3 -m py_compile "$ci_root/Scripts/Check-AP8220-1G-Single.py"
 		;;
 	configure)
+		# WIFI-NO 完全沿用上游 Config/IPQ807X-WIFI-NO.txt 的行为，此处不额外裁剪。
 		;;
 	verify)
 		grep -Eq "^CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y$" .config || {
 			echo "::error::AP8220 device is not selected" >&2; exit 1; }
+		if [ "${WRT_BRANCH:-}" = "main" ]; then
+			for pattern in \
+				"^CONFIG_PACKAGE_nss-firmware=y$" \
+				"^CONFIG_PACKAGE_kmod-qca-nss-drv=y$" \
+				"^CONFIG_PACKAGE_kmod-qca-nss-ecm=y$" \
+				"^CONFIG_PACKAGE_kmod-qca-nss-dp=y$" \
+				"^CONFIG_PACKAGE_kmod-qca-ssdk=y$"
+			do
+				grep -Eq "$pattern" .config || {
+					echo "::error::NSS is not selected ($pattern); 编译NSS固件 requires VIKINGYFY/immortalwrt main" >&2
+					exit 1; }
+			done
+		fi
 		;;
 	verify-image)
 		python3 "$ci_root/Scripts/Check-AP8220-1G-Single.py" "$source_root/bin/targets/qualcommax/ipq807x/"
