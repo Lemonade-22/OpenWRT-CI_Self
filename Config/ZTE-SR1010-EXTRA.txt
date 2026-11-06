@@ -36,6 +36,3 @@ CONFIG_BPF_TOOLCHAIN_HOST=y
 
 # Hardware offload: board defaults also enable both firewall flow switches.
 CONFIG_PACKAGE_kmod-nft-offload=y
-CONFIG_PACKAGE_kmod-zte-npu=y
-CONFIG_PACKAGE_kmod-zte-fnoffload=y
-CONFIG_PACKAGE_kmod-zte-rtl8372n=y

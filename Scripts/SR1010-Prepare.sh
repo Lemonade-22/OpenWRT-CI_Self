@@ -2,7 +2,7 @@
 # Run in the checked-out firmware source tree.
 set -euo pipefail
 
-# Keep the board's pinned LuCI fork and its client-flow statistics. Only import
+# Keep the author's pinned LuCI feed. Only import
 # the same Footstrap theme used by MT7621 from ImmortalWrt's current LuCI feed.
 git clone --depth=1 --filter=blob:none --sparse https://github.com/immortalwrt/luci.git "$RUNNER_TEMP/sr1010-luci"
 git -C "$RUNNER_TEMP/sr1010-luci" sparse-checkout set themes/luci-theme-footstrap
@@ -30,6 +30,8 @@ with open('.config', 'a') as config:
                                  if line.startswith('CONFIG_')) + '\n')
 PY
 cat "$GITHUB_WORKSPACE/Config/ZTE-SR1010-EXTRA.txt" >> .config
+printf 'CONFIG_EXTERNAL_KERNEL_TREE="%s"\nCONFIG_SR1010_VENDOR_TEMPLATE="%s"\n' \
+  "$KERNEL_TREE" "$SR1010_VENDOR_TEMPLATE" >> .config
 printf 'CONFIG_BPF_TOOLCHAIN_HOST_PATH="%s"\n' "$(llvm-config --prefix)" >> .config
 # User input adjusts packages only; it cannot silently switch the target.
 while IFS= read -r line; do
@@ -50,13 +52,27 @@ sed -i "s/hostname='.*'/hostname='OWRT'/" package/base-files/files/bin/config_ge
 sed -i 's/luci-theme-bootstrap/luci-theme-footstrap/g' feeds/luci/collections/luci/Makefile
 sed -i 's|/luci-static/bootstrap|/luci-static/footstrap|g' feeds/luci/modules/luci-base/root/etc/config/luci
 
+# Compress offload is a hidden optional kernel feature, unrelated to USB PCM.
+# Package its module only when Linux actually selected it as a module.
+python3 - <<'PY'
+from pathlib import Path
+p = Path('package/kernel/linux/modules/sound.mk')
+s = p.read_text()
+s = s.replace('\tsnd-compress\n', '\t$(if $(filter m,$(CONFIG_SND_COMPRESS_OFFLOAD)),snd-compress)\n')
+s = s.replace('\t$(LINUX_DIR)/sound/core/snd-compress.ko\n',
+              '\t$(if $(filter m,$(CONFIG_SND_COMPRESS_OFFLOAD)),$(LINUX_DIR)/sound/core/snd-compress.ko)\n')
+p.write_text(s)
+PY
+
 cp .config "$RUNNER_TEMP/sr1010-requested.config"
 make defconfig
-for symbol in TARGET_zte TARGET_zte_zx279133 TARGET_DEVICE_zte_zx279133_DEVICE_zte_zxslc-sr1010 \
-  PACKAGE_kmod-zte-npu PACKAGE_kmod-zte-fnoffload PACKAGE_kmod-zte-rtl8372n \
+for symbol in TARGET_zte TARGET_zte_zx279133 TARGET_DEVICE_zte_zx279133_DEVICE_zte_zxslc-sr1010-flash \
   PACKAGE_luci-theme-footstrap KERNEL_DEBUG_INFO_BTF KERNEL_BPF_EVENTS \
   KERNEL_CGROUP_BPF KERNEL_BPF_STREAM_PARSER PACKAGE_kmod-sched-bpf \
-  PACKAGE_kmod-nft-offload; do
+  PACKAGE_kmod-nft-offload PACKAGE_zte-fwslot PACKAGE_luci-app-zte-fwslot \
+  PACKAGE_zte-mesh PACKAGE_zte-mesh-launcher PACKAGE_luci-app-zte-mesh \
+  PACKAGE_luci-app-samba4 PACKAGE_samba4-server PACKAGE_samba4-libs \
+  PACKAGE_mwan3 PACKAGE_luci-app-mwan3 PACKAGE_luci-app-syncdial; do
   grep -qx "CONFIG_${symbol}=y" .config || { echo "Missing required configuration: $symbol" >&2; exit 1; }
 done
 python3 - <<'PY'
@@ -80,6 +96,9 @@ cp .config "$GITHUB_WORKSPACE/sr1010-output/config.txt"
 {
   printf 'Firmware: '; git rev-parse HEAD
   printf 'CI: %s\n' "$GITHUB_SHA"
+  printf 'Author firmware baseline: 1b50aaf4ed9cf042df6207564555b244d6ced517\n'
+  printf 'Kernel: '; git -C "$KERNEL_TREE" rev-parse HEAD
+  printf 'Kernel version: '; make -s -C "$KERNEL_TREE" kernelversion
   printf 'Footstrap: '; git -C "$RUNNER_TEMP/sr1010-luci" rev-parse HEAD
   for repo in feeds/* package/luci-app-mini-diskmanager package/luci-app-partexp package/openwrt-natmapt package/openwrt-stuntman package/luci-app-natmapt; do
     if [ -d "$repo/.git" ]; then printf '%s: ' "$repo"; git -C "$repo" rev-parse HEAD; fi

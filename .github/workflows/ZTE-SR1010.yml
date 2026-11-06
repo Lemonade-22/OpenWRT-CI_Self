@@ -28,6 +28,10 @@ env:
   WRT_PACKAGE: ${{ inputs.PACKAGE }}
   SOURCE_REPO: https://github.com/Lemonade-22/immortalwrt.git
   SOURCE_BRANCH: sr1010-zx279133
+  KERNEL_REPO: https://github.com/cnjn/linux-mainline-zte-zxslc-sr1010.git
+  KERNEL_REF: e1efdeed1398eeb9e6b950a757ae9d6f7293736d
+  KERNEL_TREE: /mnt/sr1010/linux-mainline-zte-zxslc-sr1010/linux-6.18.38
+  SR1010_VENDOR_TEMPLATE: /mnt/sr1010/sr1010-template.bin
 
 jobs:
   build:
@@ -62,7 +66,8 @@ jobs:
             bc bzip2 cpio xz-utils zstd device-tree-compiler genisoimage qemu-utils
           sudo mkdir -p /mnt/sr1010
           sudo chown "$USER:$USER" /mnt/sr1010
-          ln -s /mnt/sr1010 wrt
+          mkdir /mnt/sr1010/immortalwrt
+          ln -s /mnt/sr1010/immortalwrt wrt
 
       - name: Clone SR1010 source
         id: source
@@ -70,6 +75,19 @@ jobs:
           git clone --depth=1 --single-branch --branch "$SOURCE_BRANCH" "$SOURCE_REPO" wrt
           echo "sha=$(git -C wrt rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "date=$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare author Linux 6.18.38 and stock packaging resources
+        run: |
+          mkdir -p "$KERNEL_TREE"
+          git -C "$KERNEL_TREE" init
+          git -C "$KERNEL_TREE" remote add origin "$KERNEL_REPO"
+          git -C "$KERNEL_TREE" fetch --depth=1 origin "$KERNEL_REF"
+          git -C "$KERNEL_TREE" checkout --detach FETCH_HEAD
+          test "$(git -C "$KERNEL_TREE" rev-parse HEAD)" = "$KERNEL_REF"
+          test "$(make -s -C "$KERNEL_TREE" kernelversion)" = 6.18.38
+          grep -q '^KERNEL_PATCHVER:=6.18$' wrt/target/linux/zte/Makefile
+          python3 Scripts/SR1010-Template.py "$SR1010_VENDOR_TEMPLATE"
+          printf 'CONFIG_EXTERNAL_KERNEL_TREE="%s"\n' "$KERNEL_TREE" > wrt/.config
 
       - name: Update pinned feeds
         working-directory: wrt
@@ -93,8 +111,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: wrt/.ccache
-          key: sr1010-ccache-${{ runner.os }}-${{ steps.source.outputs.sha }}-${{ hashFiles('Config/ZTE-SR1010*.txt', 'Config/GENERAL.txt', 'Scripts/SR1010-Prepare.sh') }}
-          restore-keys: sr1010-ccache-${{ runner.os }}-
+          key: sr1010-618-ccache-${{ runner.os }}-${{ env.KERNEL_REF }}-${{ steps.source.outputs.sha }}-${{ hashFiles('Config/ZTE-SR1010*.txt', 'Config/GENERAL.txt', 'Scripts/SR1010-Prepare.sh') }}
+          restore-keys: sr1010-618-ccache-${{ runner.os }}-${{ env.KERNEL_REF }}-
 
       - name: Download source packages
         if: ${{ !inputs.TEST }}
@@ -115,11 +133,11 @@ jobs:
         if: ${{ !inputs.TEST }}
         working-directory: wrt
         run: |
-          image=bin/targets/zte/zx279133/immortalwrt-zte-zx279133-zte_zxslc-sr1010-squashfs-sysupgrade.bin
+          image=bin/targets/zte/zx279133/immortalwrt-zte-zx279133-zte_zxslc-sr1010-flash-squashfs-sysupgrade.bin
           test -s "$image"
-          kernel_config=$(find build_dir/target-*/linux-zte_zx279133/linux-* -maxdepth 1 -name .config -type f)
-          test -n "$kernel_config"
-          for symbol in BPF BPF_SYSCALL BPF_JIT DEBUG_INFO_BTF BPF_EVENTS CGROUP_BPF COMPAT; do
+          kernel_config="$KERNEL_TREE/.config"
+          test "$(make -s -C "$KERNEL_TREE" kernelversion)" = 6.18.38
+          for symbol in BPF BPF_SYSCALL BPF_JIT DEBUG_INFO_BTF BPF_EVENTS CGROUP_BPF COMPAT ZTE_ZX279133_ETH ZTE_ZX279133_RTL8372N; do
             grep -qx "CONFIG_${symbol}=y" "$kernel_config"
           done
           cp "$kernel_config" "$GITHUB_WORKSPACE/sr1010-output/kernel.config"
@@ -152,6 +170,7 @@ jobs:
             源码：${{ env.SOURCE_REPO }}，分支：${{ env.SOURCE_BRANCH }}
             源码提交：${{ steps.source.outputs.sha }}
             CI 提交：${{ github.sha }}
+            内核：Linux 6.18.38；${{ env.KERNEL_REPO }}@${{ env.KERNEL_REF }}
             默认地址：192.168.10.1；主机名：OWRT；初始 root 密码为空。
             默认主题：Footstrap；软件选择参考 MT7621。
             增加 Samba4、mwan3 多 WAN、SyncDial 和 ZTE-MESH；启用 eBPF/BTF 与 TC BPF 模块。
@@ -169,5 +188,6 @@ jobs:
             *.log
             wrt/.config
             wrt/build_dir/target-*/linux-zte_zx279133/linux-*/.config
+            /mnt/sr1010/linux-mainline-zte-zxslc-sr1010/linux-6.18.38/.config
             wrt/logs/
           if-no-files-found: warn
