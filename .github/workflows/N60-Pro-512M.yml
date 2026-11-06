@@ -6,6 +6,14 @@ name: N60 Pro 512M UBI-506M
 on:
   workflow_dispatch:
     inputs:
+      WIFI:
+        description: 'WIFI 版本'
+        type: choice
+        required: true
+        default: 'YES'
+        options:
+          - 'YES'
+          - 'NO'
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false
@@ -21,7 +29,7 @@ permissions: write-all
 
 jobs:
   build:
-    name: N60 Pro 512M UBI-506M WIFI-YES
+    name: N60 Pro 512M UBI-506M
     runs-on: ubuntu-24.04
     permissions: write-all
     steps:
@@ -30,7 +38,7 @@ jobs:
       - name: Export build inputs
         shell: bash
         env:
-          IN_WRT_CONFIG: "N60-Pro-512M"
+          IN_WRT_CONFIG: N60-Pro-512M-WIFI-${{ inputs.WIFI }}
           IN_WRT_THEME: "auto"
           IN_WRT_NAME: "N60-Pro"
           IN_WRT_SSID: "N60-Pro"
@@ -97,8 +105,8 @@ jobs:
           echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
           echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
           echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
-          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/N60-Pro-512M.txt)" >> $GITHUB_ENV
-          echo "WRT_WIFI=wifi-yes" >> $GITHUB_ENV
+          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/${WRT_CONFIG}.txt)" >> $GITHUB_ENV
+          echo "WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}")" >> $GITHUB_ENV
 
       - name: Clone Code
         shell: bash
@@ -141,7 +149,7 @@ jobs:
         shell: bash
         run: |
           cd ./wrt/
-          cat "$GITHUB_WORKSPACE/Config/N60-Pro-512M.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
+          cat "$GITHUB_WORKSPACE/Config/${WRT_CONFIG}.txt" "$GITHUB_WORKSPACE/Config/GENERAL.txt" >> .config
           eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
           bash "$GITHUB_WORKSPACE/Scripts/Check-Preinstalled.sh" prepare
           $GITHUB_WORKSPACE/Scripts/Settings.sh
@@ -277,7 +285,7 @@ jobs:
         run: |
           cd ./wrt
           mkdir -p ./upload
-          cp -f ./.config ./upload/Config-N60-Pro-512M-WIFI-YES-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt
+          cp -f ./.config ./upload/Config-${WRT_CONFIG}-${WRT_INFO}-${WRT_BRANCH}-${WRT_DATE}.txt
           if [[ "$WRT_TEST" != "true" ]]; then
             echo "WRT_KVER=$(find ./bin/targets/ -type f -name '*.manifest' -exec grep -oP '^kernel - \K[\d.]+' {} \; | head -1)" >> $GITHUB_ENV
             echo "WRT_LIST=$(find ./bin/targets/ -type f -name '*.manifest' -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
@@ -295,14 +303,14 @@ jobs:
         if: ${{ (inputs.TEST && 'true' || 'false') != 'true' }}
         uses: softprops/action-gh-release@master
         with:
-          tag_name: N60-Pro-512M-WIFI-YES-${{env.UBI_LABEL}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
+          tag_name: ${{env.WRT_CONFIG}}-${{env.UBI_LABEL}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
             N60 Pro 512M / UBI-506M
             源码：${{env.WRT_REPO}}
             分支：${{env.WRT_BRANCH}}
             提交：${{env.WRT_HASH}}
-            配置：N60-Pro-512M-WIFI-YES
+            配置：${{env.WRT_CONFIG}}
             平台：${{env.WRT_TARGET}}
             UBI：506.5MiB
             登录地址：${{env.WRT_IP}}
@@ -318,4 +326,4 @@ jobs:
         run: |
           cd ./wrt
           mkdir -p ./upload
-          cp .config ./upload/Config-N60-Pro-512M-WIFI-YES.txt
+          cp .config "./upload/Config-${WRT_CONFIG}.txt"

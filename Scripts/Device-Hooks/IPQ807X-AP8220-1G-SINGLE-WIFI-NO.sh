@@ -8,10 +8,15 @@ upload="$source_root/upload"
 patch_file="$ci_root/patches/ap8220-1g-single-rootfs.patch"
 dts_rel="target/linux/qualcommax/dts/ipq8071-ap8220.dts"
 
-if [ "${WRT_CONFIG:-}" != "IPQ807X-AP8220-1G-SINGLE-WIFI-NO" ]; then
-	echo "::error::AP8220 single-rootfs hook invoked for the wrong configuration" >&2
-	exit 2
-fi
+# 同一硬件的 WIFI-YES / WIFI-NO 两个版本共用这套分区与产物逻辑，只有配置包里
+# 是否关闭 ath11k 不同。
+case "${WRT_CONFIG:-}" in
+	IPQ807X-AP8220-1G-SINGLE-WIFI-NO|IPQ807X-AP8220-1G-SINGLE-WIFI-YES) ;;
+	*)
+		echo "::error::AP8220 single-rootfs hook invoked for the wrong configuration" >&2
+		exit 2
+		;;
+esac
 
 case "${1:-}" in
 	prepare)

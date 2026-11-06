@@ -3,6 +3,17 @@
 set -euo pipefail
 ci_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Mesh is Wi-Fi work: WIFI-NO images ship without a radio driver, so the whole
+# stack (luci-app-mesh, wpad, batman, dawn) is pointless weight there. The flag
+# comes from WRT-CORE-SELF, with the profile-name suffix as the fallback for the
+# bespoke N60 workflow.
+wifi_kind="$(printenv WRT_WIFI || true)"
+[ -n "$wifi_kind" ] || wifi_kind="$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true)"
+if [ "$wifi_kind" = "WIFI-NO" ]; then
+  echo "Mesh skipped: WIFI-NO image (WRT_CONFIG=${WRT_CONFIG:-unset})"
+  exit 0
+fi
+
 case "${1:-}" in
   prepare)
     git clone --depth=1 --single-branch --branch main \

@@ -1,0 +1,12 @@
+# Netcore N60 Pro 512MB NAND —— 无 Wi-Fi 版本。
+# 上游没有 N60 Pro 的 WIFI-NO，参考 Config/MEDIATEK-WIFI-NO.txt 里 supergateway_s20p
+# 的做法：按设备剥掉默认无线包（DEVICE_PACKAGES 取反），而不是逐个关 kmod。
+# kmod-usb3 / automount 是设备自带功能，保留。
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_netcore_n60-pro=y
+CONFIG_TARGET_DEVICE_PACKAGES_mediatek_filogic_DEVICE_netcore_n60-pro="-kmod-mt76 -kmod-mt76-connac -kmod-mt76-core -kmod-mt7915e -kmod-mt7915-firmware -kmod-mt7916-firmware -kmod-mt7986-firmware -mt7986-wo-firmware"
+
+# 额外内核组件
+CONFIG_PACKAGE_kmod-cryptodev=y
+CONFIG_PACKAGE_kmod-tls=y

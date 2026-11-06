@@ -105,7 +105,7 @@ class CoreGenerationTests(unittest.TestCase):
         }
         self.assertEqual(callers, {
             'AIROHA-ALL.yml', 'AP8220-1G-Single.yml', 'MT7621.yml', 'MTK-ALL.yml', 'OWRT-ALL.yml',
-            'QCA-ALL.yml', 'QCB-ALL.yml', 'WRT-TEST.yml', 'ZN-M2-WIFI-NO.yml',
+            'QCA-ALL.yml', 'QCB-ALL.yml', 'WRT-TEST.yml', 'ZN-M2.yml',
         })
         self.assertFalse((workflows / 'AP8220-CORE.yml').exists())
 

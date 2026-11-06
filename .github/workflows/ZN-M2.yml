@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
-# ZN M2 only. WIFI-NO follows VIKINGYFY IPQ60XX-WIFI-NO; daede deps come from WRT-CORE-SELF.
+# ZN M2 双版本：WIFI-YES 保留上游 IPQ60XX-WIFI-YES 的 ath11k 默认包，WIFI-NO 沿用
+# IPQ60XX-WIFI-NO 的逐个关闭写法；MESH 只在 WIFI-YES 写入。daede 依赖来自 WRT-CORE-SELF。
 # PPE uses VIKINGYFY/immortalwrt owrt; NSS uses main.
-name: ZN-M2-WIFI-NO
-run-name: ${{ inputs.FIRMWARE || '编译PPE固件' }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
+name: ZN-M2
+run-name: ${{ inputs.FIRMWARE || '编译PPE固件' }} · WIFI-${{ inputs.WIFI }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
 on:
   workflow_dispatch:
@@ -15,6 +16,14 @@ on:
         options:
           - '编译PPE固件'
           - '编译NSS固件'
+      WIFI:
+        description: 'WIFI 版本'
+        type: choice
+        required: true
+        default: 'NO'
+        options:
+          - 'YES'
+          - 'NO'
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false
@@ -31,7 +40,8 @@ jobs:
   build:
     uses: ./.github/workflows/WRT-CORE-SELF.yml
     with:
-      WRT_CONFIG: ZN-M2-WIFI-NO
+      # WIFI 选项决定后缀；WRT_WIFI 由配置名推导，MESH 只在 WIFI-YES 写入。
+      WRT_CONFIG: ZN-M2-WIFI-${{ inputs.WIFI }}
       WRT_THEME: footstrap
       WRT_NAME: OWRT
       WRT_SSID: OWRT

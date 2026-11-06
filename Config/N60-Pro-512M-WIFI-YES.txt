@@ -1,4 +1,4 @@
-# Netcore N60 Pro 512MB NAND
+# Netcore N60 Pro 512MB NAND —— 带 Wi-Fi 版本（上游设备默认包原样保留）。
 # 使用 VIKINGYFY 当前 netcore_n60-pro profile；由 Scripts/Settings.sh
 # 在编译阶段将 N60 Pro UBI 分区扩展到约 506.5MiB。
 CONFIG_TARGET_mediatek=y

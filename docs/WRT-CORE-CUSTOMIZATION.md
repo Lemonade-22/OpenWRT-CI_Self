@@ -13,13 +13,66 @@ ARM32 兼容层见 [内核兼容支持](KERNEL-COMPAT.md)：只有选了 `zte-me
 通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。
 
+## 上游脚本的同步策略
+
+`Settings.sh` 不再保存副本。构建时由 `Scripts/Settings.sh` 从
+`VIKINGYFY/OpenWRT-CI@main` 现拉上游原文并原样执行，本仓库的加分项放在
+`Scripts/Settings-Extra.sh`，只追加、不改写。
+
+之所以这样拆：旧做法是手工复制一份（本地 106 行 vs 上游 53 行）。副本无法跟随上游，
+上游在 10 月 27 日和 31 日两次改动都进不来；更糟的是副本里把 `luci-app-<theme>` 那行
+换成了 `-config` 的条件判断，于是所有机型都只装主题、不装仪表盘（vantage 的落地页），
+而且不报错。
+
+`Settings-Extra.sh` 里只剩三件上游不负责的事，全是追加：
+
+1. 机型覆盖配置 `Config/<CONFIG>-EXTRA.txt`
+2. ramips 6.18 的 RTL837x DSA 补丁程序
+3. LuCI 默认主题（含旧配置回落到所选主题的 uci-defaults）
+
+**WIFI 账号密码归上游**：本树 `mac80211.uc` 的回退值就是 `OWRT` / `12345678`，与各流程传入的
+`WRT_SSID` / `WRT_WORD` 一致，本地再补一段 sed 属于重复劳动，还会跟上游将来的写法打架，已删除。
+
+**没有任何机型被特殊对待。** 旧版本曾让 `ZN-M2-WIFI-NO` 跳过上游的 DTS 改写（保留原厂
+qualcommax 布局），现已删除：上游在 `WIFI-NO` 时把 `#include "ipq6018.dtsi"` 换成
+`ipq6018-nowifi.dtsi`，重排 `q6_region` 等分区，ZN-M2（IPQ6000，`qualcommax` 的 `ipq60xx`
+子目标）也照此执行。若这一机型因此出问题，那是上游策略或设备本来的限制，不再在本仓库里分叉。
+
+上游哪天改了 `Settings.sh`，直接生效。本仓库不再依赖它的任何内部变量或行文，所以上游重构
+不会把某个定制悄悄甩下——最多是 `Settings-Extra.sh` 里那三件追加的事需要重新确认。
+
+`Handles.sh` 和 `Packages.sh` 目前仍是本地副本（分别比上游多 7 行和 22 行），同一个毛病
+还没修，改动时会再核对。
+
 ## daed 代理后端
 
-除 MT7621 外的所有构建入口都调用 `Scripts/DAEDE.sh`：拉取
-[openwrt-daede](https://github.com/kenzok8/openwrt-daede) 到 `package/openwrt-daede`，
-选中 `daed` 与 `luci-app-daede`，**不选 `dae`**（daed 已内嵌同一内核，界面也共用一套 UCI）。
-`v2ray-geoip`/`v2ray-geosite` 由 `daed` 的依赖带入，设备上再由 `geo-cron.sh` 更新。
-`dae/` 目录必须留在树里：`luci-app-daede` 的 install 读取 `../dae/files/dae.config`。
+除 MT7621 外的所有构建入口都调用 `Scripts/DAEDE.sh`。**不走源码编译**，改为把固定版本的
+预编译产物放进 `files/`，随镜像一起发货：
+
+| 内容 | 来源 | 固定方式 |
+| --- | --- | --- |
+| `daed`、`luci-app-daede` | [kenzok8/openwrt-daede](https://github.com/kenzok8/openwrt-daede/releases) | tag 与包版本写在脚本顶部 |
+| `geoip.dat`（默认） | [v2fly/geoip](https://github.com/v2fly/geoip/releases) 的 `geoip-only-cn-private.dat` | tag + sha256 |
+| `geoip.dat`（`GEOIP_FULL=1`） | [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat/releases) 全量 | tag + sha256 |
+| `geosite.dat` | [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat/releases) 全量 | tag + sha256 |
+
+geo 数据落在 `/usr/share/v2ray/`（`daed` 的 init 脚本导出 `DAE_LOCATION_ASSET=/usr/share/v2ray`），
+并软链到 `/usr/share/daed/`，兼容忽略该变量的旧内核。
+
+**geoip 默认只带 CN + private**（约 236 KB）：全量库 16 MB 会吃掉小闪存机型的空间和首次启动
+的解析时间，而 daed 的默认配置只用到 `geoip(cn)`。代价是配置里写 `geoip(us)`、`geoip(jp)` 这类
+规则会在编译阶段失败；需要全量的机型在 workflow 里传 `GEOIP_FULL=1`。`verify` 用体积阈值双向
+把关：该小的不许大，该大的不许小。
+
+`dae` 从不打包：daed 已内嵌同一内核，界面也共用一套 UCI。因为绕过包管理器，设备上 apk 的
+已安装列表里看不到 `daed`，LuCI 软件包页既不显示也不能升级它；升级方式是改脚本顶部的固定
+版本重新构建。
+
+解压用的是 ipk 而不是 apk：apk v3 是签名的 ADB 容器，需要 apk-tools 才能打开，而 ipk 就是
+普通 tar，任何 runner 都能解，两者负载相同。daed 是静态 Go 二进制，luci-app-daede 是与架构
+无关的 Lua，因此 24.10 构建的负载在 apk 基础的 25.12 镜像上同样可用。
+
+代价：`files/` 增加约 61 MB（daed 49 MB + 两份 geo 数据 12 MB）。
 
 ## 全设备静态地址绑定
 
@@ -52,6 +105,33 @@ WIFI-NO、X86 和测试配置同样包含这些包，但不会修改 DTS、恢�
 
 本次本地验证覆盖脚本语法、配置替换/缺依赖检测及工作流生成测试；完整固件编译、
 各设备镜像大小和实机无线组网仍需对应 GitHub Actions 构建及设备验证。
+
+## Wi-Fi 双版本
+
+ZN-M2、AP8220（单分区）和 N60 Pro 各出两版。手动触发时用一个 `WIFI` 下拉（`YES` / `NO`）选择，
+和 `固件类型` 那个下拉一样，不会在 Actions 里堆出两份工作流。配置名后缀决定行为：
+
+| 机型 | WIFI-YES | WIFI-NO |
+| --- | --- | --- |
+| ZN-M2 | `ZN-M2-WIFI-YES` | `ZN-M2-WIFI-NO` |
+| AP8220 1G 单分区 | `IPQ807X-AP8220-1G-SINGLE-WIFI-YES` | `IPQ807X-AP8220-1G-SINGLE-WIFI-NO` |
+| N60 Pro 512M | `N60-Pro-512M-WIFI-YES` | `N60-Pro-512M-WIFI-NO` |
+
+`WRT_WIFI` 由配置名后缀推导（`WIFI-(YES|NO)$`）。`Scripts/Mesh.sh` 在 `WIFI-NO` 时直接退出，
+不克隆 `luci-app-mesh`、不写入 `Config/MESH.txt`，所以无 Wi-Fi 固件里没有 wpad/batman/dawn。
+
+关无线的两种写法，各按对应平台的上游做法来：
+
+- **qualcommax（ZN-M2、AP8220）**：`CONFIG_PACKAGE_kmod-ath=n` 等逐个关闭，与上游
+  `IPQ60XX-WIFI-NO.txt` / `IPQ807X-WIFI-NO.txt` 一致。WIFI-YES 版删掉这些关闭行，无线包由
+  target `DEFAULT_PACKAGES` 与设备固件带入。
+- **mediatek（N60 Pro）**：上游没有 N60 Pro 的无 Wi-Fi 版，参照 `MEDIATEK-WIFI-NO.txt` 里
+  `supergateway_s20p` 的做法按设备剥包：
+  `CONFIG_TARGET_DEVICE_PACKAGES_mediatek_filogic_DEVICE_netcore_n60-pro="-kmod-mt76 -kmod-mt7915e ... -mt7986-wo-firmware"`，
+  保留 `kmod-usb3`、`automount`。
+
+AP8220 单分区的分区与产物逻辑在 `Scripts/Device-Hooks/IPQ807X-AP8220-1G-SINGLE-WIFI-NO.sh`，
+WIFI-YES 用薄壳钩子转发过去，两个版本不会分叉。
 
 ## 设备专用脚本
 
