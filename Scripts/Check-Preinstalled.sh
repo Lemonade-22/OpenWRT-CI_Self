@@ -53,6 +53,20 @@ PY
   apk|opkg)
     manager="$1"; shift
     [[ $# -gt 0 ]] || { echo "::error::Missing package installation command" >&2; exit 2; }
+    if [[ "$manager" == apk ]]; then
+      # APK simulation disables --initdb, so seed the empty database layout first.
+      # Preserve an existing world file; never mark any packages as installed.
+      root=""
+      previous=""
+      for argument in "$@"; do
+        if [[ "$previous" == --root ]]; then root="$argument"; break; fi
+        case "$argument" in --root=*) root="${argument#--root=}"; break ;; esac
+        previous="$argument"
+      done
+      [[ -n "$root" ]] || { echo "::error::APK rootfs command has no --root" >&2; exit 2; }
+      mkdir -p "$root/etc/apk" "$root/lib/apk/db"
+      [[ -e "$root/etc/apk/world" ]] || touch "$root/etc/apk/world"
+    fi
     option=--simulate
     [[ "$manager" == apk ]] || option=--noaction
     echo "Checking preinstalled packages and dependencies ($manager)..."

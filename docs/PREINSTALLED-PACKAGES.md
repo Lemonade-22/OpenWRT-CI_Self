@@ -15,6 +15,9 @@ The script installs a hook in OpenWrt's package/Makefile. Immediately before the
 rootfs package transaction, it runs the same command with APK --simulate or
 OPKG --noaction. This uses the exact generated install list, local package
 index/files, architecture, ABI versions and signing keys used by OpenWrt.
+For a fresh APK rootfs the hook first creates the empty database directories
+and world file, because APK disables --initdb during --simulate. Existing world
+contents are preserved and no packages are marked installed by this bootstrap.
 The package manager reports missing packages and dependency conflicts. A failed
 check prevents installation; a successful check proceeds with the original
 command. No runtime install scripts execute during the dry run.
