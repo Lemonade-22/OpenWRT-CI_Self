@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # AP8220 1 GiB NAND —— 单分区（NAND 整片一个 rootfs）变体。
 #
-# 与 AP8220-1G.yml 的区别：
+# 与已停用的 AP8220-1G.yml.disabled（双分区旧方案）的区别：
 #   · 不再写死 QWRT(1000 MiB) / ubi_kernel(24 MiB)，内核 DTB 回到上游 qcom,smem-part
 #   · 分区由 MIBIB 决定，刷机前 MIBIB 必须已是单分区版本
 #   · 同时产出 factory.ubi（uboot 可直刷）和 sysupgrade.bin（系统内升级）

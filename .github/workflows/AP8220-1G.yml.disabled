@@ -1,9 +1,26 @@
+# ============================================================
+# 已停用 / DEPRECATED —— 2026-11-06
+# ============================================================
+# 这台 AP8220 的 NAND 已经改成单分区布局：
+#   MIBIB 里 NAND 只有一个 rootfs 分区，覆盖整片 1 GiB；
+#   内核 DTB 用 qcom,smem-part；NAND 上只有一个 UBI 容器。
+#
+# 本工作流产出的固件是 QWRT(1000 MiB) + ubi_kernel(24 MiB) 双分区版本，
+# 在当前布局下刷不进去，也不要再刷。
+#
+# 替代品：.github/workflows/AP8220-1G-Single.yml
+# Actions 里显示为「AP8220-1G-Single rootfs」。
+#
+# 文件名后缀已改成 .disabled：GitHub 只处理 workflows 目录下的
+# *.yml / *.yaml，所以不会再出现在 Actions 列表里。
+# 保留本文件仅作历史参考，需要时把后缀改回 .yml 即可恢复。
+# ============================================================
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 VIKINGYFY
 
-# AP8220 1 GiB NAND
+# AP8220 1 GiB NAND（双分区旧方案）
 # PPE uses VIKINGYFY/immortalwrt owrt; NSS uses main.
-name: AP8220-1G
+name: AP8220-1G（已停用，见 AP8220-1G-Single rootfs）
 run-name: ${{ inputs.FIRMWARE || '编译PPE固件' }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
 on:
