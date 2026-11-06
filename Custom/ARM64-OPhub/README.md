@@ -38,7 +38,7 @@ ARM64-CHECK.yml → .github/actions/arm64-ophub-validate/action.yml
 | `Config/ARM64-OPhub.txt` | 两台设备共用的 generic ARM64 rootfs 配置 |
 | `Scripts/Check-DAEDE-Kernel.py` | 最终外部内核的 BTF、eBPF、SONiC、所选设备驱动和 DTB 检查 |
 
-`WRT-CORE.yml` 仍归上游维护，`WRT-CORE-SELF.yml` 仍通过补丁生成，供原生 OpenWrt target 使用。ARM64 OPhub core 复用本仓库 DAEDE/Fakeflow 脚本，但独立负责外部内核与整盘镜像打包，避免将 OPhub 设备步骤塞入上游补丁。
+`WRT-CORE.yml` 仍归上游维护，`WRT-CORE-SELF.yml` 仍通过补丁生成，供原生 OpenWrt target 使用。ARM64 OPhub core 复用本仓库 DAEDE 脚本，但独立负责外部内核与整盘镜像打包，避免将 OPhub 设备步骤塞入上游补丁。
 
 ## 设备规格与证据
 
@@ -61,7 +61,7 @@ ARM64-CHECK.yml → .github/actions/arm64-ophub-validate/action.yml
 - [固定 U-Boot 资源](https://github.com/ophub/u-boot/tree/6d28887796f8e757d7e5f6d7517d7dcb401be1a0/u-boot/rockchip/fine3399)：上述三个 Fine3399 文件均存在。Panther 专用文件位于同提交 `panther-x2/`。
 - [Fine3399 来源说明](https://github.com/ophub/amlogic-s9xxx-armbian/issues/1790)：该板使用 SW799 系列核心板，OPhub 已有 Fine3399 独立设备支持。
 - [OPhub 6.18 Fine3399 DTS](https://github.com/ophub/linux-6.18.y/blob/794930c6844d1fc83990deffcdd787d37df120a0/arch/arm64/boot/dts/rockchip/rk3399-fine3399.dts) 继承 `rk3399.dtsi`；同提交 Makefile 包含两台设备的 DTB 构建项。当前构建固定使用 OPhub `linux-6.18.y` 提交 `a0592d712c819c3571d19ad15ec2d55bd8733a02`（6.18.59），见 `sources.json`。
-- [固定内核配置](https://github.com/Lemonade-22/ophub-kernel/blob/35527918391e697f994d9efa02948d4308a7a766/kernel-config/release/stable/config-6.18) 已启用 ARCH_ROCKCHIP、DWMAC_ROCKCHIP、REALTEK_PHY、USB_RTL8152、MMC_DW_ROCKCHIP、MMC_SDHCI_OF_ARASAN、RK808 电源管理和 Rockchip PCIe/NVMe 支持。prepare_kernel.py 保留硬件配置，补 BTF/eBPF/fake-flow、SONiC 和网卡依赖。
+- [固定内核配置](https://github.com/Lemonade-22/ophub-kernel/blob/35527918391e697f994d9efa02948d4308a7a766/kernel-config/release/stable/config-6.18) 已启用 ARCH_ROCKCHIP、DWMAC_ROCKCHIP、REALTEK_PHY、USB_RTL8152、MMC_DW_ROCKCHIP、MMC_SDHCI_OF_ARASAN、RK808 电源管理和 Rockchip PCIe/NVMe 支持。prepare_kernel.py 保留硬件配置，补 BTF/eBPF、SONiC 和网卡依赖。
 
 因此本方案复用 OPhub 已有板级支持，无需从另一套内核移植 DTS，也不将 Panther DTB 改名给 Fine3399 使用。最终内核包缺少任一所选设备 DTB、缺少所需模块或缺少 SONiC 支持时，打包前直接失败。
 
@@ -86,7 +86,7 @@ Fine3399 的硬件描述（GMAC、RGMII 时延、USB、eMMC 等）完全由 OPhu
 
 内核模板从 `Lemonade-22/ophub-kernel` 的固定提交读取，固定版本的 OPhub 编译工具构建内核、模块和 DTBs，内核版本为 `6.18.59`。配置文件系列从内核版本推导。由于 GitHub Actions 的 `uses` 不能使用动态表达式，编译工具 SHA 同时存在于 workflow 和 sources.json；自动测试核对两者一致。
 
-插件沿用 Panther：每次获取 VIKINGYFY/OpenWRT-CI main 的 GENERAL.txt、Packages.sh、Handles.sh、Settings.sh，主题读取同一快照的 OWRT-ALL.yml；记录上游实际提交。随后应用共用 ARM64 配置，再运行 DAEDE 和 Fakeflow 配置及检查。
+插件沿用 Panther：每次获取 VIKINGYFY/OpenWRT-CI main 的 GENERAL.txt、Packages.sh、Handles.sh、Settings.sh，主题读取同一快照的 OWRT-ALL.yml；记录上游实际提交。随后应用共用 ARM64 配置，再运行 DAEDE 配置及检查。
 
 上游 `Settings.sh` 会无条件追加 `luci-theme-$WRT_THEME`、`luci-app-$WRT_THEME`、`luci-app-$WRT_THEME-config`。当前主题 `vantage` 只有 `luci-theme-vantage` 和 `luci-app-vantage`，没有 `luci-app-vantage-config`；`make defconfig` 会丢弃未定义的包。`verify_packages.py` 以实际 `tmp/.config-package.in` 为准确认：只有已确认不存在的 `luci-app-vantage-config` 在确实未被任何 feed 定义时才允许跳过；已经定义却被丢弃、以及任何非主题插件被丢弃都仍然失败。不会取消全部包检查。
 
@@ -121,7 +121,7 @@ kernel job 先把固定 OPhub 内核源码 `a0592d712c819c3571d19ad15ec2d55bd873
 - 本地检查：设备矩阵、固定设备表/引导文件核对、内核 DTB 和模块缺失的拒绝路径、内核包暂存、SONiC gate、固定内核源补丁应用、Actions 语法。
 - 云端 `ARM64 OPhub checks`：再次获取固定资源，验证下载接入、用户空间 SONiC 补丁与包元数据、shell/python 语法并运行测试。
 - 首次手动构建：确认两份 DTB、镜像、各自引导校验及发布产物，并检查内核产物中的 SONiC 符号和模块。
-- Fine3399 实机：确认实际核心板/底板版本和存储容量；验证启动、eth0 LAN/eth1 WAN、DHCP/DHCPv6、USB 晚枚举时 WAN 自动建立、SONiC fullcone 行为、TF/eMMC、USB、所需 PCIe/NVMe、温控及 dae/daed/fake-flow。Wi-Fi、蓝牙和屏幕是否适用及可用按具体硬件测试。
+- Fine3399 实机：确认实际核心板/底板版本和存储容量；验证启动、eth0 LAN/eth1 WAN、DHCP/DHCPv6、USB 晚枚举时 WAN 自动建立、SONiC fullcone 行为、TF/eMMC、USB、所需 PCIe/NVMe、温控及 dae/daed。Wi-Fi、蓝牙和屏幕是否适用及可用按具体硬件测试。
 
 Panther 旧版 `2026.09.17-10.44.03` 有维护者确认可用的历史记录；这不代表新共用 core、SONiC 配套或 Fine3399 已通过实机验证。当前改动交付到移植方案、构建结构与本地可执行验证，不自动触发数小时固件编译，也尚未刷机。
 

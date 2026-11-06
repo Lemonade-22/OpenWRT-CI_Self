@@ -6,8 +6,6 @@ on:
     paths:
       - 'patches/ap8220-1g-nand.patch'
       - 'Scripts/*AP8220*'
-      - 'Scripts/Fakeflow.sh'
-      - 'Config/FAKEFLOW.txt'
       - '.github/workflows/AP8220-CHECK.yml'
       - '.github/workflows/WRT-CORE-SELF.yml'
       - 'patches/wrt-core-self.patch'
@@ -17,8 +15,6 @@ on:
     paths:
       - 'patches/ap8220-1g-nand.patch'
       - 'Scripts/*AP8220*'
-      - 'Scripts/Fakeflow.sh'
-      - 'Config/FAKEFLOW.txt'
       - 'Config/IPQ807X-AP8220-1G-WIFI-NO.txt'
       - '.github/workflows/AP8220-CHECK.yml'
       - '.github/workflows/AP8220-1G.yml'
@@ -53,7 +49,6 @@ jobs:
       - name: Check adaptation patch and shell syntax
         run: |
           set -euo pipefail
-          bash -n Scripts/Fakeflow.sh
           bash -n Scripts/Device.sh
           bash -n Scripts/Device-Hooks/IPQ807X-AP8220-1G-WIFI-NO.sh
           sh -n Scripts/Install-AP8220-1G-From-Transition.sh

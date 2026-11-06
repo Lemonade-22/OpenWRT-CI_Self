@@ -10,7 +10,7 @@ AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL �
 所有入口共用 [内核兼容支持](KERNEL-COMPAT.md)：ARM64 启用 `CONFIG_COMPAT`，并启用原厂 ARM32
 运行环境需要的 SysV IPC、命名空间、packet socket 等功能；编译后核查实际内核配置，缺项则停止发布。
 
-通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE/Fakeflow 配置和验证，以及
+通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。
 
 ## 全设备静态地址绑定
@@ -39,7 +39,7 @@ wpad/hostapd/supplicant 提供者；`verify` 在 `make defconfig` 后核对每�
 WIFI-NO、X86 和测试配置同样包含这些包，但不会修改 DTS、恢复被禁用的无线
 设备或自动启用组网。实际无线 Mesh 仍需要可工作的无线设备及支持 mesh point
 的驱动。N60 Pro 的独立核心也调用同一套 prepare/configure/verify 流程，
-在现有 eBPF/Fakeflow 配置之后应用 Mesh 配置，在配置哈希计算前完成验证。
+在现有 eBPF（DAEDE）配置之后应用 Mesh 配置，在配置哈希计算前完成验证。
 使用独立核心的 XG-040G 和 Panther-X2 不在此次修改范围内。
 
 本次本地验证覆盖脚本语法、配置替换/缺依赖检测及工作流生成测试；完整固件编译、

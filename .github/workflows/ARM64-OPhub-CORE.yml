@@ -217,7 +217,6 @@ jobs:
             echo "CONFIG_PACKAGE_${package}=y" >> .config
           done
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
-          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" configure
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
           make defconfig
@@ -226,7 +225,6 @@ jobs:
           grep -qx 'CONFIG_PACKAGE_wifi-scripts=y' .config || {
             echo '::error::Missing wifi-scripts required for boot-time wifi config'; exit 1; }
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
-          bash "$GITHUB_WORKSPACE/Scripts/Fakeflow.sh" verify
           test -s tmp/.config-package.in
           python3 "$GITHUB_WORKSPACE/Custom/ARM64-OPhub/verify_packages.py" \
             --requested "$GITHUB_WORKSPACE/output/upstream-luci-selected.config" \

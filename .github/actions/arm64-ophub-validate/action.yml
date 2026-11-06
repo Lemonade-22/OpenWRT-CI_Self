@@ -80,7 +80,6 @@ runs:
         python3 Custom/ARM64-OPhub/profiles.py --device "$DEVICE" --database ophub/make-openwrt/openwrt-files/common-files/etc/model_database.conf --boot-root boot-resources/u-boot
         python3 Custom/ARM64-OPhub/pin_ophub.py ophub/remake
         bash -n ophub/remake
-        bash -n Scripts/Fakeflow.sh
         bash -n Custom/ARM64-OPhub/fine3399-direct-lan
         for script in upstream-ci/Scripts/*.sh; do bash -n "$script"; done
         python3 -m py_compile Custom/ARM64-OPhub/verify_packages.py \
