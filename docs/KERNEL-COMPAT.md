@@ -1,6 +1,11 @@
 # ARM64 上执行 ARM32 程序
 
-所有固件构建入口通过 `Scripts/kernel_compat.py` 共用以下要求：
+这套配置**只服务 zte-mesh**：它的 `ns-run` 先 unshare IPC、网络、挂载三个命名空间，再 exec
+原厂的 32 位 ARM 守护进程。仓库里已经没有任何构建选择这个包，所以 `Scripts/kernel_compat.py`
+现在是**按需生效**的——`.config` 里没有 `CONFIG_PACKAGE_zte-mesh`（或 `zte-mesh-launcher`）就整体跳过，
+`configure`、`verify`、`verify-kernel` 三个阶段一起跳过，`.config` 与 `Config-kernel.in` 一个字节都不动。
+
+想恢复这套层，在任意机器的 `.config` 里选上 `zte-mesh` 即可，以下要求会自动重新生效：
 
 - ARM64：`CONFIG_COMPAT=y`，为支持 AArch32 的 CPU 提供 ARM32 用户态兼容。
 - 明确启用 `KUSER_HELPERS`、`COMPAT_ALIGNMENT_FIXUPS`，避免 COMPAT 打开后 Linux

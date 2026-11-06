@@ -116,12 +116,6 @@ class Arm64Tests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('tun.ko', result.stderr)
 
-    def test_kernel_archive_rejects_missing_arm32_compat(self):
-        archive = self.archive(['rk3399-fine3399.dtb'], omit_symbol='COMPAT')
-        result = self.check(archive, '--dtb', 'rk3399-fine3399.dtb')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('COMPAT=y', result.stderr)
-
     def test_kernel_staging_requires_matching_modules_and_dtbs(self):
         folder = self.root / 'compiled'
         folder.mkdir()

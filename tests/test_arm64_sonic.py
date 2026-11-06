@@ -264,8 +264,6 @@ class PrepareKernelTests(unittest.TestCase):
         text = config.read_text(encoding='utf-8')
         self.assertNotIn('\r', text)
         values = prepare_kernel.config_values(text)
-        for symbol in prepare_kernel.ARM64:
-            self.assertEqual(values.get(symbol), 'y', symbol)
         for symbol, value in {**SONIC_CONFIG, **DEVICE_CONFIG}.items():
             self.assertEqual(values.get(symbol), value, symbol)
         for symbol in SONIC_CONFIG:

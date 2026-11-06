@@ -22,11 +22,25 @@ class CompatTests(unittest.TestCase):
         (self.root / 'config/Config-kernel.in').write_text(
             'config KERNEL_NET_NS\n\tbool "Network namespaces"\n\tdefault n\n')
         (self.root / '.config').write_text(
-            'CONFIG_aarch64=y\n# CONFIG_KERNEL_COMPAT is not set\nCONFIG_KERNEL_COMPAT=n\n')
+            'CONFIG_aarch64=y\n# CONFIG_KERNEL_COMPAT is not set\nCONFIG_KERNEL_COMPAT=n\n'
+            'CONFIG_PACKAGE_zte-mesh=y\n')
 
     def run_phase(self, phase):
         return subprocess.run([sys.executable, str(SCRIPT), phase], cwd=self.root,
                               capture_output=True, text=True)
+
+    def test_layer_stays_off_when_no_build_selects_zte_mesh(self):
+        # No build in this repository selects zte-mesh any more, so the layer
+        # has to stay dormant: a build without the package comes out untouched.
+        config = self.root / '.config'
+        original = 'CONFIG_aarch64=y\n# CONFIG_KERNEL_COMPAT is not set\nCONFIG_KERNEL_COMPAT=n\n'
+        config.write_text(original)
+        definitions = self.root / 'config/Config-kernel.in'
+        before = definitions.read_text()
+        for phase in ('configure', 'verify', 'verify-kernel'):
+            self.assertEqual(self.run_phase(phase).returncode, 0, phase)
+        self.assertEqual(config.read_text(), original)
+        self.assertEqual(definitions.read_text(), before)
 
     def test_configure_replaces_overrides_and_registers_missing_selectors(self):
         self.assertEqual(self.run_phase('configure').returncode, 0)

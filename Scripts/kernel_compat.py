@@ -84,11 +84,37 @@ def configure(root):
     config.write_text(selections, encoding="utf-8", newline="\n")
 
 
+# The only consumer of this layer is zte-mesh: its ns-run unshares an IPC,
+# network and mount namespace and then execs the vendor's 32-bit ARM daemon.
+# Nothing in this repository selects that package any more, so the layer stays
+# off and no default build pays for AArch32 in its kernel. A firmware that
+# picks the package up again re-enables it through one of these symbols.
+NEED_MARKERS = (
+    "CONFIG_PACKAGE_zte-mesh=y",
+    "CONFIG_PACKAGE_zte-mesh=m",
+    "CONFIG_PACKAGE_zte-mesh-launcher=y",
+    "CONFIG_PACKAGE_zte-mesh-launcher=m",
+)
+
+
+def arm32_wanted(root):
+    """Return True when this build selects the package that needs ARM32."""
+    config = root / ".config"
+    if not config.exists():
+        return False
+    text = config.read_text(encoding="utf-8", errors="replace")
+    return any(marker in text for marker in NEED_MARKERS)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phase", choices=("configure", "verify", "verify-kernel"))
     args = parser.parse_args()
     root = Path.cwd()
+    if not arm32_wanted(root):
+        print("ARM32 compatibility layer not selected (no zte-mesh package in .config); "
+              + ("nothing to configure" if args.phase == "configure" else "nothing to verify"))
+        return
     if args.phase == "configure":
         configure(root)
         return
