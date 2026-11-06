@@ -64,6 +64,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Initialization Environment
+        timeout-minutes: 35
         shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -74,6 +75,15 @@ jobs:
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
           sudo -E apt -yqq install dos2unix libfuse-dev clang-18 llvm-18
+          # xmlto 的推荐依赖会拖进整套 TeX Live（texlive-lang-greek 单个就 79MB），
+          # 共享镜像上能跑一小时以上。关掉推荐依赖，只装编译真正需要的包。
+          sudo tee /etc/apt/apt.conf.d/99-wrt-norecommends >/dev/null <<'WRT_APT_EOF'
+          APT::Install-Recommends "false";
+          APT::Install-Suggests "false";
+          Acquire::Retries "3";
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          WRT_APT_EOF
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
@@ -178,7 +188,7 @@ jobs:
       - name: Restore Toolchain Cache
         id: toolchain-cache
         if: ${{ (inputs.TEST && 'true' || 'false') != 'true' }}
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: n60-v2-ubuntu24-llvm18-${{env.WRT_INFO}}-${{env.WRT_HASH}}-${{env.WRT_CONFIG_HASH}}
           path: |
@@ -196,7 +206,7 @@ jobs:
       - name: Restore Compiler Cache
         id: compiler-cache
         if: ${{ (inputs.TEST && 'true' || 'false') != 'true' }}
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: n60-ccache-v2-ubuntu24-${{env.WRT_INFO}}-${{github.run_id}}-${{github.run_attempt}}
           restore-keys: n60-ccache-v2-ubuntu24-${{env.WRT_INFO}}-
@@ -222,7 +232,7 @@ jobs:
 
       - name: Save Toolchain Cache
         if: ${{ (inputs.TEST && 'true' || 'false') != 'true' && steps.toolchain-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: ${{steps.toolchain-cache.outputs.cache-primary-key}}
           path: |
@@ -240,14 +250,14 @@ jobs:
 
       - name: Save Compiler Cache
         if: ${{ always() && (inputs.TEST && 'true' || 'false') != 'true' && steps.build-toolchain.outcome == 'success' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: ${{steps.compiler-cache.outputs.cache-primary-key}}
           path: ./wrt/.ccache
 
       - name: Upload Build Logs
         if: ${{ always() && (inputs.TEST && 'true' || 'false') != 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: N60-Pro-build-logs-${{github.run_id}}-${{github.run_attempt}}
           path: ./wrt/logs/

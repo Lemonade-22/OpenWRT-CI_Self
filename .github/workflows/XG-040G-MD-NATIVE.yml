@@ -66,6 +66,7 @@ jobs:
           path: upstream-ci
 
       - name: Initialization Environment
+        timeout-minutes: 35
         shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -77,6 +78,15 @@ jobs:
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
           sudo -E apt -yqq install dos2unix libfuse-dev
+          # xmlto 的推荐依赖会拖进整套 TeX Live（texlive-lang-greek 单个就 79MB），
+          # 共享镜像上能跑一小时以上。关掉推荐依赖，只装编译真正需要的包。
+          sudo tee /etc/apt/apt.conf.d/99-wrt-norecommends >/dev/null <<'WRT_APT_EOF'
+          APT::Install-Recommends "false";
+          APT::Install-Suggests "false";
+          Acquire::Retries "3";
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          WRT_APT_EOF
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
