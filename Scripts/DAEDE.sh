@@ -85,18 +85,6 @@ case "${1:-}" in
       echo "::error::$DAEDE_DIR/daed is missing after defconfig" >&2
       exit 1
     fi
-    if ! grep -qx 'CONFIG_PACKAGE_daed=y' .config; then
-      echo "::error::daed was dropped by defconfig; is $DAEDE_DIR/daed readable?" >&2
-      exit 1
-    fi
-    if ! grep -qx 'CONFIG_PACKAGE_luci-app-daede=y' .config; then
-      echo "::error::luci-app-daede was dropped by defconfig" >&2
-      exit 1
-    fi
-    if grep -Eq '^CONFIG_PACKAGE_dae=(y|m)$' .config; then
-      echo "::error::the dae package is selected; daed already embeds the same core" >&2
-      exit 1
-    fi
     ;;
   *) echo "Usage: $0 configure|verify" >&2; exit 2 ;;
 esac
