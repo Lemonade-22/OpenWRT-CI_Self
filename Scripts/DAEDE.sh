@@ -58,7 +58,17 @@ files_root="./files"
 die() { echo "::error::$*" >&2; exit 1; }
 
 target_arch() {
-  sed -n 's/^CONFIG_TARGET_ARCH_PACKAGES="\(.*\)"$/\1/p' .config | head -n 1
+  local arch
+  arch="$(sed -n 's/^CONFIG_TARGET_ARCH_PACKAGES="\(.*\)"$/\1/p' .config | head -n 1)"
+  if [ -z "$arch" ]; then
+    # The profile files only name board and subtarget; CONFIG_TARGET_ARCH_PACKAGES
+    # is produced by defconfig. Resolve it once here instead of failing, because
+    # this script runs before the workflow's own defconfig.
+    echo "daed: resolving target architecture (first defconfig)" >&2
+    make -s defconfig >/dev/null 2>&1 || die "make defconfig failed while resolving the target architecture"
+    arch="$(sed -n 's/^CONFIG_TARGET_ARCH_PACKAGES="\(.*\)"$/\1/p' .config | head -n 1)"
+  fi
+  printf '%s\n' "$arch"
 }
 
 fetch() {
