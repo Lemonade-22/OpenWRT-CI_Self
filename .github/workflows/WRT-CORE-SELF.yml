@@ -45,9 +45,6 @@ on:
         required: false
         default: false
         type: boolean
-      WRT_APT_FIX:
-        required: false
-        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -63,7 +60,6 @@ env:
   WRT_SOURCE: ${{inputs.WRT_SOURCE}}
   WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
   WRT_TEST: ${{inputs.WRT_TEST}}
-  WRT_APT_FIX: ${{inputs.WRT_APT_FIX}}
 
 jobs:
   core:
@@ -85,14 +81,6 @@ jobs:
           # apt 定时任务与 needrestart 是这一步最常见的挂死原因
           sudo systemctl stop unattended-upgrades.service apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
           sudo pkill -f apt.systemd.daily 2>/dev/null || true
-          if [ "$WRT_APT_FIX" = "true" ]; then
-            sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) -exec sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' {} +
-            sudo tee /etc/apt/apt.conf.d/99-wrt-network >/dev/null <<'EOF'
-          Acquire::http::Timeout "30";
-          Acquire::https::Timeout "30";
-          Acquire::Retries "3";
-          EOF
-          fi
           sudo apt-get -yqq purge firefox
           sudo apt-get -yqq update
           sudo apt-get -yqq full-upgrade
