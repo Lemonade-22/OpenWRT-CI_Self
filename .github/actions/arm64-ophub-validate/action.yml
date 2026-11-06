@@ -35,12 +35,12 @@ runs:
         DEVICE: ${{ inputs.device }}
       shell: bash
       run: python3 Custom/ARM64-OPhub/profiles.py --device "$DEVICE" --github-output "$GITHUB_OUTPUT"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         repository: ophub/amlogic-s9xxx-openwrt
         ref: ${{ steps.profiles.outputs.packer_commit }}
         path: ophub
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         repository: ophub/u-boot
         ref: ${{ steps.profiles.outputs.uboot_commit }}
@@ -49,13 +49,13 @@ runs:
           u-boot/rockchip/panther-x2
           u-boot/rockchip/fine3399
     - name: Checkout upstream plugin configuration
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: VIKINGYFY/OpenWRT-CI
         ref: main
         path: upstream-ci
     - name: Checkout pinned userspace SONiC sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: VIKINGYFY/immortalwrt
         ref: ${{ steps.profiles.outputs.userspace_commit }}

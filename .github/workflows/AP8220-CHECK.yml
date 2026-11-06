@@ -36,9 +36,9 @@ jobs:
         branch: [owrt, main]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Fetch firmware source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: VIKINGYFY/immortalwrt
           ref: ${{ matrix.branch }}
