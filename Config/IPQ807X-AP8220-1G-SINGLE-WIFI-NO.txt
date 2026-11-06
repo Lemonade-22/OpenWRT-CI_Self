@@ -1,0 +1,16 @@
+# Aliyun AP8220, 1 GiB NAND (MT29F8G08ABBCAH4, 4096-byte page / 256-KiB eraseblock).
+# 单分区变体：NAND 由 MIBIB 描述成「一个 rootfs 分区，覆盖整片 1 GiB」，
+# 内核 DTB 使用上游的 qcom,smem-part，不再写死 QWRT / ubi_kernel。
+# 刷机前 MIBIB 必须是单分区版本，否则内核找不到 MTD。
+CONFIG_TARGET_qualcommax=y
+CONFIG_TARGET_qualcommax_ipq807x=y
+CONFIG_TARGET_DEVICE_qualcommax_ipq807x_DEVICE_aliyun_ap8220=y
+CONFIG_PACKAGE_kmod-ath=n
+CONFIG_PACKAGE_kmod-ath11k=n
+CONFIG_PACKAGE_kmod-ath11k-ahb=n
+CONFIG_PACKAGE_kmod-ath11k-pci=n
+CONFIG_PACKAGE_ath10k-firmware-qca9887=n
+CONFIG_PACKAGE_ath11k-firmware-ipq8074=n
+CONFIG_PACKAGE_ath11k-firmware-ipq8074-ddwrt=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074-ddwrt=n

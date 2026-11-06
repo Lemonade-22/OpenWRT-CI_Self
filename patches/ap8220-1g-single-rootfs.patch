@@ -1,0 +1,28 @@
+diff --git a/target/linux/qualcommax/dts/ipq8071-ap8220.dts b/target/linux/qualcommax/dts/ipq8071-ap8220.dts
+index ba9f9b7..32f4f01 100644
+--- a/target/linux/qualcommax/dts/ipq8071-ap8220.dts
++++ b/target/linux/qualcommax/dts/ipq8071-ap8220.dts
+@@ -112,7 +112,7 @@
+ 	nand@0 {
+ 		reg = <0>;
+ 
+-		nand-ecc-strength = <4>;
++		nand-ecc-strength = <8>;
+ 		nand-ecc-step-size = <512>;
+ 		nand-bus-width = <8>;
+ 
+diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
+index ea61827..f3474c1 100644
+--- a/target/linux/qualcommax/image/ipq807x.mk
++++ b/target/linux/qualcommax/image/ipq807x.mk
+@@ -56,8 +56,8 @@ define Device/aliyun_ap8220
+ 	$(call Device/UbiFit)
+ 	DEVICE_VENDOR := Aliyun
+ 	DEVICE_MODEL := AP8220
+-	BLOCKSIZE := 128k
+-	PAGESIZE := 2048
++	BLOCKSIZE := 256k
++	PAGESIZE := 4096
+ 	SOC := ipq8071
+ 	DEVICE_DTS_CONFIG := config@ac02
+ 	DEVICE_PACKAGES := ipq-wifi-aliyun_ap8220
