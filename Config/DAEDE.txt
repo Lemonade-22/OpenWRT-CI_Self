@@ -21,13 +21,5 @@ CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
 CONFIG_PACKAGE_kmod-nft-tproxy=y
 CONFIG_PACKAGE_ca-bundle=y
 CONFIG_PACKAGE_curl=y
-# daed is not shipped at all (only its geo data), so these stay unselected:
-# the firmware must not build a backend nobody can drive from LuCI.
-# CONFIG_PACKAGE_daed is not set
-# CONFIG_PACKAGE_dae is not set
-# CONFIG_PACKAGE_luci-app-daede is not set
-# CONFIG_PACKAGE_luci-app-daede_daed is not set
-# CONFIG_PACKAGE_luci-app-daede_dae is not set
-# CONFIG_PACKAGE_luci-app-daed is not set
 # CONFIG_PACKAGE_vmlinux-btf is not set
 

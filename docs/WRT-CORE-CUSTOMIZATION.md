@@ -45,32 +45,22 @@ qualcommax 布局），现已删除：上游在 `WIFI-NO` 时把 `#include "ipq6
 `Handles.sh` 和 `Packages.sh` 目前仍是本地副本（分别比上游多 7 行和 22 行），同一个毛病
 还没修，改动时会再核对。
 
-## geo 数据（daed 不再预装）
+## daed：只准备内核，不预装任何东西
 
-除 MT7621 外的所有构建入口都调用 `Scripts/DAEDE.sh`，但它只做一件事：把固定版本的 geo
-数据放进 `files/`，随镜像一起发货。
+`Scripts/DAEDE.sh` 现在只做一件事：把 `Config/DAEDE.txt` 里的 eBPF 内核前置依赖写进 `.config`，
+（BTF、cgroup BPF、kprobes、`kmod-sched-bpf`、`kmod-nft-tproxy`、`ca-bundle`、`curl` 等）。
 
-| 内容 | 来源 | 固定方式 |
-| --- | --- | --- |
-| `geoip.dat`（默认） | [v2fly/geoip](https://github.com/v2fly/geoip/releases) 的 `geoip-only-cn-private.dat` | tag + sha256 |
-| `geoip.dat`（`GEOIP_FULL=1`） | [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat/releases) 全量 | tag + sha256 |
-| `geosite.dat` | [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat/releases) 全量 | tag + sha256 |
+**镜像里不带 `daed`、`dae`、`luci-app-daede`，也不带 `geoip.dat` / `geosite.dat`。** 需要时由使用者
+自己 `apk add`，装完即可用，因为内核前置已经就位。
 
-两份数据落在 `/usr/share/v2ray/`（`daed` 的 init 脚本导出 `DAE_LOCATION_ASSET=/usr/share/v2ray`），
-并软链到 `/usr/share/daed/`，兼容忽略该变量的旧内核。
+为什么不做预装：
 
-**geoip 默认只带 CN + private**（约 236 KB）：全量库 16 MB 会吃掉小闪存机型的空间和首次启动
-的解析时间，而默认配置只用到 `geoip(cn)`。代价是配置里写 `geoip(us)`、`geoip(jp)` 这类规则会
-在编译阶段失败；需要全量的机型传 `GEOIP_FULL=1`。`verify` 用体积阈值双向把关：该小的不许大，
-该大的不许小。
+- 用 `files/` 覆盖安装的包不会写进 apk 的已安装数据库，daede 面板会显示「非包管理器安装 /
+  未安装」，更新按钮也是灰的——半残的面板比没有更迷惑人。
+- geo 两份数据约 10 MiB，在小型 NAND 机型上直接吃掉可写 overlay 的空间。
 
-**`daed`、`dae`、`luci-app-daede` 一律不预装。** 用 `files/` 覆盖安装的包不会写进 apk 的已安装
-数据库，daede 面板据此显示「非包管理器安装 / 未安装」，更新按钮也是灰的——装了个半残的面板
-不如不装。`Config/DAEDE.txt` 里的 eBPF 内核依赖保留，用户自己 `apk add daed` 时开箱即用。
-`verify` 会拦住三件事：geo 数据没落地、`files/` 里又冒出 daed 二进制、`.config` 里重新选中了
-daed 相关的包。
-
-代价：`files/` 增加约 12 MB（只有两份 geo 数据）。
+`verify` 只拦一件事：`files/` 里又冒出 `usr/bin/daed` 或 `usr/share/v2ray/geoip.dat`。
+daed 相关包不再被强制置为 not set——装不装由使用者决定。
 
 ## 全设备静态地址绑定
 
