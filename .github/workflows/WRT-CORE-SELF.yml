@@ -64,7 +64,8 @@ env:
 jobs:
   core:
     name: ${{inputs.WRT_SOURCE}}
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
     outputs:
       cache_prefix: ${{steps.initialize-values.outputs.cache_prefix}}
       cache_key: ${{steps.clone-code.outputs.cache_key}}
@@ -97,11 +98,13 @@ jobs:
             python3-dev python3-packaging python3-pyelftools python3-setuptools qemu-utils rsync swig \
             unzip wget xz-utils zlib1g-dev zstd
 
-          sudo timedatectl set-timezone "Asia/Shanghai"
+          # timedatectl 走 dbus/systemd；full-upgrade 之后 dbus 可能半死，会无限等待
+          sudo timeout -k 5 15 timedatectl set-timezone "Asia/Shanghai" || \
+            echo "::warning::timedatectl did not answer in 15s; continuing with the runner timezone"
 
-          sudo mkdir -p /mnt/build_wrt
-          sudo chown $USER:$USER /mnt/build_wrt
-          sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+          sudo timeout -k 5 20 mkdir -p /mnt/build_wrt
+          sudo timeout -k 5 20 chown "$USER:$USER" /mnt/build_wrt
+          sudo timeout -k 5 20 ln -sfn /mnt/build_wrt "$GITHUB_WORKSPACE/wrt"
 
       - name: Initialization Values
         id: initialize-values
@@ -111,7 +114,9 @@ jobs:
           WRT_CACHE_SOURCE=${WRT_SOURCE//\//-}
           WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
           WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
-          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
+          # ubuntu-latest 会在 24.04/26.04 之间漂；缓存里是 host 二进制，混用会因 glibc 版本崩
+          WRT_CACHE_OS=$(. /etc/os-release && echo "${VERSION_ID//./}")
+          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_OS-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
           WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
 
           {
@@ -175,6 +180,7 @@ jobs:
           echo "restored build cache: ${{steps.cache-restore.outputs.cache-matched-key}}"
 
       - name: Update Feeds
+        timeout-minutes: 15
         run: |
           cd ./wrt/
 
@@ -182,6 +188,7 @@ jobs:
           ./scripts/feeds install -a
 
       - name: Custom Packages
+        timeout-minutes: 20
         run: |
           cd ./wrt/
 
@@ -240,6 +247,7 @@ jobs:
 
       - name: Download Packages
         if: ${{ !inputs.WRT_TEST }}
+        timeout-minutes: 60
         run: |
           cd ./wrt/
 
@@ -362,7 +370,7 @@ jobs:
     name: Roll cache generations
     needs: core
     if: ${{ !inputs.WRT_TEST && needs.core.result == 'success' }}
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     concurrency:
       group: wrt-cache-rollover-${{github.ref}}-${{needs.core.outputs.cache_prefix}}
       cancel-in-progress: false

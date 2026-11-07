@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
-index c57e99d..bda009e 100644
+index c57e99d..cce96b3 100644
 --- a/.github/workflows/WRT-CORE.yml
 +++ b/.github/workflows/WRT-CORE.yml
 @@ -1,8 +1,9 @@
@@ -14,16 +14,15 @@ index c57e99d..bda009e 100644
  
  on:
    workflow_call:
-@@ -63,7 +64,7 @@ env:
- jobs:
+@@ -64,6 +65,7 @@ jobs:
    core:
      name: ${{inputs.WRT_SOURCE}}
--    runs-on: ubuntu-latest
-+    runs-on: ubuntu-26.04
+     runs-on: ubuntu-latest
++    timeout-minutes: 240
      outputs:
        cache_prefix: ${{steps.initialize-values.outputs.cache_prefix}}
        cache_key: ${{steps.clone-code.outputs.cache_key}}
-@@ -72,9 +73,14 @@ jobs:
+@@ -72,9 +74,14 @@ jobs:
          uses: actions/checkout@main
  
        - name: Initialization Environment
@@ -38,7 +37,36 @@ index c57e99d..bda009e 100644
            sudo apt-get -yqq purge firefox
            sudo apt-get -yqq update
            sudo apt-get -yqq full-upgrade
-@@ -139,9 +145,12 @@ jobs:
+@@ -91,11 +98,13 @@ jobs:
+             python3-dev python3-packaging python3-pyelftools python3-setuptools qemu-utils rsync swig \
+             unzip wget xz-utils zlib1g-dev zstd
+ 
+-          sudo timedatectl set-timezone "Asia/Shanghai"
++          # timedatectl 走 dbus/systemd；full-upgrade 之后 dbus 可能半死，会无限等待
++          sudo timeout -k 5 15 timedatectl set-timezone "Asia/Shanghai" || \
++            echo "::warning::timedatectl did not answer in 15s; continuing with the runner timezone"
+ 
+-          sudo mkdir -p /mnt/build_wrt
+-          sudo chown $USER:$USER /mnt/build_wrt
+-          sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
++          sudo timeout -k 5 20 mkdir -p /mnt/build_wrt
++          sudo timeout -k 5 20 chown "$USER:$USER" /mnt/build_wrt
++          sudo timeout -k 5 20 ln -sfn /mnt/build_wrt "$GITHUB_WORKSPACE/wrt"
+ 
+       - name: Initialization Values
+         id: initialize-values
+@@ -105,7 +114,9 @@ jobs:
+           WRT_CACHE_SOURCE=${WRT_SOURCE//\//-}
+           WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
+           WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
+-          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
++          # ubuntu-latest 会在 24.04/26.04 之间漂；缓存里是 host 二进制，混用会因 glibc 版本崩
++          WRT_CACHE_OS=$(. /etc/os-release && echo "${VERSION_ID//./}")
++          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_OS-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
+           WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
+ 
+           {
+@@ -139,9 +150,12 @@ jobs:
              sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
            fi
  
@@ -51,7 +79,22 @@ index c57e99d..bda009e 100644
  
        - name: Restore Build Cache
          id: cache-restore
-@@ -179,6 +188,7 @@ jobs:
+@@ -166,6 +180,7 @@ jobs:
+           echo "restored build cache: ${{steps.cache-restore.outputs.cache-matched-key}}"
+ 
+       - name: Update Feeds
++        timeout-minutes: 15
+         run: |
+           cd ./wrt/
+ 
+@@ -173,12 +188,14 @@ jobs:
+           ./scripts/feeds install -a
+ 
+       - name: Custom Packages
++        timeout-minutes: 20
+         run: |
+           cd ./wrt/
+ 
            $GITHUB_WORKSPACE/Scripts/Packages.sh
            $GITHUB_WORKSPACE/Scripts/Handles.sh
            $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
@@ -59,7 +102,7 @@ index c57e99d..bda009e 100644
  
        - name: Custom Settings
          run: |
-@@ -190,10 +200,36 @@ jobs:
+@@ -190,10 +207,36 @@ jobs:
              cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
            fi
  
@@ -98,7 +141,15 @@ index c57e99d..bda009e 100644
  
        - name: Prepare Rust Toolchain
          if: ${{ !inputs.WRT_TEST }}
-@@ -217,6 +253,8 @@ jobs:
+@@ -204,6 +247,7 @@ jobs:
+ 
+       - name: Download Packages
+         if: ${{ !inputs.WRT_TEST }}
++        timeout-minutes: 60
+         run: |
+           cd ./wrt/
+ 
+@@ -217,6 +261,8 @@ jobs:
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
              make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
@@ -107,7 +158,7 @@ index c57e99d..bda009e 100644
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +302,8 @@ jobs:
+@@ -264,9 +310,8 @@ jobs:
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -119,7 +170,7 @@ index c57e99d..bda009e 100644
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,39 +318,51 @@ jobs:
+@@ -281,33 +326,45 @@ jobs:
              make clean -j$(nproc)
            fi
  
@@ -186,10 +237,3 @@ index c57e99d..bda009e 100644
  
    cache-rollover:
      name: Roll cache generations
-     needs: core
-     if: ${{ !inputs.WRT_TEST && needs.core.result == 'success' }}
--    runs-on: ubuntu-latest
-+    runs-on: ubuntu-26.04
-     concurrency:
-       group: wrt-cache-rollover-${{github.ref}}-${{needs.core.outputs.cache_prefix}}
-       cancel-in-progress: false
