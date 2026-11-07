@@ -1,6 +1,6 @@
-# Shared non-MT7621 profiles: kernel eBPF support for dae/daed.
-# daed, dae and luci-app-daede are NOT built here: Scripts/DAEDE.sh stages the
-# pinned prebuilt payload into files/ instead. Requirements (kernel side):
+# Shared non-MT7621 profiles: kernel eBPF support so a user-installed daed or dae
+# works out of the box. The firmware ships only the geo databases; see
+# Scripts/DAEDE.sh. Requirements (kernel side):
 # https://github.com/kenzok8/openwrt-daede
 CONFIG_KERNEL_DEBUG_INFO=y
 # CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set
@@ -21,8 +21,8 @@ CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
 CONFIG_PACKAGE_kmod-nft-tproxy=y
 CONFIG_PACKAGE_ca-bundle=y
 CONFIG_PACKAGE_curl=y
-# Prebuilt payload comes from files/, so nothing here may be built: a second
-# copy would fight over /usr/bin/daed and /etc/config/daed.
+# daed is not shipped at all (only its geo data), so these stay unselected:
+# the firmware must not build a backend nobody can drive from LuCI.
 # CONFIG_PACKAGE_daed is not set
 # CONFIG_PACKAGE_dae is not set
 # CONFIG_PACKAGE_luci-app-daede is not set

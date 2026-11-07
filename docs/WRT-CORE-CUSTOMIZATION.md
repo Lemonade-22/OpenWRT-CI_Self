@@ -45,35 +45,32 @@ qualcommax 布局），现已删除：上游在 `WIFI-NO` 时把 `#include "ipq6
 `Handles.sh` 和 `Packages.sh` 目前仍是本地副本（分别比上游多 7 行和 22 行），同一个毛病
 还没修，改动时会再核对。
 
-## daed 代理后端
+## geo 数据（daed 不再预装）
 
-除 MT7621 外的所有构建入口都调用 `Scripts/DAEDE.sh`。**不走源码编译**，改为把固定版本的
-预编译产物放进 `files/`，随镜像一起发货：
+除 MT7621 外的所有构建入口都调用 `Scripts/DAEDE.sh`，但它只做一件事：把固定版本的 geo
+数据放进 `files/`，随镜像一起发货。
 
 | 内容 | 来源 | 固定方式 |
 | --- | --- | --- |
-| `daed`、`luci-app-daede` | [kenzok8/openwrt-daede](https://github.com/kenzok8/openwrt-daede/releases) | tag 与包版本写在脚本顶部 |
 | `geoip.dat`（默认） | [v2fly/geoip](https://github.com/v2fly/geoip/releases) 的 `geoip-only-cn-private.dat` | tag + sha256 |
 | `geoip.dat`（`GEOIP_FULL=1`） | [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat/releases) 全量 | tag + sha256 |
 | `geosite.dat` | [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat/releases) 全量 | tag + sha256 |
 
-geo 数据落在 `/usr/share/v2ray/`（`daed` 的 init 脚本导出 `DAE_LOCATION_ASSET=/usr/share/v2ray`），
+两份数据落在 `/usr/share/v2ray/`（`daed` 的 init 脚本导出 `DAE_LOCATION_ASSET=/usr/share/v2ray`），
 并软链到 `/usr/share/daed/`，兼容忽略该变量的旧内核。
 
 **geoip 默认只带 CN + private**（约 236 KB）：全量库 16 MB 会吃掉小闪存机型的空间和首次启动
-的解析时间，而 daed 的默认配置只用到 `geoip(cn)`。代价是配置里写 `geoip(us)`、`geoip(jp)` 这类
-规则会在编译阶段失败；需要全量的机型在 workflow 里传 `GEOIP_FULL=1`。`verify` 用体积阈值双向
-把关：该小的不许大，该大的不许小。
+的解析时间，而默认配置只用到 `geoip(cn)`。代价是配置里写 `geoip(us)`、`geoip(jp)` 这类规则会
+在编译阶段失败；需要全量的机型传 `GEOIP_FULL=1`。`verify` 用体积阈值双向把关：该小的不许大，
+该大的不许小。
 
-`dae` 从不打包：daed 已内嵌同一内核，界面也共用一套 UCI。因为绕过包管理器，设备上 apk 的
-已安装列表里看不到 `daed`，LuCI 软件包页既不显示也不能升级它；升级方式是改脚本顶部的固定
-版本重新构建。
+**`daed`、`dae`、`luci-app-daede` 一律不预装。** 用 `files/` 覆盖安装的包不会写进 apk 的已安装
+数据库，daede 面板据此显示「非包管理器安装 / 未安装」，更新按钮也是灰的——装了个半残的面板
+不如不装。`Config/DAEDE.txt` 里的 eBPF 内核依赖保留，用户自己 `apk add daed` 时开箱即用。
+`verify` 会拦住三件事：geo 数据没落地、`files/` 里又冒出 daed 二进制、`.config` 里重新选中了
+daed 相关的包。
 
-解压用的是 ipk 而不是 apk：apk v3 是签名的 ADB 容器，需要 apk-tools 才能打开，而 ipk 就是
-普通 tar，任何 runner 都能解，两者负载相同。daed 是静态 Go 二进制，luci-app-daede 是与架构
-无关的 Lua，因此 24.10 构建的负载在 apk 基础的 25.12 镜像上同样可用。
-
-代价：`files/` 增加约 61 MB（daed 49 MB + 两份 geo 数据 12 MB）。
+代价：`files/` 增加约 12 MB（只有两份 geo 数据）。
 
 ## 全设备静态地址绑定
 
