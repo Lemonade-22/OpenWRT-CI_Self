@@ -13,10 +13,10 @@ class CoreGenerationTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(prefix='test-wrt-core-')
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        self.repository = Path(__file__).resolve().parents[1]
+        self.repository = Path(__file__).resolve().parents[2]
         for name in (
             'Scripts/Generate-Wrt-Core.py',
-            'patches/wrt-core-self.patch',
+            'Custom/patches/wrt-core-self.patch',
             '.github/workflows/WRT-CORE.yml',
             '.github/workflows/WRT-CORE-SELF.yml',
         ):
@@ -106,6 +106,7 @@ class CoreGenerationTests(unittest.TestCase):
         self.assertEqual(callers, {
             'AIROHA-ALL.yml', 'AP8220-1G-Single.yml', 'MT7621.yml', 'MTK-ALL.yml', 'OWRT-ALL.yml',
             'QCA-ALL.yml', 'QCB-ALL.yml', 'WRT-TEST.yml', 'ZN-M2.yml', 'N60-Pro-512M.yml',
+            'RAX3000M.yml',
         })
         self.assertFalse((workflows / 'AP8220-CORE.yml').exists())
 

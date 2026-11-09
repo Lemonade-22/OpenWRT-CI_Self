@@ -16,7 +16,7 @@ require_config
 case "${1:-}" in
   prepare)
     test "$WRT_SOURCE" = 'VIKINGYFY/immortalwrt'
-    patch="$ci_root/patches/ap8220-1g-nand.patch"
+    patch="$ci_root/Custom/patches/ap8220-1g-nand.patch"
     git apply --check "$patch"
     git apply "$patch"
     git diff --check
@@ -71,7 +71,7 @@ case "${1:-}" in
       mv -f -- "$file" "${file/aliyun_ap8220/aliyun_ap8220-1g}"
     done
     cp "$ci_root/Scripts/Install-AP8220-1G-From-Transition.sh" \
-      "$ci_root/docs/AP8220-1G-NAND-SETUP-COMPAT.md" .
+      "$ci_root/Custom/docs/AP8220-1G-NAND-SETUP-COMPAT.md" .
     rm -f SHA256SUMS.txt
     if command -v sha256sum >/dev/null 2>&1; then
       sha256sum -- * > SHA256SUMS.txt

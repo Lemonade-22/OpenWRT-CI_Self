@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OVERLAY = ROOT / 'Custom/ARM64-OPhub/fine3399-direct-lan'
 WORKFLOW = ROOT / '.github/workflows/ARM64-OPhub-CORE.yml'
 BOARD_CONDITION = 'if [ "$BOARD" = fine3399 ]; then'

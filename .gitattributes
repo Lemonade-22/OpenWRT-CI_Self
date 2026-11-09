@@ -1,4 +1,4 @@
 *.txt text eol=lf
 *.sh text eol=lf
-patches/wrt-core-self.patch text eol=lf whitespace=-blank-at-eol
-patches/*.patch text eol=lf
+Custom/patches/wrt-core-self.patch text eol=lf whitespace=-blank-at-eol
+Custom/patches/*.patch text eol=lf

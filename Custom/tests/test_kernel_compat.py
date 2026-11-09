@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'Scripts/kernel_compat.py'
 spec = importlib.util.spec_from_file_location('kernel_compat', SCRIPT)
 compat = importlib.util.module_from_spec(spec)

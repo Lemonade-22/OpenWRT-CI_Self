@@ -19,7 +19,7 @@ try:
 except ImportError:  # pragma: no cover - only structural checks need PyYAML
     yaml = None
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 COMMON = ROOT / 'Custom/ARM64-OPhub'
 GATE = ROOT / 'Scripts/Check-DAEDE-Kernel.py'
 WORKFLOW = ROOT / '.github/workflows/ARM64-OPhub-CORE.yml'
@@ -308,7 +308,7 @@ class PrepareKernelSourceTests(unittest.TestCase):
         for index, (relative, marker) in enumerate(SONIC_MARKER_FILES):
             patches[f'target/linux/generic/hack-6.18/{984 + index}-fixture.patch'] = make_patch(
                 source, relative, base[relative] + marker + '\n' + (
-                    (ROOT / 'tests/fixtures/sonic-fullcone-init.c').read_text()
+                    (ROOT / 'Custom/tests/fixtures/sonic-fullcone-init.c').read_text()
                     if relative.endswith('nft_masq.c') else ''))
         patch_root = self.root / 'patch-checkout'
         patch_head = init_git_repository(patch_root, patches)
@@ -406,8 +406,8 @@ class FullconeAttributeRegressionTests(unittest.TestCase):
             root = Path(directory)
             target = root / 'net/netfilter/nft_masq.c'
             target.parent.mkdir(parents=True)
-            target.write_text((ROOT / 'tests/fixtures/sonic-fullcone-init.c').read_text())
-            harness = (ROOT / 'tests/fixtures/fullcone-attributes-harness.c').read_text()
+            target.write_text((ROOT / 'Custom/tests/fixtures/sonic-fullcone-init.c').read_text())
+            harness = (ROOT / 'Custom/tests/fixtures/fullcone-attributes-harness.c').read_text()
 
             def run_init():
                 content = target.read_text()

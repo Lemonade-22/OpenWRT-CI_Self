@@ -10,11 +10,11 @@ on:
       - 'Config/ARM64-OPhub.txt'
       - 'Config/DAEDE.txt'
       - 'Scripts/kernel_compat.py'
-      - 'tests/test_kernel_compat.py'
+      - 'Custom/tests/test_kernel_compat.py'
       - 'Scripts/DAEDE.sh'
       - 'Scripts/Check-DAEDE-Kernel.py'
-      - 'tests/test_arm64_*.py'
-      - 'tests/test_fine3399_network.py'
+      - 'Custom/tests/test_arm64_*.py'
+      - 'Custom/tests/test_fine3399_network.py'
   pull_request:
     paths:
       - '.github/workflows/ARM64-*.yml'
@@ -23,11 +23,11 @@ on:
       - 'Config/ARM64-OPhub.txt'
       - 'Config/DAEDE.txt'
       - 'Scripts/kernel_compat.py'
-      - 'tests/test_kernel_compat.py'
+      - 'Custom/tests/test_kernel_compat.py'
       - 'Scripts/DAEDE.sh'
       - 'Scripts/Check-DAEDE-Kernel.py'
-      - 'tests/test_arm64_*.py'
-      - 'tests/test_fine3399_network.py'
+      - 'Custom/tests/test_arm64_*.py'
+      - 'Custom/tests/test_fine3399_network.py'
   workflow_dispatch:
 
 permissions:

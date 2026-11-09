@@ -14,7 +14,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     source = Path('.github/workflows/WRT-CORE.yml')
     output = root / '.github/workflows/WRT-CORE-SELF.yml'
-    patch = root / 'patches/wrt-core-self.patch'
+    patch = root / 'Custom/patches/wrt-core-self.patch'
 
     with tempfile.TemporaryDirectory(prefix='wrt-core-') as directory:
         staged = Path(directory) / source

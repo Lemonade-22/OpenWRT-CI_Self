@@ -199,7 +199,7 @@ Do not maintain a full fork of VIKINGYFY/immortalwrt solely for this experiment.
 The repository-owned patch is:
 
 ```
-patches/ap8220-1g-nand.patch
+Custom/patches/ap8220-1g-nand.patch
 ```
 
 `Scripts/Device-Hooks/IPQ807X-AP8220-1G-WIFI-NO.sh` applies it after cloning upstream, only for the isolated `IPQ807X-AP8220-1G-WIFI-NO` config. The shared `WRT-CORE-SELF.yml` invokes this device hook by config name; the normal multi-device QCA builds retain the original upstream AP8220 image.

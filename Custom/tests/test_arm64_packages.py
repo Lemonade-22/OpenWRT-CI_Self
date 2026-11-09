@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('packages', ROOT / 'Custom/ARM64-OPhub/verify_packages.py')
 packages = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(packages)

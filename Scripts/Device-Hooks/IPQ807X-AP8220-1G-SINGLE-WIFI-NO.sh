@@ -5,7 +5,7 @@ set -euo pipefail
 ci_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source_root="$(pwd)"
 upload="$source_root/upload"
-patch_file="$ci_root/patches/ap8220-1g-single-rootfs.patch"
+patch_file="$ci_root/Custom/patches/ap8220-1g-single-rootfs.patch"
 dts_rel="target/linux/qualcommax/dts/ipq8071-ap8220.dts"
 
 # 同一硬件的 WIFI-YES / WIFI-NO 两个版本共用这套分区与产物逻辑，只有配置包里

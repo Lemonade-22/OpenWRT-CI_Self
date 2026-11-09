@@ -1,7 +1,7 @@
 # WRT-CORE 上游同步与本地定制
 
 `.github/workflows/WRT-CORE.yml` 保持上游原版。本地修改集中在
-`patches/wrt-core-self.patch`，由 `Scripts/Generate-Wrt-Core.py` 应用到临时副本，
+`Custom/patches/wrt-core-self.patch`，由 `Scripts/Generate-Wrt-Core.py` 应用到临时副本，
 生成统一的 `.github/workflows/WRT-CORE-SELF.yml`。
 
 AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL 和 WRT-TEST
@@ -125,7 +125,7 @@ WIFI-YES 用薄壳钩子转发过去，两个版本不会分叉。
 ## N60 Pro 512M
 
 Netcore N60 Pro 有 512 MB NAND，但设备树把 ubi 分区写死在 122.5 MiB（`0x7a80000`），固件因此
-只认这么点空间。`patches/n60pro-512m-ubi-5065m.patch` 把该分区改成 `0x1fa80000`（约 506.5 MiB），
+只认这么点空间。`Custom/patches/n60pro-512m-ubi-5065m.patch` 把该分区改成 `0x1fa80000`（约 506.5 MiB），
 由 `Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO}.sh` 在 `prepare` 阶段应用，`verify` 与
 `verify-image` 阶段分别核对分区没被打回、产物不超过整片 NAND。
 
@@ -154,7 +154,7 @@ Netcore N60 Pro 有 512 MB NAND，但设备树把 ubi 分区写死在 122.5 MiB�
 
 ## 修改定制内容
 
-通用构建行为修改 `patches/wrt-core-self.patch`；单设备行为修改对应
+通用构建行为修改 `Custom/patches/wrt-core-self.patch`；单设备行为修改对应
 `Scripts/Device-Hooks/*.sh`。然后运行：
 
 ```sh

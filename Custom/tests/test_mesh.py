@@ -10,7 +10,7 @@ class MeshTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.script = Path(__file__).resolve().parents[1] / 'Scripts/Mesh.sh'
+        self.script = Path(__file__).resolve().parents[2] / 'Scripts/Mesh.sh'
         hostapd = self.root / 'package/network/services/hostapd/Makefile'
         hostapd.parent.mkdir(parents=True)
         hostapd.write_text('\n'.join('define Package/' + name for name in (

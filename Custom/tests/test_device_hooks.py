@@ -23,7 +23,7 @@ class DeviceHookTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(prefix='test-device-hooks-')
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        self.repository = Path(__file__).resolve().parents[1]
+        self.repository = Path(__file__).resolve().parents[2]
         scripts = self.root / 'Scripts'
         scripts.mkdir()
         shutil.copyfile(self.repository / 'Scripts/Device.sh', scripts / 'Device.sh')
@@ -47,8 +47,8 @@ class DeviceHookTests(unittest.TestCase):
             self.repository / 'Scripts/Device-Hooks/IPQ807X-AP8220-1G-WIFI-NO.sh',
             self.root / 'Scripts/Device-Hooks/IPQ807X-AP8220-1G-WIFI-NO.sh',
         )
-        (self.root / 'docs').mkdir()
-        shutil.copyfile(self.repository / 'docs/AP8220-1G-NAND-SETUP-COMPAT.md', self.root / 'docs/AP8220-1G-NAND-SETUP-COMPAT.md')
+        (self.root / 'Custom/docs').mkdir(parents=True)
+        shutil.copyfile(self.repository / 'Custom/docs/AP8220-1G-NAND-SETUP-COMPAT.md', self.root / 'Custom/docs/AP8220-1G-NAND-SETUP-COMPAT.md')
         shutil.copyfile(
             self.repository / 'Scripts/Install-AP8220-1G-From-Transition.sh',
             self.root / 'Scripts/Install-AP8220-1G-From-Transition.sh',

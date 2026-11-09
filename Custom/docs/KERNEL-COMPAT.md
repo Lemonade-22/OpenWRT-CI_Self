@@ -19,7 +19,7 @@ OpenWrt 配置在设备与私有设置之后、`make defconfig` 之前应用，�
 
 普通 OpenWrt、N60 专用、Airoha NWRT/原生构建均在编译完成后检查真正的 Linux `.config`，缺项则停止发布。
 OPhub 路径另外修改最终外部内核配置，并通过现有内核归档校验检查实际产物；只修改其 rootfs 配置不足以改变外部内核。
-通用 core 的改动保存在 `patches/wrt-core-self.patch`，并同步生成 `WRT-CORE-SELF.yml`，保留上游 core 原文件。
+通用 core 的改动保存在 `Custom/patches/wrt-core-self.patch`，并同步生成 `WRT-CORE-SELF.yml`，保留上游 core 原文件。
 
 32 位目标无需 ARM64 的 COMPAT；x86 等架构不能借此运行 ARM32 原厂程序。即使内核启用 COMPAT，CPU 也必须
 支持 AArch32。此改动不会把闭源 ARM32 程序转换成 ARM64，也不会修改现有已发布固件；设备需要重新构建和升级。

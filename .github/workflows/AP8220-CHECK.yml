@@ -4,22 +4,22 @@ on:
   push:
     branches: [main, proposal/ap8220-1g-nand-setup-compat]
     paths:
-      - 'patches/ap8220-1g-nand.patch'
+      - 'Custom/patches/ap8220-1g-nand.patch'
       - 'Scripts/*AP8220*'
       - '.github/workflows/AP8220-CHECK.yml'
       - '.github/workflows/WRT-CORE-SELF.yml'
-      - 'patches/wrt-core-self.patch'
+      - 'Custom/patches/wrt-core-self.patch'
       - 'Scripts/Device.sh'
       - 'Scripts/Device-Hooks/IPQ807X-AP8220-1G-WIFI-NO.sh'
   pull_request:
     paths:
-      - 'patches/ap8220-1g-nand.patch'
+      - 'Custom/patches/ap8220-1g-nand.patch'
       - 'Scripts/*AP8220*'
       - 'Config/IPQ807X-AP8220-1G-WIFI-NO.txt'
       - '.github/workflows/AP8220-CHECK.yml'
       - '.github/workflows/AP8220-1G.yml'
       - '.github/workflows/WRT-CORE-SELF.yml'
-      - 'patches/wrt-core-self.patch'
+      - 'Custom/patches/wrt-core-self.patch'
       - 'Scripts/Device.sh'
       - 'Scripts/Device-Hooks/IPQ807X-AP8220-1G-WIFI-NO.sh'
   workflow_dispatch:
@@ -54,8 +54,8 @@ jobs:
           sh -n Scripts/Install-AP8220-1G-From-Transition.sh
           python3 -m py_compile Scripts/Check-AP8220-1G.py
           cd firmware-source
-          git apply --check ../patches/ap8220-1g-nand.patch
-          git apply ../patches/ap8220-1g-nand.patch
+          git apply --check ../Custom/patches/ap8220-1g-nand.patch
+          git apply ../Custom/patches/ap8220-1g-nand.patch
           git diff --check
           bash -n package/base-files/files/lib/upgrade/nand.sh
           sh -n target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
