@@ -1,12 +1,21 @@
 # SPDX-License-Identifier: MIT
-# RAX3000M (CMCC, SPI-NAND) 单机型 NO-WIFI：沿用 MEDIATEK-WIFI-NO 的逐个关闭写法，
-# 软件侧设置与 ZN-M2 保持一致（footstrap 主题、OWRT 默认名/IP、关掉 aurora/homeproxy/samba 等）。
+# CMCC RAX3000M (SPI-NAND) 单机型。
+# WIFI 下拉沿用 ZN-M2 / N60 Pro 的写法：WIFI-NO 按 MEDIATEK-WIFI-NO 逐个关闭该机型无线包。
+# 软件侧设置（主题、命名、IP、插件开关）与 ZN-M2 一致。
 name: RAX3000M
-run-name: 编译RAX3000M固件 · WIFI-NO · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
+run-name: 编译RAX3000M固件 · WIFI-${{ inputs.WIFI }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
 on:
   workflow_dispatch:
     inputs:
+      WIFI:
+        description: 'WIFI 版本'
+        type: choice
+        required: true
+        default: 'NO'
+        options:
+          - 'YES'
+          - 'NO'
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false
@@ -23,7 +32,7 @@ jobs:
   build:
     uses: ./.github/workflows/WRT-CORE-SELF.yml
     with:
-      WRT_CONFIG: RAX3000M-WIFI-NO
+      WRT_CONFIG: RAX3000M-WIFI-${{ inputs.WIFI }}
       WRT_THEME: footstrap
       WRT_NAME: OWRT
       WRT_SSID: OWRT
