@@ -105,6 +105,21 @@ UBI 挂不上 → 没有 `ubiblock0_2` → 没有 `/dev/fit0` → 内核永远�
 | `/flash.html` | 原始 flash 读/写/擦 |
 | `/console.html` | 网页 U-Boot 控制台 |
 
+## 兼容的固件
+
+**已实测能起（刷完自动重启进系统）：**
+
+| 固件 | 说明 |
+|---|---|
+| VIKINGYFY/owrt 的 sysupgrade `.itb` | 例如 `mediatek-filogic-cmcc_rax3000m-squashfs-sysupgrade-VIKINGYFY-owrt-WIFI-YES-26.11.09-09.02.59.itb` |
+| 本仓库基于 owrt 的自用修改固件 | `Config/RAX3000M-WIFI-YES.txt` / `Config/RAX3000M-WIFI-NO.txt` 编出来的 sysupgrade `.itb` |
+
+**推测能沿用（未逐一实测）：**
+
+- OpenWrt 主线 25.x 及以上版本的 `cmcc_rax3000m` sysupgrade 镜像
+
+判断依据：这类固件的设备树把 ubi 描述为 114 MiB，与上面 `114M(ubi)` 的分区表一致，并且支持 `root=/dev/fit0` 的 fitblk 布局。若设备树写成别的尺寸，会出现 `not enough PEBs` 而起不来。
+
 ## 验证清单
 
 刷完 U-Boot 后，在 `/console.html` 执行 `printenv mtdparts`，**必须**包含 `114M(ubi)`。若显示 `-(ubi)`，说明用的还是旧 FIP。
