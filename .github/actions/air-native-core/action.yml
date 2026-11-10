@@ -108,7 +108,10 @@ runs:
         Acquire::http::Timeout "30";
         Acquire::https::Timeout "30";
         WRT_APT_EOF
-        sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        # 上游 init_build_environment.sh 只认写死的 Ubuntu 代号白名单，
+        # ubuntu-latest 落到 26.04（resolute）时会直接 "Unsupported OS" 退出。
+        # 改用仓库内脚本，从发行版装同一套编译依赖。
+        sudo bash "$GITHUB_WORKSPACE/.github/scripts/install-build-deps.sh"
         sudo -E systemctl daemon-reload
         sudo -E timedatectl set-timezone "Asia/Shanghai"
 
