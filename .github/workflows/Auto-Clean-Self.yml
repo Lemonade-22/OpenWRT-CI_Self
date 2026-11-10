@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Lemonade-22
+#
+# Replaces upstream's Auto-Clean. That one calls ophub/delete-releases-workflows
+# with releases_keep_latest: 0, delete_tags: true and workflows_keep_day: 0, so
+# a single run wipes every release, every tag and every run log.
+#
+# This keeps the newest releases of each build line instead. A line is the part
+# of the release title before the build timestamp, for example
+# "ZN-M2-WIFI-NO-VIKINGYFY-owrt" in ZN-M2-WIFI-NO-VIKINGYFY-owrt-26.11.07-15.29.06.
+# Each line keeps at least one release and at most KEEP, oldest deleted first.
+name: Auto-Clean-Self
+
+on:
+  # 每天北京时间 05:21，与上游 Auto-Clean 的时点一致
+  schedule:
+    - cron: '21 21 * * *'
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: '每种标题保留的最新 Release 数量（至少 1 个）'
+        type: number
+        default: 2
+        required: true
+      dry_run:
+        description: '仅列出将删除的 Release，不实际删除'
+        type: boolean
+        default: true
+        required: true
+      delete_tags:
+        description: '同时删除被清理 Release 的 git tag'
+        type: boolean
+        default: true
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-clean-self
+  cancel-in-progress: false
+
+jobs:
+  clean-releases:
+    name: 按标题保留最新 Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout cleanup script
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Delete older releases per title
+        uses: actions/github-script@v8
+        env:
+          # schedule 触发时 inputs 为空，用下面的默认值兜底
+          CLEAN_KEEP: ${{ inputs.keep }}
+          CLEAN_DRY_RUN: ${{ inputs.dry_run }}
+          CLEAN_DELETE_TAGS: ${{ inputs.delete_tags }}
+        with:
+          retries: 3
+          script: |
+            const clean = require('./Scripts/Clean-Releases.cjs');
+            await clean({
+              github,
+              context,
+              core,
+              keep: process.env.CLEAN_KEEP,
+              dryRun: process.env.CLEAN_DRY_RUN || 'false',
+              deleteTags: process.env.CLEAN_DELETE_TAGS || 'true'
+            });
