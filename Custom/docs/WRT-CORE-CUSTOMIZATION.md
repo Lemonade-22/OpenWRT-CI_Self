@@ -8,8 +8,8 @@ AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL �
 都调用这一份定制核心。N60 Pro 也走这一份（见“N60 Pro 512M”一节）；只有 Airoha NWRT/原生
 和 ARM64 OPhub 用自己的专用构建路径。
 
-ARM32 兼容层见 [内核兼容支持](KERNEL-COMPAT.md)：只有选了 `zte-mesh` 的构建才会启用
-`CONFIG_COMPAT` 和原厂运行环境需要的 SysV IPC、命名空间，未选该包的固件整体跳过、`.config` 不动。
+ARM32 兼容层已删除。它只服务 `zte-mesh`（原厂 32 位守护进程），而仓库里已没有任何构建
+选择该包；`Scripts/kernel_compat.py` 现在只负责 honk 的 TCX 内核开关。
 
 通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。

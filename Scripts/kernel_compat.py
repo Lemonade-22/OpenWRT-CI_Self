@@ -1,25 +1,21 @@
 #!/usr/bin/env python3
-"""Enable native ARM32 execution on ARM64 and the vendor runtime's kernel prerequisites."""
+"""Register honk's TCX kernel symbols so make defconfig keeps them.
+
+OpenWrt drops unknown CONFIG_KERNEL_* options at defconfig: kconfig silently
+discards a symbol whose dependencies cannot be satisfied. The symbols honk
+needs therefore have to be declared in config/Config-kernel.in first, then
+selected in .config, and only then does include/kernel-defaults.mk hand them to
+Linux. The same three phases are what the workflow calls.
+
+The ARM32 compatibility layer that used to live here (COMPAT plus the SysV IPC
+and namespace set) was removed: it existed only so zte-mesh could exec the
+vendor's 32-bit ARM daemon, and no build in this repository selects that
+package.
+"""
 import argparse
 from pathlib import Path
 import re
 
-
-RUNTIME = ("SYSVIPC", "NAMESPACES", "IPC_NS", "NET_NS", "PACKET", "TMPFS", "BINFMT_ELF")
-ARM64 = ("COMPAT",) + RUNTIME
-# Explicitly answer newly visible COMPAT prompts before Linux syncconfig.
-# Alignment fixups are absent on older kernels, so they are a requested
-# setting rather than a universally required final-kernel symbol.
-COMPAT_OPTIONS = ("KUSER_HELPERS", "COMPAT_ALIGNMENT_FIXUPS")
-# COMPAT also exposes this prompt. Keep Linux's default (no legacy instruction
-# emulation), explicitly, so syncconfig never asks for an interactive answer.
-COMPAT_DISABLED = ("ARMV8_DEPRECATED",)
-# COMPAT additionally exposes a range-limited integer prompt for the 32-bit
-# ASLR entropy. Filogic pins ARCH_MMAP_RND_COMPAT_BITS_MIN=11 and generic pins
-# ARCH_MMAP_RND_COMPAT_BITS_MAX=16, so 11 sits inside the 11..16 range and is
-# the value Linux itself defaults to. It has to be selected as an integer, not
-# as a boolean selector, or the prompt survives into syncconfig.
-COMPAT_VALUES = {"ARCH_MMAP_RND_COMPAT_BITS": "11"}
 
 # honk (Rust + eBPF transparent proxy) attaches through TCX. NET_XGRESS is a
 # hidden option selected by NET_CLS_ACT, which generic config leaves off, so
@@ -35,14 +31,6 @@ def set_symbols(text, symbols, prefix="CONFIG_", value="y"):
     return text
 
 
-def set_values(text, values, prefix="CONFIG_"):
-    for symbol, value in values.items():
-        name = prefix + symbol
-        text = re.sub(r"^(?:# )?" + name + r"(?:=.*| is not set)\n?", "", text, flags=re.M)
-        text += f"{name}={value}\n"
-    return text
-
-
 def check(text, symbols, label):
     missing = ["CONFIG_" + symbol + "=y" for symbol in symbols
                if not re.search(r"^CONFIG_" + symbol + r"=y$", text, re.M)]
@@ -50,56 +38,9 @@ def check(text, symbols, label):
         raise SystemExit("::error::" + label + " missing " + ", ".join(missing))
 
 
-def check_values(text, values, label):
-    missing = [f"CONFIG_{symbol}={value}" for symbol, value in values.items()
-               if not re.search(r"^CONFIG_" + symbol + "=" + re.escape(value) + r"$", text, re.M)]
-    if missing:
-        raise SystemExit("::error::" + label + " missing " + ", ".join(missing))
-
-
 def kernel_option(symbol, kind, default):
-    # Integer selections need their own type and an explicit default so that
-    # defconfig keeps them instead of dropping the symbol.
     text = f"\nconfig KERNEL_{symbol}\n\t{kind}\n"
-    if symbol in ("COMPAT",) + COMPAT_OPTIONS + COMPAT_DISABLED + tuple(COMPAT_VALUES):
-        text += "\tdepends on aarch64\n"
     return text + f"\tdefault {default}\n"
-
-
-def declarations():
-    entries = [(symbol, "bool", "y") for symbol in ARM64 + COMPAT_OPTIONS]
-    entries += [(symbol, "bool", "n") for symbol in COMPAT_DISABLED]
-    entries += [(symbol, "int", value) for symbol, value in COMPAT_VALUES.items()]
-    return entries
-
-
-def configure(root):
-    # OpenWrt strips unknown CONFIG_KERNEL_* options at defconfig. Register
-    # missing selectors, then let include/kernel-defaults.mk pass them to Linux.
-    path = root / "config/Config-kernel.in"
-    text = path.read_text(encoding="utf-8")
-    for symbol, kind, default in declarations():
-        if not re.search(r"^\s*(?:menu)?config KERNEL_" + symbol + r"\s*$", text, re.M):
-            text += kernel_option(symbol, kind, default)
-    path.write_text(text, encoding="utf-8", newline="\n")
-    config = root / ".config"
-    selections = set_symbols(config.read_text(encoding="utf-8"), ARM64 + COMPAT_OPTIONS, "CONFIG_KERNEL_")
-    selections = set_symbols(selections, COMPAT_DISABLED, "CONFIG_KERNEL_", value="n")
-    selections = set_values(selections, COMPAT_VALUES, "CONFIG_KERNEL_")
-    config.write_text(selections, encoding="utf-8", newline="\n")
-
-
-# The only consumer of this layer is zte-mesh: its ns-run unshares an IPC,
-# network and mount namespace and then execs the vendor's 32-bit ARM daemon.
-# Nothing in this repository selects that package any more, so the layer stays
-# off and no default build pays for AArch32 in its kernel. A firmware that
-# picks the package up again re-enables it through one of these symbols.
-NEED_MARKERS = (
-    "CONFIG_PACKAGE_zte-mesh=y",
-    "CONFIG_PACKAGE_zte-mesh=m",
-    "CONFIG_PACKAGE_zte-mesh-launcher=y",
-    "CONFIG_PACKAGE_zte-mesh-launcher=m",
-)
 
 
 def tcx_wanted(root):
@@ -136,53 +77,18 @@ def verify_tcx(root, phase):
         print("Verified honk TCX:", path)
 
 
-def arm32_wanted(root):
-    """Return True when this build selects the package that needs ARM32."""
-    config = root / ".config"
-    if not config.exists():
-        return False
-    text = config.read_text(encoding="utf-8", errors="replace")
-    return any(marker in text for marker in NEED_MARKERS)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phase", choices=("configure", "verify", "verify-kernel"))
     args = parser.parse_args()
     root = Path.cwd()
-    if tcx_wanted(root):
-        if args.phase == "configure":
-            configure_tcx(root)
-        else:
-            verify_tcx(root, args.phase)
-    else:
+    if not tcx_wanted(root):
         print("honk TCX layer skipped: ramips target keeps its own kernel")
-    if not arm32_wanted(root):
-        print("ARM32 compatibility layer not selected (no zte-mesh package in .config); "
-              + ("nothing to configure" if args.phase == "configure" else "nothing to verify"))
         return
     if args.phase == "configure":
-        configure(root)
+        configure_tcx(root)
         return
-    config = (root / ".config").read_text(encoding="utf-8")
-    arm64 = bool(re.search(r"^CONFIG_aarch64=y$", config, re.M))
-    required = ARM64 if arm64 else RUNTIME
-    required_values = COMPAT_VALUES if arm64 else {}
-    if args.phase == "verify":
-        selections = config.replace("CONFIG_KERNEL_", "CONFIG_")
-        check(selections, required, "OpenWrt kernel selections")
-        check_values(selections, required_values, "OpenWrt kernel selections")
-    else:
-        configs = sorted(root.glob("build_dir/target-*/linux-*/linux-*/.config"))
-        if not configs:
-            raise SystemExit("::error::No compiled Linux .config found for compatibility verification")
-        for path in configs:
-            text = path.read_text(encoding="utf-8")
-            check(text, required, str(path))
-            check_values(text, required_values, str(path))
-            print("Verified kernel runtime compatibility:", path)
-    if not arm64:
-        print("Non-ARM64 target: ARM32 COMPAT is not required; runtime prerequisites verified.")
+    verify_tcx(root, args.phase)
 
 
 if __name__ == "__main__":

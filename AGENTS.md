@@ -55,7 +55,7 @@ rebase 一次，否则越落越远。
 零警告。
 
 正路是 `Scripts/kernel_compat.py`：它把符号注册进 `config/Config-kernel.in`，
-defconfig 之后才留得住。要加新符号，扩展这个脚本的 `declarations()`。
+defconfig 之后才留得住。要加新符号，照 `configure_tcx()` 的写法扩展。
 
 honk 需要的 `NET_CLS_ACT` + `NET_XGRESS` 就是这么开的，ramips 除外（内核 6.6）。
 

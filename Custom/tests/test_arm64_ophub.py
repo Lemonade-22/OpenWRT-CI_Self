@@ -71,7 +71,7 @@ class Arm64Tests(unittest.TestCase):
     def archive(self, dtbs, omit_module=None, omit_symbol=None):
         builtin = ('BPF BPF_SYSCALL BPF_JIT CGROUPS CGROUP_BPF KPROBES KPROBE_EVENTS '
                    'BPF_EVENTS DEBUG_INFO_BTF BPF_STREAM_PARSER XDP_SOCKETS NET_CLS_ACT '
-                   'NET_INGRESS NET_EGRESS NET_NS COMPAT SYSVIPC NAMESPACES IPC_NS PACKET TMPFS BINFMT_ELF').split()
+                   'NET_INGRESS NET_EGRESS NET_NS').split()
         modular = {'NET_SCH_INGRESS': 'sch_ingress', 'NET_CLS_BPF': 'cls_bpf',
                    'NET_ACT_BPF': 'act_bpf', 'VETH': 'veth', 'DUMMY': 'dummy', 'TUN': 'tun'}
         config = ''.join(f'CONFIG_{key}=y\n' for key in builtin)
