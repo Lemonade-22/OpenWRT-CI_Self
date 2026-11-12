@@ -34,7 +34,19 @@ export PATH
 RUST_TOOLCHAIN=$(rustup show active-toolchain | awk '{print $1}')
 printf 'Rust toolchain: %s\nRust target: %s\n' "$RUST_TOOLCHAIN" "$RUST_TARGET" | tee "$REPORT_DIR/rust-toolchain.txt"
 
-rustup target add --toolchain "$RUST_TOOLCHAIN" "$RUST_TARGET"
+# mipsel-unknown-linux-musl and friends are tier 3: rustup knows the triple
+# but ships no prebuilt std for it. Refusing here killed every ramips build
+# before it started, even when nothing in .config selected a Rust package.
+# Fall back to OpenWrt's own source bootstrap instead of failing the run.
+if ! rustup target add --toolchain "$RUST_TOOLCHAIN" "$RUST_TARGET"; then
+	echo "::warning::rustup has no prebuilt std for $RUST_TARGET; leaving OpenWrt to bootstrap Rust from source"
+	{
+		echo "Rust toolchain: $RUST_TOOLCHAIN"
+		echo "Rust target: $RUST_TARGET"
+		echo "Prebuilt std: unavailable (tier 3 target); source bootstrap in use"
+	} >> "$REPORT_DIR/rust-toolchain.txt"
+	exit 0
+fi
 RUST_ROOT=$(rustup run "$RUST_TOOLCHAIN" rustc --print sysroot)
 test -d "$RUST_ROOT/lib/rustlib/$RUST_TARGET/lib"
 for tool in cargo rustc rustdoc; do
