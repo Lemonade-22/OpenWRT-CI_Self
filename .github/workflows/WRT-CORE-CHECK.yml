@@ -13,9 +13,6 @@ on:
       - 'Scripts/Generate-Wrt-Core.py'
       - 'Custom/tests/test_wrt_core_generation.py'
       - 'Custom/tests/test_device_hooks.py'
-      - 'Scripts/Mesh.sh'
-      - 'Config/MESH.txt'
-      - 'Custom/tests/test_mesh.py'
   pull_request:
     paths:
       - '.github/workflows/*.yml'
@@ -27,9 +24,6 @@ on:
       - 'Scripts/Generate-Wrt-Core.py'
       - 'Custom/tests/test_wrt_core_generation.py'
       - 'Custom/tests/test_device_hooks.py'
-      - 'Scripts/Mesh.sh'
-      - 'Config/MESH.txt'
-      - 'Custom/tests/test_mesh.py'
   workflow_dispatch:
 
 permissions:
@@ -48,5 +42,3 @@ jobs:
         run: python3 -m unittest discover -s Custom/tests -p test_device_hooks.py -v
       - name: Test kernel compatibility requirements
         run: python3 -m unittest discover -s Custom/tests -p test_kernel_compat.py -v
-      - name: Test Mesh dependency selection
-        run: python3 -m unittest discover -s Custom/tests -p test_mesh.py -v

@@ -49,13 +49,10 @@ class CoreGenerationTests(unittest.TestCase):
         ordered = (
             'Scripts/Handles.sh',
             '.github/scripts/prepare-i2c-tools.sh',
-            'Scripts/Mesh.sh" prepare',
             'Scripts/Settings.sh',
             '.github/scripts/prepare-build-host.sh',
             'Scripts/Device.sh" configure',
-            'Scripts/Mesh.sh" configure',
             'make defconfig',
-            'Scripts/Mesh.sh" verify',
             '.github/scripts/prepare-rust.sh',
             'make download',
             'build-reports/parallel.tsv',

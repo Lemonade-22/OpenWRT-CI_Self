@@ -69,30 +69,23 @@ daed 相关包不再被强制置为 not set——装不装由使用者决定。
 分支拉取插件并记录提交号。脚本在设备配置和手动包选项之后将插件设为内置，
 在 `make defconfig` 后确认仍然选中，避免构建出缺少插件的固件。
 
-## 所有定制核心机型及 N60 Pro 的 Mesh 支持
+## Mesh 支持已移除
 
-`Scripts/Mesh.sh prepare` 在软件包处理完成后拉取
-`xxosdev/luci-app-mesh` 的 main 分支，并在构建日志记录提交号。
-插件的 wpad 依赖改为同样支持 802.11s/SAE 的完整版 `wpad-openssl`，
-保留完整认证功能；batctl 使用 `batctl-full`，包含状态查询与诊断命令。
+原先 `Scripts/Mesh.sh prepare` 会克隆 `xxosdev/luci-app-mesh`，再由
+`Config/MESH.txt` 打开 batman-adv、dawn、802.11s 和整套 wpad 依赖。
 
-`Config/MESH.txt` 为所有调用 WRT-CORE-SELF 的配置启用插件、LuCI batman
-协议、dawn/umdns、mac80211 802.11s、batman-adv、加密模块和 CRC16，
-以及 BATMAN V、BLA、DAT、MCAST。其余传递依赖由当前源码的包依赖自动选择，
-例如适用内核版本的 CRC32C。无需强开仅供开发调试的 tracing/debug。
+该上游仓库现已不存在（GitHub 返回 404），克隆失败会让 WIFI-YES 构建在
+`Custom Packages` 以 `exit 128` 退出——git 对不存在的仓库回的是凭据提示，
+所以现象看起来像认证失败。既然 Mesh 这块整条链都只为这个插件服务，已整体移除：
 
-`configure` 在私有配置、机型覆盖和手动包选项之后执行，统一移除冲突的
-wpad/hostapd/supplicant 提供者；`verify` 在 `make defconfig` 后核对每项依赖。
-缺包、被目标限制移除或重新选中冲突提供者时终止构建，避免输出缺依赖的固件。
+- 删除 `Scripts/Mesh.sh`、`Config/MESH.txt`、`Custom/tests/test_mesh.py`；
+- `Custom/patches/wrt-core-self.patch` 不再插入 prepare/configure/verify 三步，
+  `WRT-CORE-SELF.yml` 由它重新生成；
+- `WRT-CORE-CHECK.yml` 去掉对应路径触发和测试步骤。
 
-WIFI-NO、X86 和测试配置同样包含这些包，但不会修改 DTS、恢复被禁用的无线
-设备或自动启用组网。实际无线 Mesh 仍需要可工作的无线设备及支持 mesh point
-的驱动。N60 Pro 也走同一套 prepare/configure/verify 流程，
-在现有 eBPF（DAEDE）配置之后应用 Mesh 配置，在配置哈希计算前完成验证。
-使用独立核心的 XG-040G 和 Panther-X2 不在此次修改范围内。
-
-本次本地验证覆盖脚本语法、配置替换/缺依赖检测及工作流生成测试；完整固件编译、
-各设备镜像大小和实机无线组网仍需对应 GitHub Actions 构建及设备验证。
+因此 WIFI-YES 与 WIFI-NO 现在使用完全相同的软件包集合，两者差异只剩无线
+驱动的开关写法。要恢复 Mesh，需要先找到 `luci-app-mesh` 的新上游，再连同
+这一节一起补回来。
 
 ## Wi-Fi 双版本
 
@@ -105,8 +98,8 @@ ZN-M2、AP8220（单分区）和 N60 Pro 各出两版。手动触发时用一个
 | AP8220 1G 单分区 | `IPQ807X-AP8220-1G-SINGLE-WIFI-YES` | `IPQ807X-AP8220-1G-SINGLE-WIFI-NO` |
 | N60 Pro 512M | `N60-Pro-512M-WIFI-YES` | `N60-Pro-512M-WIFI-NO` |
 
-`WRT_WIFI` 由配置名后缀推导（`WIFI-(YES|NO)$`）。`Scripts/Mesh.sh` 在 `WIFI-NO` 时直接退出，
-不克隆 `luci-app-mesh`、不写入 `Config/MESH.txt`，所以无 Wi-Fi 固件里没有 wpad/batman/dawn。
+`WRT_WIFI` 由配置名后缀推导（`WIFI-(YES|NO)$`）。Mesh 支持已整体移除，两种版本不再有
+wpad/batman/dawn 上的差异。
 
 关无线的两种写法，各按对应平台的上游做法来：
 
@@ -129,7 +122,7 @@ Netcore N60 Pro 有 512 MB NAND，但设备树把 ubi 分区写死在 122.5 MiB�
 由 `Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO}.sh` 在 `prepare` 阶段应用，`verify` 与
 `verify-image` 阶段分别核对分区没被打回、产物不超过整片 NAND。
 
-除此之外没有专用逻辑：主题、Mesh、DAEDE、静态地址、内核兼容、缓存和发布全部由
+除此之外没有专用逻辑：主题、DAEDE、静态地址、内核兼容、缓存和发布全部由
 `WRT-CORE-SELF.yml` 提供。早先那份 321 行的独立工作流把通用核心的步骤抄了一份，
 既容易漂移，也让每次改动要改两处，已删除。
 

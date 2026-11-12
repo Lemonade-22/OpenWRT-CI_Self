@@ -195,7 +195,6 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
-          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" prepare
 
       - name: Custom Settings
         run: |
@@ -213,13 +212,11 @@ jobs:
           $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
           bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
-          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
           make defconfig -j$(nproc)
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
-          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify
           if [[ "$WRT_BRANCH" == "main" && "$WRT_CONFIG" == "ZN-M2-WIFI-NO" ]]; then

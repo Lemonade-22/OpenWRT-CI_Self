@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
-index c57e99d..cce96b3 100644
+index c57e99d..c7ff503 100644
 --- a/.github/workflows/WRT-CORE.yml
 +++ b/.github/workflows/WRT-CORE.yml
 @@ -1,8 +1,9 @@
@@ -87,7 +87,7 @@ index c57e99d..cce96b3 100644
          run: |
            cd ./wrt/
  
-@@ -173,12 +188,14 @@ jobs:
+@@ -173,6 +188,7 @@ jobs:
            ./scripts/feeds install -a
  
        - name: Custom Packages
@@ -95,14 +95,7 @@ index c57e99d..cce96b3 100644
          run: |
            cd ./wrt/
  
-           $GITHUB_WORKSPACE/Scripts/Packages.sh
-           $GITHUB_WORKSPACE/Scripts/Handles.sh
-           $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
-+          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" prepare
- 
-       - name: Custom Settings
-         run: |
-@@ -190,10 +207,36 @@ jobs:
+@@ -190,10 +206,34 @@ jobs:
              cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
            fi
  
@@ -114,13 +107,11 @@ index c57e99d..cce96b3 100644
 -          make defconfig -j$(nproc) && make clean -j$(nproc)
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
-+          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" configure
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
 +          make defconfig -j$(nproc)
 +          bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
-+          bash "$GITHUB_WORKSPACE/Scripts/Mesh.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify
 +          if [[ "$WRT_BRANCH" == "main" && "$WRT_CONFIG" == "ZN-M2-WIFI-NO" ]]; then
@@ -141,7 +132,7 @@ index c57e99d..cce96b3 100644
  
        - name: Prepare Rust Toolchain
          if: ${{ !inputs.WRT_TEST }}
-@@ -204,6 +247,7 @@ jobs:
+@@ -204,6 +244,7 @@ jobs:
  
        - name: Download Packages
          if: ${{ !inputs.WRT_TEST }}
@@ -149,7 +140,7 @@ index c57e99d..cce96b3 100644
          run: |
            cd ./wrt/
  
-@@ -217,6 +261,8 @@ jobs:
+@@ -217,6 +258,8 @@ jobs:
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
              make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
@@ -158,7 +149,7 @@ index c57e99d..cce96b3 100644
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +310,8 @@ jobs:
+@@ -264,9 +307,8 @@ jobs:
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -170,7 +161,7 @@ index c57e99d..cce96b3 100644
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,33 +326,45 @@ jobs:
+@@ -281,33 +323,45 @@ jobs:
              make clean -j$(nproc)
            fi
  

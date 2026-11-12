@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Netcore N60 Pro 512M NAND。
 #
-# 走通用 WRT 核心，不再自己抄一套步骤：主题、Mesh、DAEDE、静态地址、内核兼容、
+# 走通用 WRT 核心，不再自己抄一套步骤：主题、DAEDE、静态地址、内核兼容、
 # 缓存与发布全部由 .github/workflows/WRT-CORE-SELF.yml 提供。
 #
 # 这台机器特殊的地方只有一处：设备树把 ubi 分区限在 122.5 MiB，认不出 512 MB NAND。
