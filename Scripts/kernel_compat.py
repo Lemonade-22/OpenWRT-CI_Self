@@ -21,6 +21,11 @@ COMPAT_DISABLED = ("ARMV8_DEPRECATED",)
 # as a boolean selector, or the prompt survives into syncconfig.
 COMPAT_VALUES = {"ARCH_MMAP_RND_COMPAT_BITS": "11"}
 
+# honk (Rust + eBPF transparent proxy) attaches through TCX. NET_XGRESS is a
+# hidden option selected by NET_CLS_ACT, which generic config leaves off, so
+# both have to be opened. ramips still ships an older kernel and is skipped.
+TCX = ("NET_CLS_ACT", "NET_XGRESS")
+
 
 def set_symbols(text, symbols, prefix="CONFIG_", value="y"):
     for symbol in symbols:
@@ -97,6 +102,40 @@ NEED_MARKERS = (
 )
 
 
+def tcx_wanted(root):
+    """honk needs TCX; ramips (mt7621 included) still ships an older kernel."""
+    config = root / ".config"
+    if not config.exists():
+        return False
+    text = config.read_text(encoding="utf-8", errors="replace")
+    return not re.search(r"^CONFIG_TARGET_ramips(?:=|_)", text, re.M)
+
+
+def configure_tcx(root):
+    path = root / "config/Config-kernel.in"
+    text = path.read_text(encoding="utf-8")
+    for symbol in TCX:
+        if not re.search(r"^\s*(?:menu)?config KERNEL_" + symbol + r"\s*$", text, re.M):
+            text += kernel_option(symbol, "bool", "y")
+    path.write_text(text, encoding="utf-8", newline="\n")
+    config = root / ".config"
+    selections = set_symbols(config.read_text(encoding="utf-8"), TCX, "CONFIG_KERNEL_")
+    config.write_text(selections, encoding="utf-8", newline="\n")
+
+
+def verify_tcx(root, phase):
+    if phase == "verify":
+        selections = (root / ".config").read_text(encoding="utf-8").replace("CONFIG_KERNEL_", "CONFIG_")
+        check(selections, TCX, "honk TCX kernel selections")
+        return
+    configs = sorted(root.glob("build_dir/target-*/linux-*/linux-*/.config"))
+    if not configs:
+        raise SystemExit("::error::No compiled Linux .config found for honk TCX verification")
+    for path in configs:
+        check(path.read_text(encoding="utf-8"), TCX, str(path))
+        print("Verified honk TCX:", path)
+
+
 def arm32_wanted(root):
     """Return True when this build selects the package that needs ARM32."""
     config = root / ".config"
@@ -111,6 +150,13 @@ def main():
     parser.add_argument("phase", choices=("configure", "verify", "verify-kernel"))
     args = parser.parse_args()
     root = Path.cwd()
+    if tcx_wanted(root):
+        if args.phase == "configure":
+            configure_tcx(root)
+        else:
+            verify_tcx(root, args.phase)
+    else:
+        print("honk TCX layer skipped: ramips target keeps its own kernel")
     if not arm32_wanted(root):
         print("ARM32 compatibility layer not selected (no zte-mesh package in .config); "
               + ("nothing to configure" if args.phase == "configure" else "nothing to verify"))

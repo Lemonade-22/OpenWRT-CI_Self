@@ -188,6 +188,11 @@ jobs:
           find ./feeds/luci/ ./feeds/packages/ -type d -name luci-app-airoha-npu -prune -exec rm -rf {} +
           # Lemonade-22/luci-app-airoha-npu 从未创建（404）；用 Packages.sh 里同一上游 fork。
           git clone --depth=1 --branch main https://github.com/luanmuc/luci-app-airoha-npu.git package/luci-app-airoha-npu
+          # luci-app-honk 在我们的 packages 仓库里；这里的 Packages.sh 是 upstream-ci 的，不含它。
+          rm -rf /tmp/honk-pkgs ./package/luci-app-honk
+          git clone --depth=1 --branch main https://github.com/Lemonade-22/packages.git /tmp/honk-pkgs
+          cp -a /tmp/honk-pkgs/luci-app-honk ./package/luci-app-honk
+          test -f package/luci-app-honk/Makefile
           echo "WRT_NPU_HASH=$(git -C package/luci-app-airoha-npu rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "WRT_CI_HASH=$(git -C "$GITHUB_WORKSPACE/upstream-ci" rev-parse HEAD)" >> "$GITHUB_ENV"
 
@@ -220,6 +225,7 @@ jobs:
           bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
           grep -qx 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y' .config
           grep -qx 'CONFIG_PACKAGE_luci-app-airoha-npu=y' .config
+          grep -qx 'CONFIG_PACKAGE_luci-app-honk=y' .config
           grep -qx 'CONFIG_BUSYBOX_CONFIG_DEVMEM=y' .config
           grep -qx 'CONFIG_KERNEL_DEVMEM=y' .config
           make clean -j$(nproc)
