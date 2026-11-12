@@ -15,7 +15,7 @@ dts_rel="target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts"
 ubi_reg="0x1fa80000"
 
 case "${WRT_CONFIG:-}" in
-	N60-Pro-512M-WIFI-YES|N60-Pro-512M-WIFI-NO) ;;
+	N60-Pro-512M-WIFI-YES|N60-Pro-512M-WIFI-NO|N60-Pro-512M-WIFI-Multi) ;;
 	*)
 		echo "::error::N60 Pro hook invoked for the wrong configuration" >&2
 		exit 2

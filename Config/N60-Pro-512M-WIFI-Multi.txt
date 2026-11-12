@@ -1,0 +1,24 @@
+# Netcore N60 Pro 512MB NAND —— 多WIFI 版本。
+#
+# 多 SSID 本身不改固件，靠首次开机的 /etc/uci-defaults/97-multiwifi 生成。
+# 这里只负责把 passwall2 那层编进去，用来给每个网段分不同的出口节点。
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_netcore_n60-pro=y
+
+# 额外内核组件
+CONFIG_PACKAGE_kmod-cryptodev=y
+CONFIG_PACKAGE_kmod-tls=y
+
+# passwall2：按源网段分流。只带 Xray 核心，不额外塞 sing-box。
+CONFIG_PACKAGE_luci-app-passwall2=y
+CONFIG_PACKAGE_luci-app-passwall2_Basic_Core_Xray=y
+CONFIG_PACKAGE_luci-app-passwall2_Basic_Core_All=n
+CONFIG_PACKAGE_luci-app-passwall2_Basic_Core_SingBox=n
+
+# 目标固件是 firewall4，走 nftables 透明代理那条
+CONFIG_PACKAGE_luci-app-passwall2_Nftables_Transparent_Proxy=y
+CONFIG_PACKAGE_luci-app-passwall2_Iptables_Transparent_Proxy=n
+
+# 客户端隔离用的 hostapd 能力，wpad 完整版才带足
+CONFIG_PACKAGE_wpad-openssl=y

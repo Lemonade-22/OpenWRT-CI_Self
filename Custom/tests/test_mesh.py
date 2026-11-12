@@ -1,8 +1,21 @@
 """Exercise provider replacement and the post-defconfig dependency gate."""
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
+
+
+def bash_executable():
+    """Windows 的 System32 bash.exe 是 WSL 启动器，拿到 Windows 路径只会退出 127。"""
+    if os.name == 'nt':
+        git = shutil.which('git')
+        if git:
+            candidate = Path(git).parents[1] / 'usr/bin/bash.exe'
+            if candidate.exists():
+                return str(candidate)
+    return shutil.which('bash') or 'bash'
 
 
 class MeshTests(unittest.TestCase):
@@ -29,8 +42,11 @@ class MeshTests(unittest.TestCase):
         )
 
     def run_mesh(self, mode):
-        return subprocess.run(['bash', str(self.script), mode], cwd=self.root,
-                              capture_output=True, text=True)
+        env = os.environ.copy()
+        if os.name == 'nt':
+            env['PATH'] = str(Path(bash_executable()).parent) + ';' + env.get('PATH', '')
+        return subprocess.run([bash_executable(), str(self.script), mode], cwd=self.root,
+                              capture_output=True, text=True, env=env)
 
     def test_replace_conflicts_preserve_utilities_and_repeat_safely(self):
         self.assertEqual(self.run_mesh('configure').returncode, 0)
@@ -58,3 +74,7 @@ class MeshTests(unittest.TestCase):
         with self.config.open('a') as output:
             output.write('CONFIG_PACKAGE_wpad-basic-mbedtls=y\n')
         self.assertNotEqual(self.run_mesh('verify').returncode, 0)
+
+
+if __name__ == '__main__':
+    unittest.main()

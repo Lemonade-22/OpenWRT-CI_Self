@@ -8,7 +8,7 @@ ci_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # comes from WRT-CORE-SELF, with the profile-name suffix as the fallback for the
 # bespoke N60 workflow.
 wifi_kind="$(printenv WRT_WIFI || true)"
-[ -n "$wifi_kind" ] || wifi_kind="$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true)"
+[ -n "$wifi_kind" ] || wifi_kind="$(grep -oE 'WIFI-(YES|NO|MULTI)$' <<< "${WRT_CONFIG^^}" || true)"
 if [ "$wifi_kind" = "WIFI-NO" ]; then
   echo "Mesh skipped: WIFI-NO image (WRT_CONFIG=${WRT_CONFIG:-unset})"
   exit 0
@@ -16,8 +16,11 @@ fi
 
 case "${1:-}" in
   prepare)
+    # xxosdev/luci-app-mesh 已被删除（GitHub 上 resolve 不到）。
+    # EricYin/luci-app-mesh 是同一项目的副本：PKG_NAME 仍是 luci-app-mesh，
+    # 依赖里仍是 +wpad-mesh-openssl 与 +batctl，下面两条 sed 照旧生效。
     git clone --depth=1 --single-branch --branch main \
-      https://github.com/xxosdev/luci-app-mesh.git package/luci-app-mesh
+      https://github.com/EricYin/luci-app-mesh.git package/luci-app-mesh
     # Full OpenSSL wpad includes Mesh and preserves enterprise authentication.
     # Use one provider instead of installing conflicting wpad binaries.
     sed -i 's/+wpad-mesh-openssl/+wpad-openssl/g; s/+batctl /+batctl-full /g' \

@@ -117,7 +117,7 @@ jobs:
           # ubuntu-latest 会在 24.04/26.04 之间漂；缓存里是 host 二进制，混用会因 glibc 版本崩
           WRT_CACHE_OS=$(. /etc/os-release && echo "${VERSION_ID//./}")
           WRT_CACHE_PREFIX="wrt-$WRT_CACHE_OS-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
-          WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
+          WRT_WIFI=$(grep -oE 'WIFI-(YES|NO|MULTI)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
 
           {
             echo "WRT_INFO=${WRT_SOURCE%%/*}"

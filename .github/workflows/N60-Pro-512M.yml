@@ -6,7 +6,11 @@
 #
 # 这台机器特殊的地方只有一处：设备树把 ubi 分区限在 122.5 MiB，认不出 512 MB NAND。
 # Custom/patches/n60pro-512m-ubi-5065m.patch 扩到约 506.5 MiB，由
-# Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO}.sh 在 prepare 阶段打上。
+# Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO,Multi}.sh 在 prepare 阶段打上。
+#
+# Multi 版只比 YES 多一件事：把 Custom/multiwifi/files 并进源码树，首次开机由
+# /etc/uci-defaults/97-multiwifi 生成 30 个互相隔离的 SSID、各自网段，以及
+# passwall2 按源网段分流的骨架。分区和产物逻辑跟 YES/NO 共用一份钩子。
 name: N60 Pro 512M
 run-name: ${{ inputs.FIRMWARE || '编译固件' }} · WIFI-${{ inputs.WIFI }} · ${{ inputs.TEST && '仅输出配置' || '完整编译' }}
 
@@ -21,6 +25,7 @@ on:
         options:
           - 'YES'
           - 'NO'
+          - 'Multi'
       PACKAGE:
         description: '手动调整插件包，多个请用换行符分隔。'
         required: false

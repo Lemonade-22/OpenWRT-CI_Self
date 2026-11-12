@@ -72,7 +72,9 @@ daed 相关包不再被强制置为 not set——装不装由使用者决定。
 ## 所有定制核心机型及 N60 Pro 的 Mesh 支持
 
 `Scripts/Mesh.sh prepare` 在软件包处理完成后拉取
-`xxosdev/luci-app-mesh` 的 main 分支，并在构建日志记录提交号。
+`EricYin/luci-app-mesh` 的 main 分支，并在构建日志记录提交号。
+原先的 `xxosdev/luci-app-mesh` 已从 GitHub 删除（resolve 不到），镜像仓库是同一
+项目（`PKG_NAME` 仍为 `luci-app-mesh`，依赖仍是 `+wpad-mesh-openssl` 与 `+batctl`）。
 插件的 wpad 依赖改为同样支持 802.11s/SAE 的完整版 `wpad-openssl`，
 保留完整认证功能；batctl 使用 `batctl-full`，包含状态查询与诊断命令。
 
@@ -96,16 +98,20 @@ WIFI-NO、X86 和测试配置同样包含这些包，但不会修改 DTS、恢�
 
 ## Wi-Fi 双版本
 
-ZN-M2、AP8220（单分区）和 N60 Pro 各出两版。手动触发时用一个 `WIFI` 下拉（`YES` / `NO`）选择，
-和 `固件类型` 那个下拉一样，不会在 Actions 里堆出两份工作流。配置名后缀决定行为：
+ZN-M2、AP8220（单分区）各出两版，N60 Pro 出三版。手动触发时用一个 `WIFI` 下拉（`YES` / `NO`，
+N60 Pro 另有 `Multi`）选择，和 `固件类型` 那个下拉一样，不会在 Actions 里堆出多份工作流。
+配置名后缀决定行为：
 
-| 机型 | WIFI-YES | WIFI-NO |
-| --- | --- | --- |
-| ZN-M2 | `ZN-M2-WIFI-YES` | `ZN-M2-WIFI-NO` |
-| AP8220 1G 单分区 | `IPQ807X-AP8220-1G-SINGLE-WIFI-YES` | `IPQ807X-AP8220-1G-SINGLE-WIFI-NO` |
-| N60 Pro 512M | `N60-Pro-512M-WIFI-YES` | `N60-Pro-512M-WIFI-NO` |
+| 机型 | WIFI-YES | WIFI-NO | WIFI-Multi |
+| --- | --- | --- | --- |
+| ZN-M2 | `ZN-M2-WIFI-YES` | `ZN-M2-WIFI-NO` | — |
+| AP8220 1G 单分区 | `IPQ807X-AP8220-1G-SINGLE-WIFI-YES` | `IPQ807X-AP8220-1G-SINGLE-WIFI-NO` | — |
+| N60 Pro 512M | `N60-Pro-512M-WIFI-YES` | `N60-Pro-512M-WIFI-NO` | `N60-Pro-512M-WIFI-Multi` |
 
-`WRT_WIFI` 由配置名后缀推导（`WIFI-(YES|NO)$`）。`Scripts/Mesh.sh` 在 `WIFI-NO` 时直接退出，
+`WIFI-Multi` 不是无线开关，是多 SSID 分流版（见 `Custom/multiwifi/README.md`）：它照常
+编译无线驱动和 Mesh，首次开机由 `/etc/uci-defaults/97-multiwifi` 生成隔离的多 SSID。
+
+`WRT_WIFI` 由配置名后缀推导（`WIFI-(YES|NO|MULTI)$`）。`Scripts/Mesh.sh` 在 `WIFI-NO` 时直接退出，
 不克隆 `luci-app-mesh`、不写入 `Config/MESH.txt`，所以无 Wi-Fi 固件里没有 wpad/batman/dawn。
 
 关无线的两种写法，各按对应平台的上游做法来：

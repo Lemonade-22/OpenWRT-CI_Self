@@ -1,0 +1,164 @@
+#!/bin/sh
+#
+# 多WIFI：把一块无线电切成 N 个互相隔离的 SSID，每个 SSID 一个独立网段。
+#
+# 这不是什么固件特性，就是一堆 UCI。原机（TikTok-Yemaowrt）也是这么干的：
+# 30 个 wifi-iface + 30 个 188.181.N.1/24 网段 + 30 条 passwall2 shunt_rules，
+# 每条规则带 source=<该网段>，各自绑一个出口节点。
+#
+# 本脚本是"追加"，不覆盖上游 Settings.sh 设好的主 SSID / 密码 / 无线信道。
+# 参数在 /etc/multiwifi.conf，改完删掉 /etc/config/wireless 重来即可重排。
+#
+# 驱动硬顶：mt7915 的 if_limits 是 .max=16（AP），max_interfaces=16，
+# 所以每个 phy 最多 16 个 BSS，双频合计 32。COUNT 别超过它。
+
+[ -f /etc/multiwifi.conf ] && . /etc/multiwifi.conf
+
+COUNT=${COUNT:-30}
+PREFIX=${PREFIX:-WiFi}
+KEY=${KEY:-12345678}
+BASE=${BASE:-188.181}
+ISOLATE=${ISOLATE:-1}
+
+case "$COUNT" in ''|*[!0-9]*) exit 0 ;; esac
+[ "$COUNT" -gt 0 ] || exit 0
+
+# ---- 找无线电 -------------------------------------------------------------
+radio_of_band() {
+	local band="$1" d
+	for d in $(uci show wireless 2>/dev/null | sed -n 's/^wireless\.\([^.=]*\)=wifi-device$/\1/p'); do
+		[ "$(uci -q get wireless.$d.band)" = "$band" ] && { echo "$d"; return 0; }
+	done
+	return 1
+}
+
+R5=$(radio_of_band 5g)
+R2=$(radio_of_band 2g)
+[ -n "$R5" ] || [ -n "$R2" ] || exit 0
+
+# 两个频段都在就五五分，只有一个就全给那个
+if [ -n "$R5" ] && [ -n "$R2" ]; then
+	N5=$(( (COUNT + 1) / 2 ))
+elif [ -n "$R5" ]; then
+	N5=$COUNT
+else
+	N5=0
+fi
+
+# ---- 生成 ----------------------------------------------------------------
+i=1
+while [ "$i" -le "$COUNT" ]; do
+	if [ "$i" -le "$N5" ]; then dev="$R5"; else dev="$R2"; fi
+	[ -n "$dev" ] || { i=$((i + 1)); continue; }
+
+	ssid="$(printf '%s-%02d' "$PREFIX" "$i")"
+	ip="${BASE}.${i}.1"
+
+	# 无线接口：客户端隔离 + 每次起来换一个随机 BSSID（原机就是这么防串的）
+	uci -q delete "wireless.mw$i"
+	uci set "wireless.mw$i=wifi-iface"
+	uci set "wireless.mw$i.device=$dev"
+	uci set "wireless.mw$i.mode=ap"
+	uci set "wireless.mw$i.ssid=$ssid"
+	uci set "wireless.mw$i.network=wifi$i"
+	uci set "wireless.mw$i.encryption=psk2"
+	uci set "wireless.mw$i.key=$KEY"
+	uci set "wireless.mw$i.isolate=$ISOLATE"
+	uci set "wireless.mw$i.macaddr=random"
+	uci set "wireless.mw$i.disassoc_low_ack=0"
+
+	# 每段一个独立子网
+	uci -q delete "network.wifi$i"
+	uci set "network.wifi$i=interface"
+	uci set "network.wifi$i.proto=static"
+	uci set "network.wifi$i.ipaddr=$ip"
+	uci set "network.wifi$i.netmask=255.255.255.0"
+	uci set "network.wifi$i.delegate=0"
+	uci -q delete "network.wifi$i.dns"
+	uci add_list "network.wifi$i.dns=1.1.1.1"
+	uci add_list "network.wifi$i.dns=8.8.8.8"
+
+	# 每段一个独立 DHCP 池
+	uci -q delete "dhcp.wifi$i"
+	uci set "dhcp.wifi$i=dhcp"
+	uci set "dhcp.wifi$i.interface=wifi$i"
+	uci set "dhcp.wifi$i.start=100"
+	uci set "dhcp.wifi$i.limit=150"
+	uci set "dhcp.wifi$i.leasetime=12h"
+
+	i=$((i + 1))
+done
+
+# ---- 防火墙：一个 zone 收全部网段，转发到 lan 再出 wan ----------------------
+# forward=REJECT 是故意的。原机写的 ACCEPT，等于 30 个网段之间互相能扫通，
+# 同 SSID 内靠 ap_isolate 隔了，跨 SSID 一点没隔。要调试就改成 ACCEPT。
+uci -q delete firewall.mw_zone
+uci set firewall.mw_zone=zone
+uci set firewall.mw_zone.name=multiwifi
+uci set firewall.mw_zone.input=ACCEPT
+uci set firewall.mw_zone.output=ACCEPT
+uci set firewall.mw_zone.forward=REJECT
+
+i=1
+while [ "$i" -le "$COUNT" ]; do
+	uci add_list "firewall.mw_zone.network=wifi$i"
+	i=$((i + 1))
+done
+
+uci -q delete firewall.mw_fwd
+uci set firewall.mw_fwd=forwarding
+uci set firewall.mw_fwd.src=multiwifi
+uci set firewall.mw_fwd.dest=lan
+
+uci commit wireless
+uci commit network
+uci commit dhcp
+uci commit firewall
+
+# ---- passwall2：一条分流规则管一个网段，节点留空自己填 ----------------------
+# 没装 passwall2 就跳过，多 SSID 本身照样能用。
+# PW2_CONF 只是给自检用的，真机上走默认路径。
+PW2_CONF=${PW2_CONF:-/etc/config/passwall2}
+if [ -f "$PW2_CONF" ]; then
+	# 分流总开关：Xray 的 _shunt，所有网段都挂在它下面
+	uci -q delete passwall2.myshunt
+	uci set passwall2.myshunt=nodes
+	uci set passwall2.myshunt.type=Xray
+	uci set passwall2.myshunt.protocol=_shunt
+	uci set passwall2.myshunt.remarks='总开关⚡勿删'
+	uci set passwall2.myshunt.group='总开关⚡不要删'
+	uci set passwall2.myshunt.default_node=_direct
+	uci set passwall2.myshunt.domainStrategy=IPOnDemand
+	uci set passwall2.myshunt.domainMatcher=hybrid
+	uci set passwall2.myshunt.fakedns=1
+	uci set passwall2.myshunt.default_fakedns=1
+	uci set passwall2.myshunt.write_ipset_direct=1
+
+	i=1
+	while [ "$i" -le "$COUNT" ]; do
+		# 规则名就是 myshunt 里的键名，两处必须一致
+		uci -q delete "passwall2.wifi$i"
+		uci set "passwall2.wifi$i=shunt_rules"
+		uci set "passwall2.wifi$i.remarks=wifi-$(printf '%02d' "$i")"
+		uci set "passwall2.wifi$i.network=tcp,udp"
+		# 按源网段匹配 —— 这一行就是"每个 SSID 走各自节点"的全部秘密
+		uci set "passwall2.wifi$i.source=${BASE}.${i}.0/24"
+		uci set "passwall2.wifi$i.domain_list=regexp:.*"
+		uci set "passwall2.wifi$i.ip_list=0.0.0.0/0"
+
+		# 出口节点：空 = 跟随默认节点。填成节点段名就单独走。
+		uci set "passwall2.myshunt.wifi$i="
+		uci set "passwall2.myshunt.wifi${i}_fakedns=1"
+
+		i=$((i + 1))
+	done
+
+	# 主开关挂到分流节点上
+	uci -q set passwall2.@global[0].node=myshunt
+	uci -q set passwall2.@global[0].enabled=1
+	# 目标固件是 firewall4，透明代理走 nftables 那条；不设的话还按 iptables 起
+	uci -q set passwall2.@global_forwarding[0].use_nft=1
+	uci commit passwall2
+fi
+
+exit 0

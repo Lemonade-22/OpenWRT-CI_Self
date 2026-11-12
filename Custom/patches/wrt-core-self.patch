@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
-index c57e99d..cce96b3 100644
+index c57e99d..a1f32ce 100644
 --- a/.github/workflows/WRT-CORE.yml
 +++ b/.github/workflows/WRT-CORE.yml
 @@ -1,8 +1,9 @@
@@ -55,17 +55,19 @@ index c57e99d..cce96b3 100644
  
        - name: Initialization Values
          id: initialize-values
-@@ -105,7 +114,9 @@ jobs:
+@@ -105,8 +114,10 @@ jobs:
            WRT_CACHE_SOURCE=${WRT_SOURCE//\//-}
            WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
            WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
 -          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
+-          WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
 +          # ubuntu-latest 会在 24.04/26.04 之间漂；缓存里是 host 二进制，混用会因 glibc 版本崩
 +          WRT_CACHE_OS=$(. /etc/os-release && echo "${VERSION_ID//./}")
 +          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_OS-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
-           WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
++          WRT_WIFI=$(grep -oE 'WIFI-(YES|NO|MULTI)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
  
            {
+             echo "WRT_INFO=${WRT_SOURCE%%/*}"
 @@ -139,9 +150,12 @@ jobs:
              sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
            fi
