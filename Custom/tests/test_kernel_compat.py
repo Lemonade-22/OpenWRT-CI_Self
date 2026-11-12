@@ -30,17 +30,27 @@ class CompatTests(unittest.TestCase):
                               capture_output=True, text=True)
 
     def test_layer_stays_off_when_no_build_selects_zte_mesh(self):
-        # No build in this repository selects zte-mesh any more, so the layer
-        # has to stay dormant: a build without the package comes out untouched.
+        # No build in this repository selects zte-mesh any more, so the ARM32
+        # layer has to stay dormant: a build without the package must not gain
+        # COMPAT or any of its children. The honk TCX layer is independent of
+        # that and still applies, so it has to be present in the shipped kernel.
         config = self.root / '.config'
-        original = 'CONFIG_aarch64=y\n# CONFIG_KERNEL_COMPAT is not set\nCONFIG_KERNEL_COMPAT=n\n'
-        config.write_text(original)
+        config.write_text('CONFIG_aarch64=y\n# CONFIG_KERNEL_COMPAT is not set\n'
+                          'CONFIG_KERNEL_COMPAT=n\n')
         definitions = self.root / 'config/Config-kernel.in'
-        before = definitions.read_text()
+        kernel = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'
+        kernel.parent.mkdir(parents=True)
+        kernel.write_text(''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.TCX))
         for phase in ('configure', 'verify', 'verify-kernel'):
             self.assertEqual(self.run_phase(phase).returncode, 0, phase)
-        self.assertEqual(config.read_text(), original)
-        self.assertEqual(definitions.read_text(), before)
+        text = config.read_text()
+        # The TCX layer legitimately adds its own selections...
+        for symbol in compat.TCX:
+            self.assertIn('CONFIG_KERNEL_' + symbol + '=y\n', text)
+        # ...but nothing from the ARM32 layer may appear.
+        for symbol in compat.ARM64 + compat.COMPAT_OPTIONS:
+            self.assertNotIn('CONFIG_KERNEL_' + symbol + '=y\n', text)
+        self.assertNotIn('depends on aarch64', definitions.read_text())
 
     def test_configure_replaces_overrides_and_registers_missing_selectors(self):
         self.assertEqual(self.run_phase('configure').returncode, 0)
@@ -116,7 +126,7 @@ class CompatTests(unittest.TestCase):
         self.run_phase('configure')
         path = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'
         path.parent.mkdir(parents=True)
-        full = ''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.ARM64)
+        full = ''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.TCX + compat.ARM64)
         full += 'CONFIG_ARCH_MMAP_RND_COMPAT_BITS=11\n'
         path.write_text(full.replace('CONFIG_ARCH_MMAP_RND_COMPAT_BITS=11\n', ''))
         result = self.run_phase('verify-kernel')
@@ -129,7 +139,7 @@ class CompatTests(unittest.TestCase):
         self.run_phase('configure')
         path = self.root / 'build_dir/target-aarch64/linux-mediatek_filogic/linux-6.18/.config'
         path.parent.mkdir(parents=True)
-        full = ''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.ARM64)
+        full = ''.join('CONFIG_' + symbol + '=y\n' for symbol in compat.TCX + compat.ARM64)
         full += 'CONFIG_ARCH_MMAP_RND_COMPAT_BITS=11\n'
         for symbol in ('COMPAT', 'SYSVIPC', 'IPC_NS'):
             path.write_text(full.replace('CONFIG_' + symbol + '=y\n', ''))
