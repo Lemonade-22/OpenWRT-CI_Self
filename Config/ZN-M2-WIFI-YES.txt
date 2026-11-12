@@ -3,7 +3,7 @@ CONFIG_TARGET_qualcommax=y
 CONFIG_TARGET_qualcommax_ipq60xx=y
 #设备列表
 CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_zn_m2=y
-# WIFI-YES：不关任何无线包，ath11k 驱动来自 target DEFAULT_PACKAGES。
-# firmware 包既不在 DEFAULT_PACKAGES 也不在设备包里，上游 WIFI-YES 配置同样没写，
-# 但缺了它只有驱动没有固件，射频起不来，所以这里显式选上。
-CONFIG_PACKAGE_ath11k-firmware-ipq6018=y
+# WIFI-YES：不关任何无线包。ath11k 驱动和固件都来自 target DEFAULT_PACKAGES
+# （qualcommax/ipq60xx/target.mk 的 ath11k-firmware-ipq6018-ddwrt + kmod-nss-wifi-drv）。
+# 不要再显式选 ath11k-firmware-ipq6018：两个固件包写同一批 lib/firmware/IPQ6018
+# 文件，同时选中会让 package/install 直接失败。上游 WIFI-YES 配置同样不写这一行。
