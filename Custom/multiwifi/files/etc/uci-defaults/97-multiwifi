@@ -117,9 +117,12 @@ uci commit firewall
 
 # ---- passwall2：一条分流规则管一个网段，节点留空自己填 ----------------------
 # 没装 passwall2 就跳过，多 SSID 本身照样能用。
-# PW2_CONF 只是给自检用的，真机上走默认路径。
-PW2_CONF=${PW2_CONF:-/etc/config/passwall2}
-if [ -f "$PW2_CONF" ]; then
+#
+# 注意别用 "配置文件存不存在" 来判装没装：首次启动时本脚本比 passwall2 自己
+# 建配置还早，那样会整段跳过，结果就是只有 SSID 没有分流规则（踩过）。
+# 判 init 脚本可执行更可靠。
+PW2_INIT=${PW2_INIT:-/etc/init.d/passwall2}
+if [ -x "$PW2_INIT" ]; then
 	# 分流总开关：Xray 的 _shunt，所有网段都挂在它下面
 	uci -q delete passwall2.myshunt
 	uci set passwall2.myshunt=nodes
@@ -159,6 +162,9 @@ if [ -f "$PW2_CONF" ]; then
 	# 目标固件是 firewall4，透明代理走 nftables 那条；不设的话还按 iptables 起
 	uci -q set passwall2.@global_forwarding[0].use_nft=1
 	uci commit passwall2
+
+	# 让规则立刻生效；此刻 passwall2 可能还没起过，重启一次最省事。
+	"$PW2_INIT" restart >/dev/null 2>&1 || true
 fi
 
 exit 0
