@@ -10,5 +10,3 @@ CONFIG_BUSYBOX_CUSTOM=y
 CONFIG_BUSYBOX_CONFIG_DEVMEM=y
 # eBPF/BTF configuration is applied and verified through Scripts/DAEDE.sh.
 
-# honk 前端（eBPF 透明代理）。honk-core 另装（daeuniverse apk 源）。
-CONFIG_PACKAGE_luci-app-honk=y
