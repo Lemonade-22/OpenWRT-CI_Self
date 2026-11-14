@@ -1,16 +1,20 @@
 # honk 实验机上手指南
 
-适用于 `ZN-M2-WIFI-NO` 和 `XG-040G-MD-NATIVE`。两台固件里已经含 `luci-app-honk`，
-**但不含 `honk-core`**——那个要自己装，见第 2 步。
+适用于 `ZN-M2-WIFI-NO` 和 `XG-040G-MD-NATIVE`。**两台固件都不再内置 `luci-app-honk`**，
+前端和 `honk-core` 都要自己装：前端见第 1 步，`honk-core` 见第 2 步。
 
-## 1. 确认固件带上了前端
+## 1. 装前端（luci-app-honk）
+
+这个仓库只为 `dae`/`daed` 出包，`luci-app-honk` 不再自动编译。源码在
+`Lemonade-22/packages` 的 `luci-app-honk` 目录，用 SDK 编一次，或者直接装编好的包：
 
 ```sh
-opkg list-installed | grep honk      # opkg 系统
-apk info -e luci-app-honk            # apk 系统（25.12+）
+apk add --allow-untrusted ./luci-app-honk-*.apk    # apk 系统（25.12+）
+opkg install ./luci-app-honk-*.ipk                 # opkg 系统
+apk info -e luci-app-honk                          # 装完确认
 ```
 
-出现过 `luci-app-honk` 就对了。LuCI 里应当在「服务」下看到 **Honk**。
+装上了，LuCI 的「服务」下才会出现 **Honk**。
 
 ## 2. 装 honk-core
 
