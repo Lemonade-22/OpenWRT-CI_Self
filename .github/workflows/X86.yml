@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: MIT
+# X86-64：走 VIKINGYFY/immortalwrt 的默认分支 owrt，镜像按 Config/X86.txt 出
+# GRUB/VMDK、128M 内核分区。dae/daed/honk 的依赖由核心 workflow 负责：
+# Scripts/DAEDE.sh 写入 Config/DAEDE.txt 的 eBPF 前置项（BTF/cgroup/kprobes/
+# BPF_EVENTS/XDP_SOCKETS 与 kmod-sched-bpf、kmod-veth、nft-tproxy 等），
+# Scripts/kernel_compat.py 打开 honk 需要的 TCX（NET_CLS_ACT + NET_XGRESS）。
+# 三个本体（daed/dae/luci-app-daede）和 honk 一律不选，用户装的时候才有东西可配。
+name: X86
+run-name: ${{ inputs.TEST && '仅输出配置' || '完整编译' }} · X86-64 · ${{ inputs.BRANCH }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH:
+        description: '上游分支（默认 owrt；main 是 NSS 系列，x86 用不上）'
+        type: choice
+        required: true
+        default: 'owrt'
+        options:
+          - 'owrt'
+          - 'main'
+      PACKAGE:
+        description: '手动调整插件包，多个请用换行符分隔。'
+        required: false
+        type: string
+      TEST:
+        description: '仅输出配置文件，不编译固件。'
+        default: false
+        required: false
+        type: boolean
+
+permissions: write-all
+
+jobs:
+  build:
+    uses: ./.github/workflows/WRT-CORE-SELF.yml
+    with:
+      WRT_CONFIG: X86
+      WRT_THEME: auto
+      WRT_NAME: OWRT
+      WRT_SSID: OWRT
+      WRT_WORD: 12345678
+      WRT_IP: 192.168.10.1
+      WRT_PW: 无
+      WRT_REPO: https://github.com/VIKINGYFY/immortalwrt.git
+      WRT_BRANCH: ${{ inputs.BRANCH }}
+      WRT_SOURCE: VIKINGYFY/immortalwrt
+      # Applied after GENERAL.txt. 本体不选，只留依赖。
+      WRT_PACKAGE: |
+        ${{inputs.PACKAGE}}
+        CONFIG_PACKAGE_dae=n
+        CONFIG_PACKAGE_daed=n
+        CONFIG_PACKAGE_luci-app-daede=n
+        CONFIG_PACKAGE_luci-i18n-daede-zh-cn=n
+        CONFIG_PACKAGE_honk=n
+        CONFIG_PACKAGE_luci-app-honk=n
+      WRT_TEST: ${{inputs.TEST || false}}
