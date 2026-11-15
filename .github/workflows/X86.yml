@@ -52,6 +52,4 @@ jobs:
         CONFIG_PACKAGE_daed=n
         CONFIG_PACKAGE_luci-app-daede=n
         CONFIG_PACKAGE_luci-i18n-daede-zh-cn=n
-        CONFIG_PACKAGE_honk=n
-        CONFIG_PACKAGE_luci-app-honk=n
       WRT_TEST: ${{inputs.TEST || false}}
