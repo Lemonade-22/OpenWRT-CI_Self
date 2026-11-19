@@ -186,13 +186,13 @@ jobs:
           eval "$(bash "$GITHUB_WORKSPACE/Scripts/Theme.sh")"
           bash "$GITHUB_WORKSPACE/Scripts/Check-Preinstalled.sh" prepare
           $GITHUB_WORKSPACE/Scripts/Settings.sh
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+          bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" configure
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
           make defconfig -j$(nproc)
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+          bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" verify
           make clean -j$(nproc)
 
       - name: Download Packages

@@ -131,7 +131,7 @@ jobs:
             args+=(--device fine3399)
           fi
           while IFS= read -r dtb; do args+=(--dtb "$dtb"); done < <(jq -r '.[]' <<< "$REQUIRED_DTBS")
-          python3 Scripts/Check-DAEDE-Kernel.py "$archive" "${args[@]}"
+          python3 Scripts/Check-EBPF-Kernel.py "$archive" "${args[@]}"
           mkdir -p kernel-output
           cp "$archive" kernel-output/kernel.tar.gz
           cp kernel-fork/${{ needs.plan.outputs.kernel_config_path }}/${{ needs.plan.outputs.kernel_config_file }} kernel-output/requested-kernel.config
@@ -218,7 +218,7 @@ jobs:
           for package in r8152-firmware perl perlbase-essential perlbase-utf8 perlbase-time perlbase-xsloader perlbase-file ethtool uuidgen pv wifi-scripts; do
             echo "CONFIG_PACKAGE_${package}=y" >> .config
           done
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
+          bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" configure
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
           make defconfig
@@ -226,7 +226,7 @@ jobs:
           python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
           grep -qx 'CONFIG_PACKAGE_wifi-scripts=y' .config || {
             echo '::error::Missing wifi-scripts required for boot-time wifi config'; exit 1; }
-          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
+          bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" verify
           test -s tmp/.config-package.in
           python3 "$GITHUB_WORKSPACE/Custom/ARM64-OPhub/verify_packages.py" \
             --requested "$GITHUB_WORKSPACE/output/upstream-luci-selected.config" \
@@ -370,7 +370,7 @@ jobs:
           cp compiled-kernel/kernel.sha256 output/kernel.sha256
           cp compiled-kernel/requested-kernel.config output/requested-kernel.config
           mkdir -p ophub/make-openwrt/kernel/stable ophub/openwrt-armsr
-          python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --dtb "$BOARD_DTB" --fakeflow --sonic --device "$BOARD"
+          python3 Scripts/Check-EBPF-Kernel.py kernel.tar.gz --dtb "$BOARD_DTB" --fakeflow --sonic --device "$BOARD"
           tar -xzf kernel.tar.gz -C ophub/make-openwrt/kernel/stable
           kernel=$(python3 Custom/ARM64-OPhub/stage_kernel.py ophub/make-openwrt/kernel/stable)
           echo "Actual compiled kernel: $kernel (requested $(jq -r .kernel.version "$lock"))"
