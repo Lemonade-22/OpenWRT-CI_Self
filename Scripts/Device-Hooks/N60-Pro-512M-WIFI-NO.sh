@@ -2,7 +2,7 @@
 # Netcore N60 Pro 512M NAND。
 #
 # 出厂/上游设备树把 ubi 分区限在 122.5 MiB（0x7a80000），可这颗芯片有 512 MB NAND。
-# Custom/patches/n60pro-512m-ubi-5065m.patch 把分区改成 0x1fa80000（约 506.5 MiB），
+# Custom/patches/n60pro-512m-ubi-490m.patch 把分区改成 0x1EA00000（490 MiB），
 # 固件这才"认得"整片空间——否则 sysupgrade 只能写进 122.5 MiB。
 #
 # 本钩子由通用核心在 prepare/verify/verify-image 阶段调用，和 WIFI-YES/NO 无关：
@@ -10,9 +10,9 @@
 set -euo pipefail
 ci_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source_root="$(pwd)"
-patch_file="$ci_root/Custom/patches/n60pro-512m-ubi-5065m.patch"
+patch_file="$ci_root/Custom/patches/n60pro-512m-ubi-490m.patch"
 dts_rel="target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts"
-ubi_reg="0x1fa80000"
+ubi_reg="0x1EA00000"
 
 case "${WRT_CONFIG:-}" in
 	N60-Pro-512M-WIFI-YES|N60-Pro-512M-WIFI-NO) ;;
@@ -38,8 +38,8 @@ case "${1:-}" in
 		git apply "$patch_file"
 		git diff --check
 		grep -q "reg = <0x0580000 $ubi_reg>;" "$dts_rel" || {
-			echo "::error::ubi partition is not enlarged to 506.5 MiB after patching" >&2; exit 1; }
-		echo "N60 Pro: ubi partition widened to $ubi_reg (about 506.5 MiB)"
+			echo "::error::ubi partition is not enlarged to 490 MiB after patching" >&2; exit 1; }
+		echo "N60 Pro: ubi partition widened to $ubi_reg (490 MiB)"
 		;;
 	lint)
 		sh -n "$ci_root/Scripts/Device-Hooks/N60-Pro-512M-WIFI-NO.sh"

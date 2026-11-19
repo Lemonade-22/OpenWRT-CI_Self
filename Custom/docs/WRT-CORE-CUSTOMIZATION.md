@@ -118,7 +118,7 @@ WIFI-YES 用薄壳钩子转发过去，两个版本不会分叉。
 ## N60 Pro 512M
 
 Netcore N60 Pro 有 512 MB NAND，但设备树把 ubi 分区写死在 122.5 MiB（`0x7a80000`），固件因此
-只认这么点空间。`Custom/patches/n60pro-512m-ubi-5065m.patch` 把该分区改成 `0x1fa80000`（约 506.5 MiB），
+只认这么点空间。`Custom/patches/n60pro-512m-ubi-490m.patch` 把该分区改成 `0x1EA00000`（490 MiB），
 由 `Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO}.sh` 在 `prepare` 阶段应用，`verify` 与
 `verify-image` 阶段分别核对分区没被打回、产物不超过整片 NAND。
 

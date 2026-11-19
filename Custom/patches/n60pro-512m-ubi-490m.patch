@@ -1,5 +1,5 @@
 diff --git a/target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts b/target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts
-index 67b8dd1..b34ab4e 100644
+index 67b8dd1..6fbdafb 100644
 --- a/target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts
 +++ b/target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts
 @@ -290,7 +290,7 @@
@@ -7,7 +7,7 @@ index 67b8dd1..b34ab4e 100644
  			partition@580000 {
  				label = "ubi";
 -				reg = <0x0580000 0x7a80000>;
-+				reg = <0x0580000 0x1fa80000>;
++				reg = <0x0580000 0x1EA00000>;
  				compatible = "linux,ubi";
  
  				volumes {
