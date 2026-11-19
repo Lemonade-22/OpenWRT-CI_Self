@@ -21,7 +21,7 @@ except ImportError:  # pragma: no cover - only structural checks need PyYAML
 
 ROOT = Path(__file__).resolve().parents[2]
 COMMON = ROOT / 'Custom/ARM64-OPhub'
-GATE = ROOT / 'Scripts/Check-DAEDE-Kernel.py'
+GATE = ROOT / 'Scripts/Check-EBPF-Kernel.py'
 WORKFLOW = ROOT / '.github/workflows/ARM64-OPhub-CORE.yml'
 ACTION = ROOT / '.github/actions/arm64-ophub-validate/action.yml'
 
@@ -455,10 +455,10 @@ class LockAndWorkflowTests(unittest.TestCase):
         self.assertEqual(self.workflow_text.count('--sonic'), 2)
         self.assertIn('args=(--fakeflow --sonic)', self.workflow_text)
         self.assertIn('args+=(--device fine3399)', self.workflow_text)
-        self.assertIn('python3 Scripts/Check-DAEDE-Kernel.py "$archive" "${args[@]}"',
+        self.assertIn('python3 Scripts/Check-EBPF-Kernel.py "$archive" "${args[@]}"',
                       self.workflow_text)
         self.assertIn('args+=(--dtb "$dtb")', self.workflow_text)
-        self.assertIn('python3 Scripts/Check-DAEDE-Kernel.py kernel.tar.gz --dtb "$BOARD_DTB" '
+        self.assertIn('python3 Scripts/Check-EBPF-Kernel.py kernel.tar.gz --dtb "$BOARD_DTB" '
                       '--fakeflow --sonic --device "$BOARD"', self.workflow_text)
         self.assertIn('python3 Custom/ARM64-OPhub/prepare_kernel_source.py', self.workflow_text)
         self.assertIn('--patch-root sonic-patches', self.workflow_text)

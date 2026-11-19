@@ -1,12 +1,12 @@
 #!/bin/bash
 # Run in the OpenWrt source root; keep MT7621 untouched.
 #
-# Nothing is shipped into the image any more: no daed, no luci-app-daede, and no
+# Nothing is shipped into the image any more: no backend at all (daed / dae / honk), and no
 # geo databases. This script only prepares the .config:
 #
-#   * applies the eBPF kernel prerequisites from Config/DAEDE.txt, so a daed or
+#   * applies the eBPF kernel prerequisites from Config/EBPF.txt, so a daed, dae or honk
 #     dae the user installs later works out of the box;
-#   * keeps daed, dae and luci-app-daede explicitly unselected, so the firmware
+#   * keeps daed, dae, honk and their luci-app-* explicitly unselected, so the firmware
 #     never carries a backend with no front end (or front end with no backend).
 #
 # Geo data used to be baked in here (daed looks for it under
@@ -30,13 +30,13 @@ apply_requirements() {
     symbol="${option%%=*}"
     sed -i -E "/^(# )?${symbol}(=| )/d" .config
     printf '%s\n' "$option" >> .config
-  done < "$ci_root/Config/DAEDE.txt"
+  done < "$ci_root/Config/EBPF.txt"
 }
 
 case "${1:-}" in
   configure)
     if grep -qx 'CONFIG_TARGET_ramips_mt7621=y' "$profile"; then
-      echo "Skipping daed prerequisites on MT7621"
+      echo "Skipping eBPF prerequisites on MT7621"
       exit 0
     fi
     apply_requirements
@@ -47,18 +47,20 @@ case "${1:-}" in
       echo 'CONFIG_KERNEL_NETKIT=y' >> .config
     fi
 
-    # Config/DAEDE.txt and the de-selection lines can both emit the same
+    # Config/EBPF.txt and the de-selection lines can both emit the same
     # "# CONFIG_X is not set"; keep a single copy of each.
     awk '/^# CONFIG_.* is not set$/{ if (seen[$0]++) next } { print }' .config > .config.dedup
     mv .config.dedup .config
-    echo "daed prerequisites applied; no daed, no geo data in the image"
+    echo "eBPF prerequisites applied; no backend, no geo data in the image"
     ;;
 
   verify)
     grep -qx 'CONFIG_TARGET_ramips_mt7621=y' "$profile" && exit 0
 
     # Nothing is staged any more; only the .config work has to hold.
-    [ ! -e "./files/usr/bin/daed" ] || die "files/usr/bin/daed reappeared; nothing should stage a backend"
+    for backend in daed dae honk; do
+      [ ! -e "./files/usr/bin/$backend" ] || die "./files/usr/bin/$backend reappeared; nothing should stage a backend"
+    done
     [ ! -e "./files/usr/share/v2ray/geoip.dat" ] || die "files/usr/share/v2ray/geoip.dat reappeared; geo data is no longer baked in"
 
     while IFS= read -r option; do
@@ -74,8 +76,8 @@ case "${1:-}" in
           fi
           ;;
       esac
-    done < "$ci_root/Config/DAEDE.txt"
-    echo "Verified: daed prerequisites only, no backend and no geo data"
+    done < "$ci_root/Config/EBPF.txt"
+    echo "Verified: eBPF prerequisites only, no backend and no geo data"
     ;;
 
   *) echo "Usage: $0 configure|verify" >&2; exit 2 ;;

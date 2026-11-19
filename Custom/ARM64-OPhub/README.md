@@ -36,9 +36,9 @@ ARM64-CHECK.yml → .github/actions/arm64-ophub-validate/action.yml
 | `Custom/ARM64-OPhub/verify_packages.py` | 核对 `make defconfig` 后上游选中的 LuCI 插件是否被丢弃 |
 | `Custom/ARM64-OPhub/fine3399-direct-lan` | Fine3399 首次启动的 LAN/WAN/DHCP 默认值（仅该设备） |
 | `Config/ARM64-OPhub.txt` | 两台设备共用的 generic ARM64 rootfs 配置 |
-| `Scripts/Check-DAEDE-Kernel.py` | 最终外部内核的 BTF、eBPF、SONiC、所选设备驱动和 DTB 检查 |
+| `Scripts/Check-EBPF-Kernel.py` | 最终外部内核的 BTF、eBPF、SONiC、所选设备驱动和 DTB 检查 |
 
-`WRT-CORE.yml` 仍归上游维护，`WRT-CORE-SELF.yml` 仍通过补丁生成，供原生 OpenWrt target 使用。ARM64 OPhub core 复用本仓库 DAEDE 脚本，但独立负责外部内核与整盘镜像打包，避免将 OPhub 设备步骤塞入上游补丁。
+`WRT-CORE.yml` 仍归上游维护，`WRT-CORE-SELF.yml` 仍通过补丁生成，供原生 OpenWrt target 使用。ARM64 OPhub core 复用本仓库 eBPF 脚本，但独立负责外部内核与整盘镜像打包，避免将 OPhub 设备步骤塞入上游补丁。
 
 ## 设备规格与证据
 
@@ -86,7 +86,7 @@ Fine3399 的硬件描述（GMAC、RGMII 时延、USB、eMMC 等）完全由 OPhu
 
 内核模板从 `Lemonade-22/ophub-kernel` 的固定提交读取，固定版本的 OPhub 编译工具构建内核、模块和 DTBs，内核版本为 `6.18.59`。配置文件系列从内核版本推导。由于 GitHub Actions 的 `uses` 不能使用动态表达式，编译工具 SHA 同时存在于 workflow 和 sources.json；自动测试核对两者一致。
 
-插件沿用 Panther：每次获取 VIKINGYFY/OpenWRT-CI main 的 GENERAL.txt、Packages.sh、Handles.sh、Settings.sh，主题读取同一快照的 OWRT-ALL.yml；记录上游实际提交。随后应用共用 ARM64 配置，再运行 DAEDE 配置及检查。
+插件沿用 Panther：每次获取 VIKINGYFY/OpenWRT-CI main 的 GENERAL.txt、Packages.sh、Handles.sh、Settings.sh，主题读取同一快照的 OWRT-ALL.yml；记录上游实际提交。随后应用共用 ARM64 配置，再运行 eBPF 配置及检查。
 
 上游 `Settings.sh` 会无条件追加 `luci-theme-$WRT_THEME`、`luci-app-$WRT_THEME`、`luci-app-$WRT_THEME-config`。当前主题 `vantage` 只有 `luci-theme-vantage` 和 `luci-app-vantage`，没有 `luci-app-vantage-config`；`make defconfig` 会丢弃未定义的包。`verify_packages.py` 以实际 `tmp/.config-package.in` 为准确认：只有已确认不存在的 `luci-app-vantage-config` 在确实未被任何 feed 定义时才允许跳过；已经定义却被丢弃、以及任何非主题插件被丢弃都仍然失败。不会取消全部包检查。
 
@@ -110,9 +110,9 @@ kernel job 先把固定 OPhub 内核源码 `a0592d712c819c3571d19ad15ec2d55bd873
 
 - SONiC：`NF_NAT_FULLCONE=y`、`NF_CT_PROTO_UDPLITE=y`、`NF_CT_PROTO_SCTP=y`，以及 `NF_NAT`、`NF_NAT_MASQUERADE`、`NF_TABLES`、`NFT_NAT`、`NFT_MASQ`、`NETFILTER_XT_TARGET_MASQUERADE`、`NETFILTER_XT_NAT`。
 - Fine3399 网卡/桥接：`STMMAC_ETH`、`STMMAC_PLATFORM`、`DWMAC_ROCKCHIP`、`DWMAC_GENERIC`、`REALTEK_PHY`、`USB_RTL8152`、`BRIDGE`、`BRIDGE_VLAN_FILTERING`、`VLAN_8021Q`，并先核对 `ARCH_ROCKCHIP`、`OF`、`USB`、`USB_SUPPORT`、`PHYLIB`、`MII`、`NETFILTER_ADVANCED`、`NF_CONNTRACK` 等依赖存在。
-- OPhub 固定 config 和内核源码本身还带旧的 `CONFIG_NFT_FULLCONE` / `CONFIG_NETFILTER_XT_TARGET_FULLCONENAT`（旧 `nft_fullcone`/`xt_FULLCONENAT` 补丁）。它们与新 SONiC 的 `fullcone` nft 表达式同名，必须不进入最终内核；`prepare_kernel.py` 会移除这些旧符号，`Check-DAEDE-Kernel.py --sonic` 会拒绝旧 config 符号和旧 `*fullcone*.ko`。
+- OPhub 固定 config 和内核源码本身还带旧的 `CONFIG_NFT_FULLCONE` / `CONFIG_NETFILTER_XT_TARGET_FULLCONENAT`（旧 `nft_fullcone`/`xt_FULLCONENAT` 补丁）。它们与新 SONiC 的 `fullcone` nft 表达式同名，必须不进入最终内核；`prepare_kernel.py` 会移除这些旧符号，`Check-EBPF-Kernel.py --sonic` 会拒绝旧 config 符号和旧 `*fullcone*.ko`。
 
-内核和打包两个关卡都调用 `Scripts/Check-DAEDE-Kernel.py --sonic`。它检查最终内核 config 的 SONiC 符号、按配置检查 `nf_nat.ko`/`nft_masq.ko`/`xt_MASQUERADE.ko` 是否存在、拒绝旧 fullcone 符号/模块；`--device fine3399` 还检查 STMMAC/DWMAC_ROCKCHIP/REALTEK_PHY/USB_RTL8152 及对应模块。rootfs 关卡额外检查 `CONFIG_PACKAGE_fullconenat-sonic=y`、`firewall4`、`kmod-nft-nat` 和 nftables 默认提供者（`DEFAULT_nftables` 或 `nftables-json`/`nftables-nojson`）已选，且旧 fullcone 包未被选。
+内核和打包两个关卡都调用 `Scripts/Check-EBPF-Kernel.py --sonic`。它检查最终内核 config 的 SONiC 符号、按配置检查 `nf_nat.ko`/`nft_masq.ko`/`xt_MASQUERADE.ko` 是否存在、拒绝旧 fullcone 符号/模块；`--device fine3399` 还检查 STMMAC/DWMAC_ROCKCHIP/REALTEK_PHY/USB_RTL8152 及对应模块。rootfs 关卡额外检查 `CONFIG_PACKAGE_fullconenat-sonic=y`、`firewall4`、`kmod-nft-nat` 和 nftables 默认提供者（`DEFAULT_nftables` 或 `nftables-json`/`nftables-nojson`）已选，且旧 fullcone 包未被选。
 
 ## 产物与验证
 

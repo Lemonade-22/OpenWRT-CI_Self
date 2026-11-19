@@ -11,7 +11,7 @@ AP8220、ZN-M2、MT7621、MTK-ALL、OWRT-ALL、QCA-ALL、QCB-ALL、AIROHA-ALL �
 ARM32 兼容层已删除。它只服务 `zte-mesh`（原厂 32 位守护进程），而仓库里已没有任何构建
 选择该包；`Scripts/kernel_compat.py` 现在只负责 honk 的 TCX 内核开关。
 
-通用补丁保留 APT 换源参数、NSS 选项检查、DAEDE 配置和验证，以及
+通用补丁保留 APT 换源参数、NSS 选项检查、eBPF 配置和验证，以及
 固件信息去重。环境依赖安装采用当前上游的 `apt-get` 和显式依赖列表。
 
 ## 上游脚本的同步策略
@@ -47,7 +47,7 @@ qualcommax 布局），现已删除：上游在 `WIFI-NO` 时把 `#include "ipq6
 
 ## daed：只准备内核，不预装任何东西
 
-`Scripts/DAEDE.sh` 现在只做一件事：把 `Config/DAEDE.txt` 里的 eBPF 内核前置依赖写进 `.config`，
+`Scripts/EBPF.sh` 现在只做一件事：把 `Config/EBPF.txt` 里的 eBPF 内核前置依赖写进 `.config`，
 （BTF、cgroup BPF、kprobes、`kmod-sched-bpf`、`kmod-nft-tproxy`、`ca-bundle`、`curl` 等）。
 
 **镜像里不带 `daed`、`dae`、`luci-app-daede`，也不带 `geoip.dat` / `geosite.dat`。** 需要时由使用者
@@ -122,7 +122,7 @@ Netcore N60 Pro 有 512 MB NAND，但设备树把 ubi 分区写死在 122.5 MiB�
 由 `Scripts/Device-Hooks/N60-Pro-512M-WIFI-{YES,NO}.sh` 在 `prepare` 阶段应用，`verify` 与
 `verify-image` 阶段分别核对分区没被打回、产物不超过整片 NAND。
 
-除此之外没有专用逻辑：主题、DAEDE、静态地址、内核兼容、缓存和发布全部由
+除此之外没有专用逻辑：主题、eBPF、静态地址、内核兼容、缓存和发布全部由
 `WRT-CORE-SELF.yml` 提供。早先那份 321 行的独立工作流把通用核心的步骤抄了一份，
 既容易漂移，也让每次改动要改两处，已删除。
 

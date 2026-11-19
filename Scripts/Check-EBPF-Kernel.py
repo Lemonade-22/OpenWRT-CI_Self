@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the actual ophub kernel archive before packing a dae/daed, fake-flow and SONiC fullcone image."""
+"""Check the actual ophub kernel archive before packing any eBPF proxy (daed / dae / honk), fake-flow and SONiC fullcone image."""
 import argparse
 import io
 import re

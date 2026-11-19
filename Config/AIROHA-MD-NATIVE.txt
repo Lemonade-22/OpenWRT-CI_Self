@@ -8,5 +8,5 @@ CONFIG_PACKAGE_luci-app-airoha-npu=y
 CONFIG_KERNEL_DEVMEM=y
 CONFIG_BUSYBOX_CUSTOM=y
 CONFIG_BUSYBOX_CONFIG_DEVMEM=y
-# eBPF/BTF configuration is applied and verified through Scripts/DAEDE.sh.
+# eBPF/BTF configuration is applied and verified through Scripts/EBPF.sh.
 

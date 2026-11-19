@@ -96,7 +96,7 @@ class Arm64Tests(unittest.TestCase):
         return path
 
     def check(self, archive, *args):
-        return subprocess.run([sys.executable, str(ROOT / 'Scripts/Check-DAEDE-Kernel.py'),
+        return subprocess.run([sys.executable, str(ROOT / 'Scripts/Check-EBPF-Kernel.py'),
                                str(archive), '--fakeflow', *args], capture_output=True, text=True)
 
     def test_kernel_requires_every_selected_dtb(self):
