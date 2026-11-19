@@ -6,8 +6,6 @@ on:
     paths:
       - '.github/workflows/*.yml'
       - 'Custom/patches/wrt-core-self.patch'
-      - 'Scripts/kernel_compat.py'
-      - 'Custom/tests/test_kernel_compat.py'
       - 'Scripts/Device.sh'
       - 'Scripts/Device-Hooks/**'
       - 'Scripts/Generate-Wrt-Core.py'
@@ -17,8 +15,6 @@ on:
     paths:
       - '.github/workflows/*.yml'
       - 'Custom/patches/wrt-core-self.patch'
-      - 'Scripts/kernel_compat.py'
-      - 'Custom/tests/test_kernel_compat.py'
       - 'Scripts/Device.sh'
       - 'Scripts/Device-Hooks/**'
       - 'Scripts/Generate-Wrt-Core.py'
@@ -41,4 +37,3 @@ jobs:
       - name: Test device hooks
         run: python3 -m unittest discover -s Custom/tests -p test_device_hooks.py -v
       - name: Test honk TCX kernel requirements
-        run: python3 -m unittest discover -s Custom/tests -p test_kernel_compat.py -v

@@ -3,7 +3,6 @@
 # GRUB/VMDK、128M 内核分区。dae/daed/honk 的依赖由核心 workflow 负责：
 # Scripts/EBPF.sh 写入 Config/EBPF.txt 的 eBPF 前置项（BTF/cgroup/kprobes/
 # BPF_EVENTS/XDP_SOCKETS 与 kmod-sched-bpf、kmod-veth、nft-tproxy 等），
-# Scripts/kernel_compat.py 打开 honk 需要的 TCX（NET_CLS_ACT + NET_XGRESS）。
 # 三个本体（daed/dae/luci-app-daede）和 honk 一律不选，用户装的时候才有东西可配。
 name: X86
 run-name: ${{ inputs.TEST && '仅输出配置' || '完整编译' }} · X86-64 · ${{ inputs.BRANCH }}

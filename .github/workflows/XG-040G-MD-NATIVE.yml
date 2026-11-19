@@ -212,11 +212,9 @@ jobs:
             done < "$GITHUB_WORKSPACE/Config/AIROHA-DEVMEM.txt"
           fi
           bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" configure
-          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
           make defconfig -j$(nproc)
           bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
-          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
           bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" verify
           grep -qx 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_nokia_xg-040g-md-ubi=y' .config
           grep -qx 'CONFIG_PACKAGE_luci-app-airoha-npu=y' .config
@@ -239,7 +237,6 @@ jobs:
           cd ./wrt/
 
           make -j$(nproc) || make -j1 V=s
-          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify-kernel
 
       - name: Verify native image and eBPF kernel
         shell: bash
