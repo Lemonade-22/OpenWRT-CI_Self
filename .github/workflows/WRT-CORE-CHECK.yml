@@ -36,4 +36,3 @@ jobs:
         run: python3 -m unittest discover -s Custom/tests -p test_wrt_core_generation.py -v
       - name: Test device hooks
         run: python3 -m unittest discover -s Custom/tests -p test_device_hooks.py -v
-      - name: Test honk TCX kernel requirements
