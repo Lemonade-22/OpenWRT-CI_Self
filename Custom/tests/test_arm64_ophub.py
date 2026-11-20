@@ -32,8 +32,10 @@ class Arm64Tests(unittest.TestCase):
         self.root = Path(self.directory.name)
 
     def test_select_one_or_both_devices(self):
-        self.assertEqual([p['board'] for p in profiles.select('all')], ['panther-x2', 'fine3399'])
+        self.assertEqual([p['board'] for p in profiles.select('all')],
+                         ['panther-x2', 'fine3399', 'nanopc-t4'])
         self.assertEqual([p['board'] for p in profiles.select('fine3399')], ['fine3399'])
+        self.assertEqual(profiles.select('nanopc-t4')[0]['dtb'], 'rk3399-nanopc-t4.dtb')
         self.assertEqual(profiles.select('panther-x2')[0]['dtb'], 'rk3566-panther-x2.dtb')
         with self.assertRaises(KeyError):
             profiles.select('unknown-board')
@@ -51,7 +53,9 @@ class Arm64Tests(unittest.TestCase):
             'r301:Panther-X2:rk3566:rk3566-panther-x2.dtb:NA:u-boot.itb:idbloader.img:'
             '4GB:stable/6.18.y:rockchip:rk3566:armbianEnv.txt:upstream:panther-x2:yes\n'
             'r416:Fine3399:rk3399:rk3399-fine3399.dtb:trust.bin:uboot.img:idbloader.bin:'
-            '4GB:stable/6.18.y:rockchip:rk3399:armbianEnv.txt:upstream:fine3399:yes\n')
+            '4GB:stable/6.18.y:rockchip:rk3399:armbianEnv.txt:upstream:fine3399:yes\n'
+            'r430:NanoPC-T4:rk3399:rk3399-nanopc-t4.dtb:trust.bin:uboot.img:idbloader.bin:'
+            '4GB:stable/6.18.y:rockchip:rk3399:armbianEnv.txt:upstream:nanopc-t4:yes\n')
         selected = profiles.select('all')
         for profile in selected:
             folder = self.root / 'rockchip' / profile['board']

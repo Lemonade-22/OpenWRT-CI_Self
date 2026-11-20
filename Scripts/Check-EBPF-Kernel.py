@@ -52,6 +52,19 @@ DEVICES = {
         },
         "label": "Fine3399 network drivers (STMMAC, DWMAC_ROCKCHIP, REALTEK_PHY, USB_RTL8152)",
     },
+    "nanopc-t4": {
+        "symbols": {
+            "STMMAC_ETH": ("y", "m"),
+            "DWMAC_ROCKCHIP": ("y", "m"),
+            "REALTEK_PHY": ("y", "m"),
+        },
+        "modules": {
+            "STMMAC_ETH": "stmmac",
+            "DWMAC_ROCKCHIP": "dwmac_rockchip",
+            "REALTEK_PHY": "realtek",
+        },
+        "label": "NanoPC-T4 network drivers (STMMAC, DWMAC_ROCKCHIP, REALTEK_PHY for RTL8211E)",
+    },
     "panther-x2": {
         "symbols": {},
         "modules": {},

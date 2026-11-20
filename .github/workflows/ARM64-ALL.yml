@@ -10,6 +10,7 @@ on:
           - all
           - panther-x2
           - fine3399
+          - nanopc-t4
         default: all
 
 permissions:

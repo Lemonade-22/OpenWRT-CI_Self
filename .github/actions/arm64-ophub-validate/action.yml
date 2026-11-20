@@ -2,7 +2,7 @@ name: Validate ARM64 OPhub integration
 description: Select devices and validate locked board recipes, boot resources and shared helpers.
 inputs:
   device:
-    description: all, panther-x2 or fine3399
+    description: all, panther-x2, fine3399 or nanopc-t4
     default: all
 outputs:
   matrix:
@@ -48,6 +48,7 @@ runs:
         sparse-checkout: |
           u-boot/rockchip/panther-x2
           u-boot/rockchip/fine3399
+          u-boot/rockchip/nanopc-t4
     - name: Checkout upstream plugin configuration
       uses: actions/checkout@v5
       with:
