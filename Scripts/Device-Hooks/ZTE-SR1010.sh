@@ -92,6 +92,20 @@ prepare() {
 	[ -f "$source_root/target/linux/zte/zx279133/config-6.18" ] || {
 		echo "::error::config-6.18 unavailable for the zte target" >&2; exit 1; }
 
+	# 3b) COMPAT：zte-mesh 要在沙箱里执行厂商的 32 位 ARM multiapd。
+	# cnjn 现役 config-7.3 带这组符号（原生执行），config-6.18 是老版没带，
+	# 这里对齐补上；缺了它 zte-mesh 只能退 qemu-arm-static 手工方案。
+	if ! grep -q '^CONFIG_COMPAT=y$' "$source_root/target/linux/zte/zx279133/config-6.18"; then
+		cat >> "$source_root/target/linux/zte/zx279133/config-6.18" <<'COMPAT'
+
+# 32-bit ARM userspace (vendor multiapd in zte-mesh sandbox); mirrors config-7.3
+CONFIG_COMPAT=y
+CONFIG_COMPAT_OLD_SIGACTION=y
+CONFIG_COMPAT_32BIT_TIME=y
+CONFIG_COMPAT_BINFMT_ELF=y
+COMPAT
+	fi
+
 	# 4) VIKINGYFY/packages：homeproxy(+sing-box) 与 wolultra，目录直拷
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
