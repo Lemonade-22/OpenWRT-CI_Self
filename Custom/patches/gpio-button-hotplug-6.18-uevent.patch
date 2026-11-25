@@ -1,0 +1,127 @@
+diff --git a/package/kernel/gpio-button-hotplug/src/gpio-button-hotplug.c b/package/kernel/gpio-button-hotplug/src/gpio-button-hotplug.c
+index e519bf8..bde2741 100644
+--- a/package/kernel/gpio-button-hotplug/src/gpio-button-hotplug.c
++++ b/package/kernel/gpio-button-hotplug/src/gpio-button-hotplug.c
+@@ -32,6 +32,7 @@
+ #include <linux/gpio/consumer.h>
+ 
+ #define BH_SKB_SIZE	2048
++#define BH_ENV_MAX	16
+ 
+ #define DRV_NAME	"gpio-keys"
+ #define PFX	DRV_NAME ": "
+@@ -42,7 +43,8 @@ struct bh_event {
+ 	char			*action;
+ 	unsigned long		seen;
+ 
+-	struct sk_buff		*skb;
++	char			*envp[BH_ENV_MAX];
++	int			nvars;
+ 	struct work_struct	work;
+ };
+ 
+@@ -65,8 +67,6 @@ struct gpio_keys_button_data {
+ 	const struct gpio_keys_button *b;
+ };
+ 
+-extern u64 uevent_next_seqnum(void);
+-
+ #define BH_MAP(_code, _name)		\
+ 	{				\
+ 		.code = (_code),	\
+@@ -106,6 +106,8 @@ static const struct bh_map button_map[] = {
+ 
+ /* -------------------------------------------------------------------------*/
+ 
++static struct kobject *bh_kobj;
++
+ static __printf(3, 4)
+ int bh_event_add_var(struct bh_event *event, int argv, const char *format, ...)
+ {
+@@ -126,10 +128,15 @@ int bh_event_add_var(struct bh_event *event, int argv, const char *format, ...)
+ 		return -ENOMEM;
+ 	}
+ 
+-	s = skb_put(event->skb, len + 1);
+-	strcpy(s, buf);
++	if (event->nvars >= BH_ENV_MAX - 1)
++		return -ENOMEM;
+ 
+-	pr_debug(PFX "added variable '%s'\n", s);
++	event->envp[event->nvars] = kstrdup(buf, GFP_KERNEL);
++	if (!event->envp[event->nvars])
++		return -ENOMEM;
++	event->nvars++;
++
++	pr_debug(PFX "added variable '%s'\n", buf);
+ 
+ 	return 0;
+ }
+@@ -169,9 +176,7 @@ static int button_hotplug_fill_event(struct bh_event *event)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = bh_event_add_var(event, 0, "SEQNUM=%llu", uevent_next_seqnum());
+-
+-	return ret;
++	return 0;
+ }
+ 
+ static void button_hotplug_work(struct work_struct *work)
+@@ -179,26 +184,26 @@ static void button_hotplug_work(struct work_struct *work)
+ 	struct bh_event *event = container_of(work, struct bh_event, work);
+ 	int ret = 0;
+ 
+-	event->skb = alloc_skb(BH_SKB_SIZE, GFP_KERNEL);
+-	if (!event->skb)
+-		goto out_free_event;
++	int i;
++
++	memset(event->envp, 0, sizeof(event->envp));
++	event->nvars = 0;
+ 
+ 	ret = bh_event_add_var(event, 0, "%s@", event->action);
+ 	if (ret)
+-		goto out_free_skb;
++		goto out_free_env;
+ 
+ 	ret = button_hotplug_fill_event(event);
+ 	if (ret)
+-		goto out_free_skb;
++		goto out_free_env;
+ 
+-	NETLINK_CB(event->skb).dst_group = 1;
+-	broadcast_uevent(event->skb, 0, 1, GFP_KERNEL);
++	ret = kobject_uevent_env(bh_kobj, KOBJ_CHANGE, event->envp);
+ 
+- out_free_skb:
+-	if (ret) {
++ out_free_env:
++	if (ret)
+ 		pr_err(PFX "work error %d\n", ret);
+-		kfree_skb(event->skb);
+-	}
++	for (i = 0; i < event->nvars; i++)
++		kfree(event->envp[i]);
+  out_free_event:
+ 	kfree(event);
+ }
+@@ -704,6 +709,10 @@ static int __init gpio_button_init(void)
+ {
+ 	int ret;
+ 
++	bh_kobj = kobject_create_and_add("gpio-button-hotplug", NULL);
++	if (!bh_kobj)
++		return -ENOMEM;
++
+ 	ret = platform_driver_register(&gpio_keys_driver);
+ 	if (ret)
+ 		return ret;
+@@ -717,6 +726,7 @@ static int __init gpio_button_init(void)
+ 
+ static void __exit gpio_button_exit(void)
+ {
++	kobject_put(bh_kobj);
+ 	platform_driver_unregister(&gpio_keys_driver);
+ 	platform_driver_unregister(&gpio_keys_polled_driver);
+ }

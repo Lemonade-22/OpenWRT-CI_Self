@@ -145,6 +145,15 @@ COMPAT
 	# 注：luci-app-static-gw 由 Scripts/Static-Gateway.sh 负责（clone + 强制选中），
 	# 这里不再重复，否则 git clone 目标已存在会直接失败。
 
+	# 4c) gpio-button-hotplug：内核 6.18 移除了 broadcast_uevent 与
+	# uevent_next_seqnum（按键事件原本走 netlink skb 广播），该包编译必失败。
+	# 补丁改为标准 kobject_uevent_env 路径，功能等价（仅少 SEQNUM 变量）。
+	gpio_patch="$ci_root/Custom/patches/gpio-button-hotplug-6.18-uevent.patch"
+	if [ -f "$gpio_patch" ]; then
+		( cd "$source_root" && patch -p1 --forward --silent < "$gpio_patch" ) || \
+			echo "::warning::gpio-button-hotplug uevent patch not applied (already patched?)" >&2
+	fi
+
 	# 5) zte-mesh feed：cnjn 的种子从它取 zte-mesh / luci-app-zte-mesh
 	if ! grep -q "zte_mesh" "$source_root/feeds.conf.default" 2>/dev/null; then
 		echo 'src-git zte_mesh https://github.com/cnjn/zte-mesh.git' >> "$source_root/feeds.conf.default"
