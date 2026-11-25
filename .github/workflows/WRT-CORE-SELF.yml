@@ -265,6 +265,8 @@ jobs:
             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv" || {
               # 失败后把关键包的构建日志打出来，CI 输出里才能看到真实错误
               for f in logs/package/kernel/bpf-headers/compile.txt \
+                       logs/package/kernel/linux/compile.txt \
+                       logs/package/libs/toolchain/compile.txt \
                        logs/package/libs/liblua/compile.txt; do
                 [ -f "$f" ] && { echo "=== $f ==="; tail -150 "$f"; }
               done

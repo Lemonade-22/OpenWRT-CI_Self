@@ -133,6 +133,37 @@ CONFIG_COMPAT_BINFMT_ELF=y
 COMPAT
 	fi
 
+	# 3c) ksmbd：6.18 的 SMB_SERVER select CRYPTO_LIB_ARC4，ksmbd.ko 因此引用
+	# lib/crypto/libarc4.ko；而 fs.mk 里 KernelPackage/fs-ksmbd 的 DEPENDS 没写
+	# kmod-crypto-arc4，libarc4.ko 就成了无主模块，打包时必然报
+	#   Package kmod-fs-ksmbd is missing dependencies ... libarc4.ko
+	# crypto.mk 的 KernelPackage/crypto-arc4 同时收 arc4.ko 与 libarc4.ko，
+	# 补进 DEPENDS 即可（OpenWrt 的缺依赖检查只读 DEPENDS 包的 .provides）。
+	# 注：6.18 里该 Kconfig 符号是 CONFIG_SMB_SERVER（不是 CONFIG_KSMBD），
+	# 由 kmod 的 KCONFIG 带出，config-6.18 不必追加——追加了反而是无效符号。
+	ksmbd_fs_mk="$source_root/package/kernel/linux/modules/fs.mk"
+	if ! grep -q 'kmod-crypto-arc4' "$ksmbd_fs_mk"; then
+		python3 - "$ksmbd_fs_mk" <<'PYKSMBD'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+head = "define KernelPackage/fs-ksmbd\n"
+start = s.find(head)
+if start < 0:
+    raise SystemExit("::error::fs-ksmbd block not found in fs.mk")
+end = s.find("\nendef", start)
+if end < 0:
+    raise SystemExit("::error::fs-ksmbd block has no endef")
+block = s[start:end]
+old = "\t  +kmod-fs-smbfs-common\n"
+if old not in block:
+    raise SystemExit("::error::fs-ksmbd DEPENDS layout changed; cannot add kmod-crypto-arc4")
+block = block.replace(old, "\t  +kmod-fs-smbfs-common \\\n\t  +kmod-crypto-arc4\n", 1)
+open(p, "w", encoding="utf-8", newline="").write(s[:start] + block + s[end:])
+print("fs.mk: kmod-fs-ksmbd DEPENDS += kmod-crypto-arc4 (ships libarc4.ko)")
+PYKSMBD
+	fi
+
 	# 4) VIKINGYFY/packages：homeproxy(+sing-box) 与 wolultra，目录直拷
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
