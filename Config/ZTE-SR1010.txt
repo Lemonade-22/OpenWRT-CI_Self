@@ -247,9 +247,6 @@ CONFIG_KERNEL_XDP_SOCKETS=y
 #   fwupdate/luci-app-fwupdate      原厂升级通道
 #   mcfast/kmod-zte-*               快速转发与硬件驱动
 
-# 代理：VIKINGYFY/packages 注入的 homeproxy（依赖 sing-box，同仓库提供）。
-CONFIG_PACKAGE_luci-app-homeproxy=y
-
 # WOL：VIKINGYFY/packages 注入的 wolultra。
 CONFIG_PACKAGE_luci-app-wolultra=y
 

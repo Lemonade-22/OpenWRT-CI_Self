@@ -9,8 +9,8 @@
 # 因此本钩子在注入后要 1) 把 KERNEL_PATCHVER 改回 6.18；2) 删掉 patches-7.3；
 # 3) 删掉 Makefile 里"禁止外部内核树"的 $(error；4) 补回 6.18 时代的 config-6.18。
 #
-# 代理与 WOL 来自 VIKINGYFY/packages（luci-app-homeproxy + sing-box、luci-app-wolultra），
-# 以目录拷贝方式注入，不加 feed。
+# WOL 来自 VIKINGYFY/packages（luci-app-wolultra），以目录拷贝方式注入，不加 feed。
+# homeproxy/sing-box 已移除（不再注入、不再选中）。
 #
 # zte-mesh 是独立 feed（cnjn/zte-mesh.git），在 prepare 追加到 feeds.conf.default，
 # 时序上 prepare(L153) 早于 feeds update(L187) 和 make defconfig(L217)。
@@ -164,10 +164,10 @@ print("fs.mk: kmod-fs-ksmbd DEPENDS += kmod-crypto-arc4 (ships libarc4.ko)")
 PYKSMBD
 	fi
 
-	# 4) VIKINGYFY/packages：homeproxy(+sing-box) 与 wolultra，目录直拷
+	# 4) VIKINGYFY/packages：wolultra / gecoosac，目录直拷（homeproxy、sing-box 已移除）
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
-	for p in luci-app-homeproxy sing-box luci-app-wolultra gecoosac luci-app-gecoosac; do
+	for p in luci-app-wolultra gecoosac luci-app-gecoosac; do
 		[ -d "$VIKY_TMP/$p" ] || { echo "::error::$p missing in VIKINGYFY/packages" >&2; exit 1; }
 		rm -rf "$source_root/package/$p"
 		cp -a "$VIKY_TMP/$p" "$source_root/package/$p"
@@ -207,8 +207,6 @@ configure() {
 	# 种子已应用、defconfig 已跑过：确认 zte 目标与关键包都在
 	grep -q '^CONFIG_TARGET_zte=y$' "$source_root/.config" || {
 		echo "::error::zte target missing after defconfig" >&2; exit 1; }
-	grep -q '^CONFIG_PACKAGE_luci-app-homeproxy=y$' "$source_root/.config" || {
-		echo "::error::homeproxy dropped by defconfig" >&2; exit 1; }
 }
 
 verify() {
