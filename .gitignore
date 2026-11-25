@@ -1,2 +1,9 @@
 __pycache__/
 *.pyc
+
+# 运行时/缓存/系统垃圾
+.local/
+*.db
+*.log
+_ci_logs/
+%SystemDrive%/
