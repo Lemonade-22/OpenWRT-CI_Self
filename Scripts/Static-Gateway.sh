@@ -7,6 +7,7 @@ package_dir=package/luci-app-static-gw
 
 case "${1:-}" in
   configure)
+    rm -rf "$package_dir"
     git clone --depth=1 --single-branch --branch main \
       https://github.com/Lemonade-22/luci-app-static-gw.git "$package_dir"
     echo "luci-app-static-gw source: $(git -C "$package_dir" rev-parse HEAD)"

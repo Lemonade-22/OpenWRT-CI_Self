@@ -25,8 +25,7 @@ CNJN_KERNEL_FORK="https://github.com/Lemonade-22/linux-mainline-zte-zxslc-sr1010
 VIKY_PACKAGES="https://github.com/VIKINGYFY/packages.git"
 CNJN_TMP="${TMPDIR:-/tmp}/cnjn-immortalwrt-zte"
 VIKY_TMP="${TMPDIR:-/tmp}/vikingyfy-packages"
-STATIC_GW_REPO="https://github.com/Lemonade-22/luci-app-static-gw.git"
-STATIC_GW_TMP="${TMPDIR:-/tmp}/luci-app-static-gw"
+
 
 case "${WRT_CONFIG:-}" in
 	ZTE-SR1010) ;;
@@ -133,13 +132,8 @@ COMPAT
 		cp -a "$VIKY_TMP/$p" "$source_root/package/$p"
 	done
 
-	# 4b) luci-app-static-gw：按主机绑网关/DNS，自有仓库，根目录即包
-	rm -rf "$STATIC_GW_TMP"
-	git clone --depth=1 "$STATIC_GW_REPO" "$STATIC_GW_TMP"
-	[ -f "$STATIC_GW_TMP/Makefile" ] || { echo "::error::static-gw missing Makefile" >&2; exit 1; }
-	rm -rf "$source_root/package/luci-app-static-gw"
-	cp -a "$STATIC_GW_TMP" "$source_root/package/luci-app-static-gw"
-	rm -rf "$source_root/package/luci-app-static-gw/.git"
+	# 注：luci-app-static-gw 由 Scripts/Static-Gateway.sh 负责（clone + 强制选中），
+	# 这里不再重复，否则 git clone 目标已存在会直接失败。
 
 	# 5) zte-mesh feed：cnjn 的种子从它取 zte-mesh / luci-app-zte-mesh
 	if ! grep -q "zte_mesh" "$source_root/feeds.conf.default" 2>/dev/null; then
