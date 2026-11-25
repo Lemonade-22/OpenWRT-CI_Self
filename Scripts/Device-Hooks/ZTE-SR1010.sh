@@ -188,6 +188,12 @@ CONFIG_CRYPTO_ARC4=y
 ARC4
 	fi
 
+	# 3e) bpf-headers 会把 target/linux/generic/{backport,pending,hack}-6.18 的补丁
+	# 打到官方内核源码上以生成 eBPF 头文件；但真实内核是外部 cnjn 树，不走这些补丁。
+	# 762（MxL862xx DSA tag）在 6.18.60 上两个 hunk 全部失败，直接删掉：
+	# 它只影响头文件生成，不影响固件内核与 DSA 驱动。
+	find "$source_root/target/linux/generic" -maxdepth 2 -name '762-v7.0-net-dsa-add-tag-format-for-MxL862xx-switches.patch' -delete 2>/dev/null || true
+
 	# 4) VIKINGYFY/packages：wolultra / gecoosac，目录直拷（homeproxy、sing-box 已移除）
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
