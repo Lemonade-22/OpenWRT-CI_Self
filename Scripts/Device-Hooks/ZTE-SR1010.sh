@@ -25,6 +25,8 @@ CNJN_KERNEL_FORK="https://github.com/Lemonade-22/linux-mainline-zte-zxslc-sr1010
 VIKY_PACKAGES="https://github.com/VIKINGYFY/packages.git"
 CNJN_TMP="${TMPDIR:-/tmp}/cnjn-immortalwrt-zte"
 VIKY_TMP="${TMPDIR:-/tmp}/vikingyfy-packages"
+STATIC_GW_REPO="https://github.com/Lemonade-22/luci-app-static-gw.git"
+STATIC_GW_TMP="${TMPDIR:-/tmp}/luci-app-static-gw"
 
 case "${WRT_CONFIG:-}" in
 	ZTE-SR1010) ;;
@@ -83,6 +85,22 @@ prepare() {
 	# 只删 $(error 行；残留的 ifneq/endif 变成无害空壳
 	sed -i '/The ZTE target uses its Linux/d' "$source_root/target/linux/zte/Makefile"
 
+	# 2b) 内核版本串小写化：APK 包格式的 version 字段不接受大写字母，而
+	# sanitize_uri 只替换符号不转大小写——fork 属于 Lemonade-22，会拼出
+	# github_com_Lemonade_22_... 这样的非法版本，导致所有内核模块打包失败。
+	python3 - "$source_root/include/kernel-version.mk" <<'PYLOWER'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+old = "sanitize_uri=$(call qstrip,$(subst @,_,$(subst :,_,$(subst .,_,$(subst -,_,$(subst /,_,$(1)))))))"
+new = "sanitize_uri=$(call qstrip,$(shell echo $(subst @,_,$(subst :,_,$(subst .,_,$(subst -,_,$(subst /,_,$(1)))))) | tr A-Z a-z))"
+if old in s:
+    open(p, "w", encoding="utf-8", newline="").write(s.replace(old, new))
+    print("kernel-version.mk: sanitize_uri lowercased")
+else:
+    print("::warning::sanitize_uri pattern not found (already patched?)")
+PYLOWER
+
 	# 3) config-6.18：7.3 化的树里可能只剩 config-7.3，6.18 时代配置从钉死的提交取
 	if [ ! -f "$source_root/target/linux/zte/zx279133/config-6.18" ]; then
 		curl -fsSL --retry 3 --max-time 60 \
@@ -109,11 +127,19 @@ COMPAT
 	# 4) VIKINGYFY/packages：homeproxy(+sing-box) 与 wolultra，目录直拷
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
-	for p in luci-app-homeproxy sing-box luci-app-wolultra; do
+	for p in luci-app-homeproxy sing-box luci-app-wolultra gecoosac luci-app-gecoosac; do
 		[ -d "$VIKY_TMP/$p" ] || { echo "::error::$p missing in VIKINGYFY/packages" >&2; exit 1; }
 		rm -rf "$source_root/package/$p"
 		cp -a "$VIKY_TMP/$p" "$source_root/package/$p"
 	done
+
+	# 4b) luci-app-static-gw：按主机绑网关/DNS，自有仓库，根目录即包
+	rm -rf "$STATIC_GW_TMP"
+	git clone --depth=1 "$STATIC_GW_REPO" "$STATIC_GW_TMP"
+	[ -f "$STATIC_GW_TMP/Makefile" ] || { echo "::error::static-gw missing Makefile" >&2; exit 1; }
+	rm -rf "$source_root/package/luci-app-static-gw"
+	cp -a "$STATIC_GW_TMP" "$source_root/package/luci-app-static-gw"
+	rm -rf "$source_root/package/luci-app-static-gw/.git"
 
 	# 5) zte-mesh feed：cnjn 的种子从它取 zte-mesh / luci-app-zte-mesh
 	if ! grep -q "zte_mesh" "$source_root/feeds.conf.default" 2>/dev/null; then
