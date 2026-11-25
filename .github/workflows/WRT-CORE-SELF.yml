@@ -255,6 +255,9 @@ jobs:
         run: |
           cd ./wrt/
 
+          make tools/install -j$(nproc) 2>&1 | tail -3
+          make toolchain/install -j$(nproc) 2>&1 | tail -3
+          make package/kernel/bpf-headers/compile V=s 2>&1 | tail -80
           mkdir -p $GITHUB_WORKSPACE/build-reports
           make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"

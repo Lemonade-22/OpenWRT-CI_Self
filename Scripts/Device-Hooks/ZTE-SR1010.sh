@@ -174,6 +174,20 @@ print("fs.mk: kmod-fs-ksmbd DEPENDS += kmod-crypto-arc4 (ships libarc4.ko)")
 PYKSMBD
 	fi
 
+	# 3d) libarc4：kmod-mppe / kmod-fs-ksmbd 打包时报缺 libarc4.ko。
+	# 6.18 的 PPP_MPPE 与 SMB_SERVER 都 select CRYPTO_LIB_ARC4，libarc4 于是编成
+	# lib/crypto/libarc4.ko 这个无主模块；OpenWrt 的缺依赖检查只读 DEPENDS 包的
+	# .provides，缺哪个 .ko 就报哪个，逐个包往 DEPENDS 里补不现实（mppe、ksmbd
+	# 以及后续任何 select 它的包都得补一遍）。内建后不再产生 .ko，从根上消失。
+	if ! grep -q '^CONFIG_CRYPTO_LIB_ARC4=y$' "$source_root/target/linux/zte/zx279133/config-6.18"; then
+		cat >> "$source_root/target/linux/zte/zx279133/config-6.18" <<'ARC4'
+
+# libarc4 built-in: kmod-mppe / kmod-fs-ksmbd packaging misses libarc4.ko
+CONFIG_CRYPTO_LIB_ARC4=y
+CONFIG_CRYPTO_ARC4=y
+ARC4
+	fi
+
 	# 4) VIKINGYFY/packages：wolultra / gecoosac，目录直拷（homeproxy、sing-box 已移除）
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
