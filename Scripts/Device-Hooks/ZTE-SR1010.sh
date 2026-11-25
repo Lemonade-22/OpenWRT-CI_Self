@@ -21,7 +21,7 @@ source_root="$(pwd)"
 # cnjn 仓库里 6.18 时代的提交：config-6.18 从这里取。
 CNJN_GIT="https://github.com/cnjn/immortalwrt.git"
 CNJN_SPARSE_COMMIT="bbda4f1c8"
-CNJN_KERNEL_FORK="https://github.com/cnjn/linux-mainline-zte-zxslc-sr1010.git"
+CNJN_KERNEL_FORK="https://github.com/Lemonade-22/linux-mainline-zte-zxslc-sr1010.git"
 VIKY_PACKAGES="https://github.com/VIKINGYFY/packages.git"
 CNJN_TMP="${TMPDIR:-/tmp}/cnjn-immortalwrt-zte"
 VIKY_TMP="${TMPDIR:-/tmp}/vikingyfy-packages"
