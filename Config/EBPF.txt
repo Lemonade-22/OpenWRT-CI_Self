@@ -4,8 +4,9 @@
 #   * 内核侧：BTF、cgroup v2、kprobes、BPF syscall/JIT、BPF events、XDP sockets
 #   * 模块侧：kmod-sched-bpf、kmod-veth、kmod-nft-queue、nft-tproxy
 #
-# TCX（NET_XGRESS）仅 honk 需要；honk 已停止维护，注册脚本 kernel_compat.py
-# 已随 7bf86d8 移除。外装 honk 的场景不再受支持。
+# honk 另需 TCX（NET_CLS_ACT + NET_XGRESS），那两个是隐藏选项，直接写 .config
+# 会被 defconfig 静默丢弃，所以由 Scripts/kernel_compat.py 在构建时注册进
+# config/Config-kernel.in 后再开。固件内核必须带 TCX，外装 honk 才挂得上。
 #
 # 固件不内置任何后端本体（daed / dae / honk / luci-app-*），
 # 用户按需自行安装，包依赖由 opkg 自己解决。
