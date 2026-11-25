@@ -57,7 +57,8 @@ prepare() {
 		package/utils/luci-app-zte-fwslot \
 		package/utils/fwupdate \
 		package/utils/luci-app-fwupdate \
-		package/network/services/mcfast
+		package/network/services/mcfast \
+		package/kernel/linux/modules/zte.mk
 
 	# cp -a 源 目标：目标已存在时会把源“塞进”目标里形成嵌套目录，
 	# 必须先清场保证幂等（第二次 CI 运行同样适用）
@@ -77,6 +78,15 @@ prepare() {
 		rm -rf "$source_root/package/$p"
 		cp -a "$CNJN_TMP/package/$p" "$source_root/package/$p"
 	done
+
+	# 1b) kmod-zte-npu / kmod-zte-fnoffload / kmod-zte-rtl8372n 定义在
+	# package/kernel/linux/modules/zte.mk，不在 target/linux/zte 里。不拷它，
+	# sr1010.mk 的 DEVICE_PACKAGES 就会在 target/install 阶段被 apk 判为
+	# "no such package"，编译停在 target/linux failed to build。
+	mkdir -p "$source_root/package/kernel/linux/modules"
+	rm -f "$source_root/package/kernel/linux/modules/zte.mk"
+	cp -a "$CNJN_TMP/package/kernel/linux/modules/zte.mk" \
+		"$source_root/package/kernel/linux/modules/zte.mk"
 
 	# 2) 内核切到 6.18 fork 模式
 	sed -i 's/^KERNEL_PATCHVER:=7.3$/KERNEL_PATCHVER:=6.18/' "$source_root/target/linux/zte/Makefile"
@@ -215,6 +225,25 @@ configure() {
 		-e 's/^CONFIG_PACKAGE_luci-app-homeproxy=y$/# CONFIG_PACKAGE_luci-app-homeproxy is not set/' \
 		-e 's/^CONFIG_PACKAGE_sing-box=y$/# CONFIG_PACKAGE_sing-box is not set/' \
 		"$source_root/.config"
+
+	# kmod-ovpn-backports：GENERAL.txt 默认开的 7.3 驱动回移包，在 6.18 外部内核树上
+	# 编译失败（MODULE_VERSION(OVPN_MODULE_VERSION) 未定义）。它只被带 DCO 的 openvpn
+	# 变体依赖（feeds/packages/net/openvpn/Makefile），本设备一个 openvpn 包都没选，
+	# 纯属无用，直接关掉。
+	sed -i 's/^CONFIG_PACKAGE_kmod-ovpn-backports=y$/# CONFIG_PACKAGE_kmod-ovpn-backports is not set/' \
+		"$source_root/.config"
+
+	# kmod-mtd-rw：GENERAL.txt（第 35 行）默认开，但它是 2021 年的老模块，用内核私有
+	# API，在 6.18 外部内核树上不可靠；而且它一旦被 defconfig 关掉、旧 apk 还留在索引里，
+	# 新内核 hash 会与旧 apk 的 kernel= 依赖冲突，apk 直接报 Error 99。这里统一关掉。
+	sed -i 's/^CONFIG_PACKAGE_kmod-mtd-rw=y$/# CONFIG_PACKAGE_kmod-mtd-rw is not set/' \
+		"$source_root/.config"
+
+	# luci-app-samba4：GENERAL.txt 默认开，但它把 samba4-server 整套拖进来
+	# （/usr/lib/samba 约 20 MB），而本设备已有 ksmbd（luci-app-ksmbd）做 SMB 服务，
+	# 功能重复且直接把镜像顶出 41 MiB 槽位。关掉。
+	sed -i -E 's/^CONFIG_PACKAGE_(samba4[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
+		"$source_root/.config"
 }
 
 verify() {
@@ -223,7 +252,8 @@ verify() {
 		CONFIG_PACKAGE_zerotier CONFIG_PACKAGE_luci-app-zerotier \
 		CONFIG_PACKAGE_luci-theme-argon CONFIG_PACKAGE_luci-app-argon-config \
 		CONFIG_PACKAGE_luci-theme-design CONFIG_PACKAGE_luci-theme-aerowert \
-		CONFIG_PACKAGE_luci-app-homeproxy CONFIG_PACKAGE_sing-box; do
+		CONFIG_PACKAGE_luci-app-homeproxy CONFIG_PACKAGE_sing-box \
+		CONFIG_PACKAGE_kmod-ovpn-backports; do
 		if grep -q "^$bad" "$source_root/.config" 2>/dev/null; then
 			echo "::error::forbidden package selected: $bad" >&2; exit 1
 		fi
