@@ -84,21 +84,31 @@ prepare() {
 	# 只删 $(error 行；残留的 ifneq/endif 变成无害空壳
 	sed -i '/The ZTE target uses its Linux/d' "$source_root/target/linux/zte/Makefile"
 
-	# 2b) 内核版本串小写化：APK 包格式的 version 字段不接受大写字母，而
-	# sanitize_uri 只替换符号不转大小写——fork 属于 Lemonade-22，会拼出
-	# github_com_Lemonade_22_... 这样的非法版本，导致所有内核模块打包失败。
-	python3 - "$source_root/include/kernel-version.mk" <<'PYLOWER'
+	# 2b) 内核版本串：APK 包的 version 字段必须以数字开头（且不含大写），
+	# 而外部内核树模式下 OpenWrt 用 URI 派生出 github_com_lemonade_22_...
+	# 这种字母开头的串，任何内核模块打包都会 Error 99。改为读 fork 源码里
+	# 的真实版本（6.18.60），既合法又诚实。
+	KVER="$(curl -fsSL --retry 3 --max-time 60 \
+		"https://raw.githubusercontent.com/Lemonade-22/linux-mainline-zte-zxslc-sr1010/build-6.18.60/Makefile" \
+		| awk '/^VERSION =/{v=$3} /^PATCHLEVEL =/{p=$3} /^SUBLEVEL =/{s=$3} END{if(v&&p&&s) print v"."p"."s}')"
+	case "$KVER" in
+		[0-9]*.[0-9]*.[0-9]*) ;;
+		*) echo "::error::could not read kernel version from fork (got '$KVER')" >&2; exit 1 ;;
+	esac
+	echo "Kernel version from fork: $KVER"
+	python3 - "$source_root/include/kernel-version.mk" "$KVER" <<'PYVER'
 import sys
-p = sys.argv[1]
+p, kver = sys.argv[1], sys.argv[2]
 s = open(p, encoding="utf-8").read()
-old = "sanitize_uri=$(call qstrip,$(subst @,_,$(subst :,_,$(subst .,_,$(subst -,_,$(subst /,_,$(1)))))))"
-new = "sanitize_uri=$(call qstrip,$(shell echo $(subst @,_,$(subst :,_,$(subst .,_,$(subst -,_,$(subst /,_,$(1)))))) | tr A-Z a-z))"
-if old in s:
-    open(p, "w", encoding="utf-8", newline="").write(s.replace(old, new))
-    print("kernel-version.mk: sanitize_uri lowercased")
-else:
-    print("::warning::sanitize_uri pattern not found (already patched?)")
-PYLOWER
+uri_line = "  LINUX_VERSION:=$(call sanitize_uri,$(call remove_uri_prefix,$(CONFIG_KERNEL_GIT_CLONE_URI)))"
+ref_line = "  LINUX_VERSION:=$(LINUX_VERSION)-$(call sanitize_uri,$(CONFIG_KERNEL_GIT_REF))"
+if uri_line not in s:
+    raise SystemExit("::error::kernel-version.mk layout changed; cannot pin LINUX_VERSION")
+s = s.replace(uri_line, "  LINUX_VERSION:=" + kver)
+s = s.replace(ref_line + "\n", "")
+open(p, "w", encoding="utf-8", newline="").write(s)
+print("kernel-version.mk: LINUX_VERSION pinned to " + kver)
+PYVER
 
 	# 3) config-6.18：7.3 化的树里可能只剩 config-7.3，6.18 时代配置从钉死的提交取
 	if [ ! -f "$source_root/target/linux/zte/zx279133/config-6.18" ]; then
