@@ -58,7 +58,7 @@ prepare() {
 		package/utils/fwupdate \
 		package/utils/luci-app-fwupdate \
 		package/network/services/mcfast \
-		package/kernel/linux/modules/zte.mk
+		package/kernel/linux/modules
 
 	# cp -a 源 目标：目标已存在时会把源“塞进”目标里形成嵌套目录，
 	# 必须先清场保证幂等（第二次 CI 运行同样适用）
