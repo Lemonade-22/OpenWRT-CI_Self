@@ -106,13 +106,13 @@ index c57e99d..c7ff503 100644
 -
 -          make defconfig -j$(nproc) && make clean -j$(nproc)
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" configure
-+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" configure
++          bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" configure
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" configure
 +          bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" configure
 +          make defconfig -j$(nproc)
 +          bash "$GITHUB_WORKSPACE/Scripts/Static-Gateway.sh" verify
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify
-+          bash "$GITHUB_WORKSPACE/Scripts/DAEDE.sh" verify
++          bash "$GITHUB_WORKSPACE/Scripts/EBPF.sh" verify
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify
 +          if [[ "$WRT_BRANCH" == "main" && "$WRT_CONFIG" == "ZN-M2-WIFI-NO" ]]; then
 +            for pattern in \
