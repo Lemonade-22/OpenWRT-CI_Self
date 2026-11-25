@@ -157,6 +157,13 @@ verify() {
 		echo "::error::footstrap theme missing" >&2; exit 1; }
 	grep -q '^CONFIG_PACKAGE_zte-fwslot=y$' "$source_root/.config" || {
 		echo "::error::zte-fwslot missing" >&2; exit 1; }
+
+	# mtd-rw：2021 年的老模块，用内核私有 API，在 6.18 外部内核树上编译失败；
+	# 本固件无任何包依赖它。build cache 恢复可能带回旧的 =y 残留，这里强制清掉。
+	if grep -q '^CONFIG_PACKAGE_kmod-mtd-rw=y$' "$source_root/.config"; then
+		echo "::warning::kmod-mtd-rw re-enabled by cache/defconfig; forcing off" >&2
+		sed -i 's/^CONFIG_PACKAGE_kmod-mtd-rw=y$/# CONFIG_PACKAGE_kmod-mtd-rw is not set/' "$source_root/.config"
+	fi
 }
 
 verify-image() {
