@@ -255,6 +255,9 @@ jobs:
         run: |
           cd ./wrt/
 
+          # 诊断：bpf-headers 先单独跑一次，把真实错误打进 CI 日志（失败不中断主构建）
+          make package/kernel/bpf-headers/compile V=s 2>&1 | tail -120 || true
+
           mkdir -p $GITHUB_WORKSPACE/build-reports
           make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
