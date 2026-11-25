@@ -207,6 +207,14 @@ configure() {
 	# 种子已应用、defconfig 已跑过：确认 zte 目标与关键包都在
 	grep -q '^CONFIG_TARGET_zte=y$' "$source_root/.config" || {
 		echo "::error::zte target missing after defconfig" >&2; exit 1; }
+
+	# homeproxy/sing-box 本设备不装。Config/GENERAL.txt 是所有设备共用、且在设备配置
+	# 之后拼接，里面仍写着 CONFIG_PACKAGE_luci-app-homeproxy=y，会把它带回来；
+	# 这里在 defconfig 之前改成显式 not set。两者不被任何包 select，defconfig 不会重开。
+	sed -i \
+		-e 's/^CONFIG_PACKAGE_luci-app-homeproxy=y$/# CONFIG_PACKAGE_luci-app-homeproxy is not set/' \
+		-e 's/^CONFIG_PACKAGE_sing-box=y$/# CONFIG_PACKAGE_sing-box is not set/' \
+		"$source_root/.config"
 }
 
 verify() {
@@ -214,7 +222,8 @@ verify() {
 	for bad in CONFIG_PACKAGE_dae CONFIG_PACKAGE_luci-app-dae \
 		CONFIG_PACKAGE_zerotier CONFIG_PACKAGE_luci-app-zerotier \
 		CONFIG_PACKAGE_luci-theme-argon CONFIG_PACKAGE_luci-app-argon-config \
-		CONFIG_PACKAGE_luci-theme-design CONFIG_PACKAGE_luci-theme-aerowert; do
+		CONFIG_PACKAGE_luci-theme-design CONFIG_PACKAGE_luci-theme-aerowert \
+		CONFIG_PACKAGE_luci-app-homeproxy CONFIG_PACKAGE_sing-box; do
 		if grep -q "^$bad" "$source_root/.config" 2>/dev/null; then
 			echo "::error::forbidden package selected: $bad" >&2; exit 1
 		fi
