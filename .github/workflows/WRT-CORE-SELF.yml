@@ -253,28 +253,8 @@ jobs:
       - name: Compile Firmware
         if: ${{ !inputs.WRT_TEST }}
         run: |
-          set -o pipefail
           cd ./wrt/
 
-          # bpf-headers 需要官方 linux-6.18.60.tar.xz。kernel.org 当前发布的 tarball 与
-          # target/linux/generic/kernel-6.18 里登记的 LINUX_KERNEL_HASH-6.18.60 不一致
-          # （上游重新打包），会导致下载后被判定哈希不符而删除，进而内核树无法解压。
-          # 这里以实际文件为准，回填期望值。
-          KVER_TAR=linux-6.18.60.tar.xz
-          mkdir -p dl
-          if [ ! -f "dl/$KVER_TAR" ]; then
-            curl -fL --retry 3 --retry-delay 2 -o "dl/$KVER_TAR" "https://cdn.kernel.org/pub/linux/kernel/v6.x/$KVER_TAR"
-          fi
-          if [ -f "dl/$KVER_TAR" ]; then
-            KVER_HASH=$(sha256sum "dl/$KVER_TAR" | cut -d" " -f1)
-            echo "kernel tarball hash: $KVER_HASH"
-            sed -i "s|^LINUX_KERNEL_HASH-6.18.60 = .*|LINUX_KERNEL_HASH-6.18.60 = $KVER_HASH|" target/linux/generic/kernel-6.18
-            grep LINUX_KERNEL_HASH-6.18.60 target/linux/generic/kernel-6.18
-          fi
-
-          make tools/install -j$(nproc) 2>&1 | tail -3
-          make toolchain/install -j$(nproc) 2>&1 | tail -3
-          make package/kernel/bpf-headers/compile V=s 2>&1 | tail -80
           mkdir -p $GITHUB_WORKSPACE/build-reports
           make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
