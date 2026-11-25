@@ -52,13 +52,13 @@ diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/
  	SOC := ipq8071
  	DEVICE_DTS_CONFIG := config@ac02
 diff --git a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
-index 5899e52..c8c2cc7 100644
+index a547442..4a33b6c 100755
 --- a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
-@@ -52,7 +52,15 @@ platform_pre_upgrade() {
- 
- platform_do_upgrade() {
- 	case "$(board_name)" in
+@@ -50,7 +50,15 @@ platform_do_upgrade() {
+ 	arista,c360)
+ 		arista_ap_do_upgrade "$1"
+ 		;;
 -	aliyun,ap8220|\
 +	aliyun,ap8220)
 +		CI_KERN_UBIPART="ubi_kernel"
