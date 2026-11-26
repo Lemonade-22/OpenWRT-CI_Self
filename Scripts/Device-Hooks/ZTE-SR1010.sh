@@ -259,10 +259,15 @@ configure() {
 	sed -i 's/^CONFIG_PACKAGE_kmod-mtd-rw=y$/# CONFIG_PACKAGE_kmod-mtd-rw is not set/' \
 		"$source_root/.config"
 
-	# luci-app-samba4：GENERAL.txt 默认开，但它把 samba4-server 整套拖进来
-	# （/usr/lib/samba 约 20 MB），而本设备已有 ksmbd（luci-app-ksmbd）做 SMB 服务，
-	# 功能重复且直接把镜像顶出 41 MiB 槽位。关掉。
-	sed -i -E 's/^CONFIG_PACKAGE_(samba4[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
+	# samba4：GENERAL.txt（第 9 行 luci-app-samba4=y）把它整套带进来 —— samba4-libs
+	# 8.55 MB + samba4-server 0.22 MB ≈ 8.8 MB。cnjn 原版固件的共享方案是 ksmbd
+	# （ksmbd-server + kmod-fs-ksmbd + luci-app-ksmbd + wsdd2），两者都监听 445，功能
+	# 完全重复；保持与上游一致并把 8.8 MB 还给 41 MiB 槽位，这里把 samba4 全系（含
+	# luci 前端与 i18n）显式置为 not set。正则只认 samba4 开头的包名，ksmbd /
+	# kmod-fs-ksmbd / luci-app-ksmbd / wsdd2 都不会被波及。
+	sed -i -E \
+		-e 's/^CONFIG_PACKAGE_(samba4[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
+		-e 's/^CONFIG_PACKAGE_(luci-(app|i18n)-samba4[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
 		"$source_root/.config"
 }
 
@@ -273,7 +278,9 @@ verify() {
 		CONFIG_PACKAGE_luci-theme-argon CONFIG_PACKAGE_luci-app-argon-config \
 		CONFIG_PACKAGE_luci-theme-design CONFIG_PACKAGE_luci-theme-aerowert \
 		CONFIG_PACKAGE_luci-app-homeproxy CONFIG_PACKAGE_sing-box \
-		CONFIG_PACKAGE_kmod-ovpn-backports; do
+		CONFIG_PACKAGE_kmod-ovpn-backports \
+		CONFIG_PACKAGE_samba4 CONFIG_PACKAGE_samba4-server \
+		CONFIG_PACKAGE_samba4-libs CONFIG_PACKAGE_luci-app-samba4; do
 		if grep -q "^$bad" "$source_root/.config" 2>/dev/null; then
 			echo "::error::forbidden package selected: $bad" >&2; exit 1
 		fi

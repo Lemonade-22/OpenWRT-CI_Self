@@ -116,9 +116,14 @@ CONFIG_PACKAGE_fdisk=y
 CONFIG_PACKAGE_usbutils=y
 CONFIG_PACKAGE_smartmontools=y
 
-# SMB server for the USB disks: ksmbd is the in-kernel SMB3 server (Samba 4 alone would
-# not fit the slot, and both listen on port 445). wsdd2 makes Windows list the router
-# under Network; macOS would need ksmbd-avahi-service as well.
+# SMB server for the USB disks: ksmbd is the in-kernel SMB3 server, and this is the same
+# stack the stock cnjn firmware ships (ksmbd-server + kmod-fs-ksmbd + luci-app-ksmbd +
+# wsdd2). samba4 listens on the same port 445, duplicates all of it and costs about
+# 8.8 MB (samba4-libs 8.55 + samba4-server 0.22), so it stays off — see
+# Scripts/Device-Hooks/ZTE-SR1010.sh. wsdd2 makes Windows list the router under
+# Network; macOS would need ksmbd-avahi-service as well.
+CONFIG_PACKAGE_kmod-fs-ksmbd=y
+CONFIG_PACKAGE_ksmbd-server=y
 CONFIG_PACKAGE_luci-app-ksmbd=y
 CONFIG_PACKAGE_wsdd2=y
 

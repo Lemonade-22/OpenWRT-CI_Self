@@ -7,3 +7,8 @@ __pycache__/
 *.log
 _ci_logs/
 %SystemDrive%/
+
+# 本地临时脚本 / 凭据，禁止入库
+.watch_ci.sh
+*.token
+.env
