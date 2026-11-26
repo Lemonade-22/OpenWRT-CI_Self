@@ -332,6 +332,13 @@ configure() {
 			sed -i "s/^${pref}${pkg}=y$/# ${pref}${pkg} is not set/" "$source_root/.config" 2>/dev/null || true
 		done
 	done
+	# gecoosac（集客 AC）：Config/Packages.sh 白名单会把它整组带进来，本机不需要
+	# （集客 AC 只对特定组网场景有用）。仅 SR1010 禁用，其他设备配置档不动。
+	sed -i -E \
+		-e 's/^CONFIG_PACKAGE_(gecoosac)=y$/# CONFIG_PACKAGE_\1 is not set/' \
+		-e 's/^CONFIG_PACKAGE_(luci-(app|i18n)-gecoosac[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
+		-e 's/^CONFIG_DEFAULT_(gecoosac)=y$/# CONFIG_DEFAULT_\1 is not set/' \
+		"$source_root/.config"
 }
 
 verify() {
@@ -345,7 +352,8 @@ verify() {
 		CONFIG_PACKAGE_samba4 CONFIG_PACKAGE_samba4-server \
 		CONFIG_PACKAGE_samba4-libs CONFIG_PACKAGE_luci-app-samba4 \
 		CONFIG_PACKAGE_kmod-zte-npu CONFIG_PACKAGE_kmod-zte-fnoffload \
-		CONFIG_PACKAGE_kmod-zte-rtl8372n; do
+		CONFIG_PACKAGE_kmod-zte-rtl8372n \
+		CONFIG_PACKAGE_gecoosac CONFIG_PACKAGE_luci-app-gecoosac; do
 		if grep -q "^$bad" "$source_root/.config" 2>/dev/null; then
 			echo "::error::forbidden package selected: $bad" >&2; exit 1
 		fi

@@ -127,6 +127,12 @@ CONFIG_PACKAGE_ksmbd-server=y
 CONFIG_PACKAGE_luci-app-ksmbd=y
 CONFIG_PACKAGE_wsdd2=y
 
+# gecoosac (Jike AC controller) is pulled in by the Config/Packages.sh whitelist, which
+# is shared by every device profile. SR1010 has no use for it, so it is disabled here
+# only; other device profiles keep it.
+# CONFIG_PACKAGE_gecoosac is not set
+# CONFIG_PACKAGE_luci-app-gecoosac is not set
+
 # ZTE mesh controller for the wired LAN (feed zte_mesh): the vendor multiapd in a
 # sandbox, so ZTE mesh child routers can join. It stays off until it is enabled
 # and given a Wi-Fi profile in LuCI.
