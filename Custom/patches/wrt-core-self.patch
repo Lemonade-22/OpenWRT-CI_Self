@@ -140,7 +140,7 @@ index c57e99d..c7ff503 100644
          run: |
            cd ./wrt/
  
-@@ -212,11 +253,53 @@ jobs:
+@@ -212,11 +257,92 @@ jobs:
        - name: Compile Firmware
          if: ${{ !inputs.WRT_TEST }}
          run: |
@@ -176,7 +176,46 @@ index c57e99d..c7ff503 100644
 +
 +          make tools/install -j$(nproc) 2>&1 | tail -3
 +          make toolchain/install -j$(nproc) 2>&1 | tail -3
-+          make package/kernel/bpf-headers/compile V=s 2>&1 | tail -80
++          # bpf-headers 的 generic 补丁在官方 tarball 上可能打不上（上游 stable 演进导致
++          # 上下文漂移）。这些补丁只影响生成 eBPF 头文件，不影响真实内核（外部 fork 树）。
++          # 策略：先严格整体打一遍；失败则退回官方 tarball 原样——失败的 hunk 全部跳过，
++          # uapi 头文件（bpf.h 等）在官方源码里本来就存在且够新，足以让 mcfast 等包编译通过。
++          BPF_GENERIC="target/linux/generic"
++          BPF_PATCH_LOG="$GITHUB_WORKSPACE/build-reports/bpf-headers-patches.log"
++          BPF_RELAXED_LOG="$GITHUB_WORKSPACE/build-reports/bpf-headers-relaxed.log"
++          mkdir -p "$(dirname "$BPF_PATCH_LOG")"
++          : > "$BPF_PATCH_LOG"
++          if make package/kernel/bpf-headers/compile V=s 2>&1 | tee -a "$BPF_PATCH_LOG" | tail -40; then
++            echo "bpf-headers built with generic patches applied"
++          else
++            echo "::warning::bpf-headers strict patch failed; falling back to pristine uapi headers"
++            # 清掉半成品：bpf-headers 的 build dir 与已被部分打补丁的内核树
++            rm -rf build_dir/target-*/bpf-headers build_dir/target-*/linux-* 2>/dev/null || true
++            # 临时移走 generic 补丁目录（backport*/pending*/hack*），让 quilt 无补丁可打；
++            # 目录名由树内通配推导，不写死版本号，上游升版后自动跟随。
++            BPF_MOVED=""
++            for d in "$BPF_GENERIC"/backport* "$BPF_GENERIC"/pending* "$BPF_GENERIC"/hack*; do
++              case "$d" in *.bak) continue;; esac
++              [ -d "$d" ] || continue
++              mv "$d" "$d.bak" && { mkdir -p "$d"; BPF_MOVED="$BPF_MOVED ${d##*/}"; }
++            done
++            make package/kernel/bpf-headers/compile V=s > "$BPF_RELAXED_LOG" 2>&1
++            rc=$?
++            tail -40 "$BPF_RELAXED_LOG" || true
++            # 无论成败都恢复补丁目录，保持工作树干净
++            for d in $BPF_MOVED; do
++              if [ -d "$BPF_GENERIC/$d.bak" ]; then
++                rm -rf "$BPF_GENERIC/$d"
++                mv "$BPF_GENERIC/$d.bak" "$BPF_GENERIC/$d"
++              fi
++            done
++            if [ "$rc" -ne 0 ]; then
++              echo "::error::bpf-headers failed even without generic patches; real build error"
++              tail -120 "$BPF_RELAXED_LOG" || true
++              exit 1
++            fi
++            echo "::warning::bpf-headers built with pristine uapi headers (generic patches skipped)"
++          fi
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
 -            make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
@@ -195,7 +234,7 @@ index c57e99d..c7ff503 100644
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +336,8 @@ jobs:
+@@ -264,9 +375,8 @@ jobs:
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -207,7 +246,7 @@ index c57e99d..c7ff503 100644
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,33 +352,45 @@ jobs:
+@@ -281,33 +391,45 @@ jobs:
              make clean -j$(nproc)
            fi
  
