@@ -193,6 +193,30 @@ ARC4
 	# 762（MxL862xx DSA tag）在 6.18.60 上两个 hunk 全部失败，直接删掉：
 	# 它只影响头文件生成，不影响固件内核与 DSA 驱动。
 	find "$source_root/target/linux/generic" -maxdepth 2 -name '762-v7.0-net-dsa-add-tag-format-for-MxL862xx-switches.patch' -delete 2>/dev/null || true
+	# 3g) 三个 zte kmod 在 6.18.60 fork 上无实体文件可打：config-6.18 里
+	# CONFIG_ZTE_ZX279133_ETH / CONFIG_ZTE_ZX279133_RTL8372N 都是 =y（内建，不产出
+	# .ko），LAN_CONDUIT 是 bool（同理无 .ko），FNOFFLOAD 符号在 fork 里已消失。
+	# 因此 npu.ko / fnoffload.ko / zx279133-rtl8372n.ko 都不存在，apk mkpkg 会报
+	# "module ... is missing"，编译停在 package/kernel/linux failed to build。
+	# NPU offload 功能由内核内建部分承担，MODPARAMS.npu 的运行时开关随之失效。
+	# image/Makefile 由 cnjn 树整份覆盖，必须在本段（拷贝之后）删包。
+	if [ -f "$source_root/target/linux/zte/image/Makefile" ]; then
+		python3 - "$source_root/target/linux/zte/image/Makefile" <<'PYZTE'
+import sys
+pkgs = {'kmod-zte-npu', 'kmod-zte-fnoffload', 'kmod-zte-rtl8372n'}
+p = sys.argv[1]
+lines = open(p, encoding='utf-8').read().split('\n')
+out = []
+for ln in lines:
+    toks = ln.strip().split()
+    cont = bool(toks) and toks[-1] == '\\'
+    core = [t for t in toks if t != '\\']
+    if core and cont and all(t in pkgs for t in core):
+        continue
+    out.append(ln)
+open(p, 'w', encoding='utf-8').write('\n'.join(out))
+PYZTE
+	fi
 
 	# 4) VIKINGYFY/packages：wolultra，目录直拷（homeproxy、sing-box 已移除）
 	rm -rf "$VIKY_TMP"
@@ -269,6 +293,14 @@ configure() {
 		-e 's/^CONFIG_PACKAGE_(samba4[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
 		-e 's/^CONFIG_PACKAGE_(luci-(app|i18n)-samba4[^=]*)=y$/# CONFIG_PACKAGE_\1 is not set/' \
 		"$source_root/.config"
+
+	# 3g) 三个 zte kmod 在 6.18 fork 上无实体文件（见 prepare 的 3g），置 not set，
+	# 防止 defconfig 或 build cache 把它们选回来。
+	for pref in CONFIG_PACKAGE_ CONFIG_DEFAULT_; do
+		for pkg in kmod-zte-npu kmod-zte-fnoffload kmod-zte-rtl8372n; do
+			sed -i "s/^${pref}${pkg}=y$/# ${pref}${pkg} is not set/" "$source_root/.config" 2>/dev/null || true
+		done
+	done
 }
 
 verify() {
@@ -280,7 +312,9 @@ verify() {
 		CONFIG_PACKAGE_luci-app-homeproxy CONFIG_PACKAGE_sing-box \
 		CONFIG_PACKAGE_kmod-ovpn-backports \
 		CONFIG_PACKAGE_samba4 CONFIG_PACKAGE_samba4-server \
-		CONFIG_PACKAGE_samba4-libs CONFIG_PACKAGE_luci-app-samba4; do
+		CONFIG_PACKAGE_samba4-libs CONFIG_PACKAGE_luci-app-samba4 \
+		CONFIG_PACKAGE_kmod-zte-npu CONFIG_PACKAGE_kmod-zte-fnoffload \
+		CONFIG_PACKAGE_kmod-zte-rtl8372n; do
 		if grep -q "^$bad" "$source_root/.config" 2>/dev/null; then
 			echo "::error::forbidden package selected: $bad" >&2; exit 1
 		fi
