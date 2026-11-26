@@ -256,20 +256,31 @@ jobs:
           set -o pipefail
           cd ./wrt/
 
-          # bpf-headers 需要官方 linux-6.18.60.tar.xz。kernel.org 当前发布的 tarball 与
-          # target/linux/generic/kernel-6.18 里登记的 LINUX_KERNEL_HASH-6.18.60 不一致
-          # （上游重新打包），会导致下载后被判定哈希不符而删除，进而内核树无法解压。
-          # 这里以实际文件为准，回填期望值。
-          KVER_TAR=linux-6.18.60.tar.xz
-          mkdir -p dl
-          if [ ! -f "dl/$KVER_TAR" ]; then
-            curl -fL --retry 3 --retry-delay 2 -o "dl/$KVER_TAR" "https://cdn.kernel.org/pub/linux/kernel/v6.x/$KVER_TAR"
-          fi
-          if [ -f "dl/$KVER_TAR" ]; then
-            KVER_HASH=$(sha256sum "dl/$KVER_TAR" | cut -d" " -f1)
-            echo "kernel tarball hash: $KVER_HASH"
-            sed -i "s|^LINUX_KERNEL_HASH-6.18.60 = .*|LINUX_KERNEL_HASH-6.18.60 = $KVER_HASH|" target/linux/generic/kernel-6.18
-            grep LINUX_KERNEL_HASH-6.18.60 target/linux/generic/kernel-6.18
+          # bpf-headers 需要官方 linux-<ver>.tar.xz，其 sha256 可能与 OpenWrt 树里登记的不一致
+          # （上游重新打包），会导致下载后被判定哈希不符而删除，进而内核树无法解压、bpf-headers 失败。
+          # 这里先按树里声明的内核版本推导 tarball 名，再以实际文件的 sha256 回填期望值，两者都必要：
+          #   版本推导解决"上游升版"；sha256 回填解决"同版本被重新打包"。
+          KVER_MAJOR="$(sed -n "s/^KERNEL_PATCHVER:=//p" target/linux/zte/Makefile 2>/dev/null | head -1)"
+          KVER_MAJOR="${KVER_MAJOR:-6.18}"
+          KVER_SUFFIX="$(sed -n "s/^LINUX_VERSION-${KVER_MAJOR} *= *//p" "target/linux/generic/kernel-${KVER_MAJOR}" 2>/dev/null | head -1)"
+          if [ -z "$KVER_SUFFIX" ]; then
+            echo "::warning::cannot derive kernel version suffix from kernel-${KVER_MAJOR}; skip tarball hash fixup"
+          else
+            KVER="${KVER_MAJOR}${KVER_SUFFIX}"
+            KVER_TAR="linux-${KVER}.tar.xz"
+            HASH_LINE="LINUX_KERNEL_HASH-${KVER}"
+            if grep -q "^${HASH_LINE} = " "target/linux/generic/kernel-${KVER_MAJOR}"; then
+              mkdir -p dl
+              if [ ! -f "dl/$KVER_TAR" ]; then
+                curl -fL --retry 3 --retry-delay 2 -o "dl/$KVER_TAR" "https://cdn.kernel.org/pub/linux/kernel/v${KVER_MAJOR%%.*}.x/$KVER_TAR" || true
+              fi
+              if [ -f "dl/$KVER_TAR" ]; then
+                KVER_HASH="$(sha256sum "dl/$KVER_TAR" | cut -d" " -f1)"
+                echo "kernel $KVER tarball sha256: $KVER_HASH"
+                sed -i "s|^${HASH_LINE} = .*|${HASH_LINE} = ${KVER_HASH}|" "target/linux/generic/kernel-${KVER_MAJOR}"
+                grep "^${HASH_LINE} = " "target/linux/generic/kernel-${KVER_MAJOR}"
+              fi
+            fi
           fi
 
           make tools/install -j$(nproc) 2>&1 | tail -3

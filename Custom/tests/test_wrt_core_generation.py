@@ -96,14 +96,16 @@ class CoreGenerationTests(unittest.TestCase):
 
     def test_all_build_entries_use_the_same_core(self):
         workflows = self.repository / '.github/workflows'
+        # 新增任何引用 WRT-CORE-SELF.yml 的构建入口时，必须同步把文件名加进下面的集合，
+        # 否则本用例会红。历史上 X86.yml 就是因为漏加而让这个用例长期失败。
         callers = {
             path.name for path in workflows.glob('*.yml')
             if 'uses: ./.github/workflows/WRT-CORE-SELF.yml' in path.read_text(encoding='utf-8')
         }
         self.assertEqual(callers, {
-            'AIROHA-ALL.yml', 'AP8220-1G-Single.yml', 'MT7621.yml', 'MTK-ALL.yml', 'OWRT-ALL.yml',
-            'QCA-ALL.yml', 'QCB-ALL.yml', 'WRT-TEST.yml', 'ZN-M2.yml', 'N60-Pro-512M.yml',
-            'RAX3000M.yml',
+            'AIROHA-ALL.yml', 'AP8220-1G-Single.yml', 'MT7621.yml', 'MTK-ALL.yml',
+            'N60-Pro-512M.yml', 'OWRT-ALL.yml', 'QCA-ALL.yml', 'QCB-ALL.yml',
+            'RAX3000M.yml', 'WRT-TEST.yml', 'X86.yml', 'ZN-M2.yml', 'ZTE-ALL.yml',
         })
         self.assertFalse((workflows / 'AP8220-CORE.yml').exists())
 
