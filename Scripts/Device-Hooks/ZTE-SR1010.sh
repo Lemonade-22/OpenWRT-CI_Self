@@ -193,6 +193,59 @@ ARC4
 	# 762（MxL862xx DSA tag）在 6.18.60 上两个 hunk 全部失败，直接删掉：
 	# 它只影响头文件生成，不影响固件内核与 DSA 驱动。
 	find "$source_root/target/linux/generic" -maxdepth 2 -name '762-v7.0-net-dsa-add-tag-format-for-MxL862xx-switches.patch' -delete 2>/dev/null || true
+	# 3e-bis) bpf-headers 的 Build/Configure 里有一行直接读主内核树的配置：
+	#   grep CONFIG_HZ $(REAL_LINUX_DIR)/.config >> $(PKG_BUILD_DIR)/.config
+	# CI 单包构建（make package/kernel/bpf-headers/compile）时主内核树还没 Configure，
+	# .config 不存在 → grep 非零退出 → Build/Configure 直接失败，bpf-headers failed to build。
+	# CONFIG_HZ 只用于推导 timeconst.h，对生成 eBPF uapi 头文件没有实际作用，缺省可接受。
+	# 改成“文件存在才继承”，幂等；上游若改了这行则告警跳过，不阻塞整体流程。
+	bpf_mk="$source_root/package/kernel/bpf-headers/Makefile"
+	if [ -f "$bpf_mk" ]; then
+		python3 - "$bpf_mk" <<'PYBPFHZ'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+changed = 0
+
+old85 = "\tgrep CONFIG_HZ $(REAL_LINUX_DIR)/.config >> $(PKG_BUILD_DIR)/.config\n"
+new85 = ('\t[ -f "$(REAL_LINUX_DIR)/.config" ] && '
+         'grep CONFIG_HZ "$(REAL_LINUX_DIR)/.config" >> $(PKG_BUILD_DIR)/.config || true\n')
+
+old87 = ("\tgrep 'CONFIG_HZ=' $(REAL_LINUX_DIR)/.config | \\\n"
+         "\t\tcut -d= -f2 | \\\n"
+         "\t\tbc -q $(LINUX_DIR)/kernel/time/timeconst.bc \\\n"
+         "\t\t> $(LINUX_DIR)/include/generated/timeconst.h\n")
+
+v2_87 = ("\thz_cfg=$(REAL_LINUX_DIR)/.config; \\\n"
+         "\t[ -f \"$$hz_cfg\" ] || hz_cfg=$(PKG_BUILD_DIR)/.config; \\\n"
+         "\thz_val=$$(grep -m1 '^CONFIG_HZ=' \"$$hz_cfg\" 2>/dev/null | cut -d= -f2); \\\n"
+         "\t[ -n \"$$hz_val\" ] || hz_val=100; \\\n"
+         "\techo \"$$hz_val\" | bc -q $(LINUX_DIR)/kernel/time/timeconst.bc \\\n"
+         "\t\t> $(LINUX_DIR)/include/generated/timeconst.h\n")
+
+new87 = ("\t( [ -f $(REAL_LINUX_DIR)/.config ] && grep -m1 '^CONFIG_HZ=' $(REAL_LINUX_DIR)/.config || \\\n"
+         "\t\tgrep -m1 '^CONFIG_HZ=' $(PKG_BUILD_DIR)/.config || echo 'CONFIG_HZ=100' ) | \\\n"
+         "\t\tcut -d= -f2 | \\\n"
+         "\t\tbc -q $(LINUX_DIR)/kernel/time/timeconst.bc \\\n"
+         "\t\t> $(LINUX_DIR)/include/generated/timeconst.h\n")
+
+for name, cands, new in (("HZ-inherit", [old85], new85), ("timeconst", [old87, v2_87], new87)):
+    if s.count(new):
+        print("skip: %s already tolerant" % name)
+        continue
+    hit = [c for c in cands if s.count(c) == 1]
+    if not hit:
+        print("::warning::bpf-headers/Makefile anchor for %s not found (upstream changed), skipped" % name)
+        continue
+    s = s.replace(hit[0], new, 1)
+    changed += 1
+    print("patched: %s" % name)
+
+if changed:
+    open(p, "w", encoding="utf-8", newline="").write(s)
+print("done changed=%d" % changed)
+PYBPFHZ
+	fi
 	# 3f) 内核源码包分家：git 内核模式下 Download(kernel) 与 Download(git-kernel)
 	# 共用 FILE=$(LINUX_SOURCE)=linux-$(LINUX_VERSION).tar.xz；bpf-headers 又按官方
 	# 哈希反复重下官方包，把 fork 包覆盖 → 内核树退回 mainline，DTB 编译缺 zte dts。
