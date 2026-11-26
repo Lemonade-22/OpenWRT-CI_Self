@@ -193,6 +193,37 @@ ARC4
 	# 762（MxL862xx DSA tag）在 6.18.60 上两个 hunk 全部失败，直接删掉：
 	# 它只影响头文件生成，不影响固件内核与 DSA 驱动。
 	find "$source_root/target/linux/generic" -maxdepth 2 -name '762-v7.0-net-dsa-add-tag-format-for-MxL862xx-switches.patch' -delete 2>/dev/null || true
+	# 3f) 内核源码包分家：git 内核模式下 Download(kernel) 与 Download(git-kernel)
+	# 共用 FILE=$(LINUX_SOURCE)=linux-$(LINUX_VERSION).tar.xz；bpf-headers 又按官方
+	# 哈希反复重下官方包，把 fork 包覆盖 → 内核树退回 mainline，DTB 编译缺 zte dts。
+	# 给内核包加 -zte 后缀独占文件名，bpf-headers 继续用官方名，互不干扰。
+	python3 - "$source_root/include/kernel.mk" <<'PYSRC'
+import sys
+p = sys.argv[1]
+s = open(p, encoding='utf-8').read()
+old = '      LINUX_SOURCE:=linux-$(LINUX_VERSION).tar.xz'
+new = '      LINUX_SOURCE:=linux-$(LINUX_VERSION)$(if $(call qstrip,$(CONFIG_KERNEL_GIT_CLONE_URI)),-zte).tar.xz'
+if new not in s:
+    if s.count(old) != 1:
+        sys.exit('kernel.mk LINUX_SOURCE anchor count=%d' % s.count(old))
+    open(p, 'w', encoding='utf-8').write(s.replace(old, new))
+PYSRC
+	# 解包顶层目录是 linux-$(LINUX_VERSION)-zte，而 LINUX_DIR 是
+	# linux-$(LINUX_VERSION)：Prepare 后补一次 mv（幂等，目录不存在时跳过）。
+	python3 - "$source_root/target/linux/zte/Makefile" <<'PYMV'
+import sys
+p = sys.argv[1]
+s = open(p, encoding='utf-8').read()
+if 'linux-$(LINUX_VERSION)-zte' not in s:
+    old = '\t$(call Kernel/Prepare/Default)\n'
+    new = ('\t$(call Kernel/Prepare/Default)\n'
+           '\t[ -d $(KERNEL_BUILD_DIR)/linux-$(LINUX_VERSION)-zte ] && '
+           'mv $(KERNEL_BUILD_DIR)/linux-$(LINUX_VERSION)-zte $(LINUX_DIR) || true\n')
+    if s.count(old) != 1:
+        sys.exit('zte/Makefile Prepare anchor count=%d' % s.count(old))
+    open(p, 'w', encoding='utf-8').write(s.replace(old, new))
+PYMV
+
 	# 3g) 三个 zte kmod 在 6.18.60 fork 上无实体文件可打：config-6.18 里
 	# CONFIG_ZTE_ZX279133_ETH / CONFIG_ZTE_ZX279133_RTL8372N 都是 =y（内建，不产出
 	# .ko），LAN_CONDUIT 是 bool（同理无 .ko），FNOFFLOAD 符号在 fork 里已消失。
