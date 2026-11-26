@@ -194,10 +194,10 @@ ARC4
 	# 它只影响头文件生成，不影响固件内核与 DSA 驱动。
 	find "$source_root/target/linux/generic" -maxdepth 2 -name '762-v7.0-net-dsa-add-tag-format-for-MxL862xx-switches.patch' -delete 2>/dev/null || true
 
-	# 4) VIKINGYFY/packages：wolultra / gecoosac，目录直拷（homeproxy、sing-box 已移除）
+	# 4) VIKINGYFY/packages：wolultra，目录直拷（homeproxy、sing-box 已移除）
 	rm -rf "$VIKY_TMP"
 	git clone --depth=1 "$VIKY_PACKAGES" "$VIKY_TMP"
-	for p in luci-app-wolultra gecoosac luci-app-gecoosac; do
+	for p in luci-app-wolultra; do
 		[ -d "$VIKY_TMP/$p" ] || { echo "::error::$p missing in VIKINGYFY/packages" >&2; exit 1; }
 		rm -rf "$source_root/package/$p"
 		cp -a "$VIKY_TMP/$p" "$source_root/package/$p"
