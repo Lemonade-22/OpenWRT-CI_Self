@@ -66,8 +66,10 @@ index c57e99d..c7ff503 100644
            WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
  
            {
-@@ -139,9 +150,12 @@ jobs:
-             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+@@ -139,11 +150,14 @@ jobs:
+             jq -e --tab 'del(.[][] | select(test(".cn/|tencent|aliyun")))' \
+               "$PROJECT_MIRRORS_FILE" > "$PROJECT_MIRRORS_FILE.tmp"
+             mv -- "$PROJECT_MIRRORS_FILE.tmp" "$PROJECT_MIRRORS_FILE"
            fi
  
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" prepare
