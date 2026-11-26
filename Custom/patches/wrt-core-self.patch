@@ -140,16 +140,51 @@ index c57e99d..c7ff503 100644
          run: |
            cd ./wrt/
  
-@@ -217,6 +258,8 @@ jobs:
+@@ -212,11 +253,42 @@ jobs:
+       - name: Compile Firmware
+         if: ${{ !inputs.WRT_TEST }}
+         run: |
++          set -o pipefail
+           cd ./wrt/
+ 
++          # bpf-headers 需要官方 linux-6.18.60.tar.xz。kernel.org 当前发布的 tarball 与
++          # target/linux/generic/kernel-6.18 里登记的 LINUX_KERNEL_HASH-6.18.60 不一致
++          # （上游重新打包），会导致下载后被判定哈希不符而删除，进而内核树无法解压。
++          # 这里以实际文件为准，回填期望值。
++          KVER_TAR=linux-6.18.60.tar.xz
++          mkdir -p dl
++          if [ ! -f "dl/$KVER_TAR" ]; then
++            curl -fL --retry 3 --retry-delay 2 -o "dl/$KVER_TAR" "https://cdn.kernel.org/pub/linux/kernel/v6.x/$KVER_TAR"
++          fi
++          if [ -f "dl/$KVER_TAR" ]; then
++            KVER_HASH=$(sha256sum "dl/$KVER_TAR" | cut -d" " -f1)
++            echo "kernel tarball hash: $KVER_HASH"
++            sed -i "s|^LINUX_KERNEL_HASH-6.18.60 = .*|LINUX_KERNEL_HASH-6.18.60 = $KVER_HASH|" target/linux/generic/kernel-6.18
++            grep LINUX_KERNEL_HASH-6.18.60 target/linux/generic/kernel-6.18
++          fi
++
++          make tools/install -j$(nproc) 2>&1 | tail -3
++          make toolchain/install -j$(nproc) 2>&1 | tail -3
++          make package/kernel/bpf-headers/compile V=s 2>&1 | tail -80
            mkdir -p $GITHUB_WORKSPACE/build-reports
            make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
-             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
+-            make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
++            make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv" || {
++              # 失败后把关键包的构建日志打出来，CI 输出里才能看到真实错误
++              for f in logs/package/kernel/bpf-headers/compile.txt \
++                       logs/package/kernel/linux/compile.txt \
++                       logs/package/libs/toolchain/compile.txt \
++                       logs/package/libs/liblua/compile.txt; do
++                [ -f "$f" ] && { echo "=== $f ==="; tail -150 "$f"; }
++              done
++              exit 1
++            }
 +          python3 "$GITHUB_WORKSPACE/Scripts/kernel_compat.py" verify-kernel
 +          bash "$GITHUB_WORKSPACE/Scripts/Device.sh" verify-image
  
        - name: Collect Build Reports
          if: ${{ !inputs.WRT_TEST && always() }}
-@@ -264,9 +307,8 @@ jobs:
+@@ -264,9 +336,8 @@ jobs:
            cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
  
            if [[ "$WRT_TEST" != 'true' ]]; then
@@ -161,7 +196,7 @@ index c57e99d..c7ff503 100644
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
              for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-@@ -281,33 +323,45 @@ jobs:
+@@ -281,33 +352,45 @@ jobs:
              make clean -j$(nproc)
            fi
  
