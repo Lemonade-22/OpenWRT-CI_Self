@@ -270,7 +270,7 @@ CONFIG_PACKAGE_luci-theme-bootstrap=y
 # 内核：外部内核树 = cnjn 的 SR1010 fork（6.18.y，自带 ZX279133 全套支持）。
 # 钩子会移除 cnjn target Makefile 里"禁止外部内核树"的检查。
 CONFIG_KERNEL_GIT_CLONE_URI="https://github.com/Lemonade-22/linux-mainline-zte-zxslc-sr1010.git"
-CONFIG_KERNEL_GIT_REF="build-6.18.60"
+CONFIG_KERNEL_GIT_REF="build-6.18.x"
 
 # mtd-rw 是 2021 年的老模块（e877673），用的内核私有 API 在 6.18 已变，
 # 且本机构建无任何包依赖它；显式关掉，避免外部内核树下编译中断。
