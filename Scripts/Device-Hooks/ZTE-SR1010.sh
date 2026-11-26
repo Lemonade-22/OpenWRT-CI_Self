@@ -246,6 +246,31 @@ if changed:
 print("done changed=%d" % changed)
 PYBPFHZ
 	fi
+	# 3e-ter) bpf-headers 的 Build/Patch 会把整个 target 的 generic
+	# {backport,pending,hack}-6.18 系列打在官方内核 tarball 上。但那套补丁是按
+	# 真正参与编译的内核树写的，在 bpf 用的主干 tarball 上并不成立：
+	#   762 引入的 DSA tag 驱动被删后，774 找不到 net/dsa/tag_mxl862xx.c；
+	#   967-02 对 include/net/dsa.h 的两个 hunk 在 6.18.60 上直接 FAILED。
+	# Prepare 一失败，bpf-headers 就 failed to build，单包与全量构建都一样。
+	# eBPF 的 uapi 头文件本身来自主干源码，不依赖这些驱动/网络补丁，因此对
+	# bpf-headers 关掉补丁阶段（Build/Patch = true）。幂等，上游若改了这行则告警跳过。
+	python3 - "$source_root/package/kernel/bpf-headers/Makefile" <<'PYBPFNP'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+old = "define Build/Patch\n\t$(Kernel/Patch/Default)\nendef\n"
+new = ("# eBPF uapi headers are taken from the pristine kernel tarball: the target's\n"
+       "# generic backport/pending/hack series are driver/netfilter patches that are\n"
+       "# irrelevant to the exported uAPI headers and do not apply to the vanilla tree.\n"
+       "define Build/Patch\n\ttrue\nendef\n")
+if s.count(new):
+    print("bpf-headers: Build/Patch 已是空操作，跳过")
+elif s.count(old) != 1:
+    print("::warning::bpf-headers Makefile Build/Patch anchor count=%d (upstream changed), skipped" % s.count(old))
+else:
+    open(p, "w", encoding="utf-8", newline="").write(s.replace(old, new, 1))
+    print("bpf-headers: Build/Patch 关掉 target 补丁系列（uapi 头文件来自主干）")
+PYBPFNP
 	# 3f) 内核源码包分家：git 内核模式下 Download(kernel) 与 Download(git-kernel)
 	# 共用 FILE=$(LINUX_SOURCE)=linux-$(LINUX_VERSION).tar.xz；bpf-headers 又按官方
 	# 哈希反复重下官方包，把 fork 包覆盖 → 内核树退回 mainline，DTB 编译缺 zte dts。
