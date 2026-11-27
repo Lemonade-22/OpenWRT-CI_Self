@@ -188,6 +188,26 @@ CONFIG_CRYPTO_ARC4=y
 ARC4
 	fi
 
+	# 3h) SR1010 启动必需驱动：bootinfo + rootfs。
+	# 6.18 fork 树里 drivers/soc/zte/{zx279133-bootinfo.c,zx279133-rootfs.c} 都在，
+	# Makefile 也按这两个符号编；但两个符号在 Kconfig 里都没有 default y，而
+	# config-6.18（cnjn bbda4f1c8，581 行）只带了 _ETH/_RTL8372N，于是默认一个都不编。
+	# 缺了它们的后果：
+	#   * 没有 zx279133-rootfs → 内核里不存在 rootfs 块设备（DTB 只有 firmware-slot1/2，
+	#     squashfs 是塞在槽里的，必须靠该驱动跳过坏块拼出来）→ 挂根时 panic；
+	#   * 没有 zx279133_bootinfo → 不解析 /chosen versioninfo，也没有
+	#     /sys/firmware/zx279133/slot_offset，zte-fwslot 的 flash/switch/info 全部 die。
+	# 这是 26.11.26 那版固件能刷进去、起不来的根因。
+	cfg618="$source_root/target/linux/zte/zx279133/config-6.18"
+	if ! grep -q '^CONFIG_ZTE_ZX279133_ROOTFS=y$' "$cfg618"; then
+		cat >> "$cfg618" <<'ZTEBOOT'
+
+# SR1010 boot: slot selection + rootfs-over-badblocks (drivers/soc/zte)
+CONFIG_ZTE_ZX279133_BOOTINFO=y
+CONFIG_ZTE_ZX279133_ROOTFS=y
+ZTEBOOT
+	fi
+
 	# 3e) bpf-headers 会把 target/linux/generic/{backport,pending,hack}-6.18 的补丁
 	# 打到官方内核源码上以生成 eBPF 头文件；但真实内核是外部 cnjn 树，不走这些补丁。
 	# 762（MxL862xx DSA tag）在 6.18.60 上两个 hunk 全部失败，直接删掉：
@@ -443,6 +463,16 @@ verify() {
 	grep -q '^CONFIG_PACKAGE_zte-fwslot=y$' "$source_root/.config" || {
 		echo "::error::zte-fwslot missing" >&2; exit 1; }
 
+	# 内核启动驱动：config-6.18 必须带着这两个符号进入编译。Kconfig 里它们是
+	# 无 default 的 bool，depends on ARM64 && OF / BOOTINFO && MTD，漏了不会报错，
+	# 只会安静地不编——固件就成了"能刷不能起"。这里在编译前先卡住。
+	for sym in CONFIG_ZTE_ZX279133_BOOTINFO CONFIG_ZTE_ZX279133_ROOTFS; do
+		grep -q "^$sym=y$" "$source_root/target/linux/zte/zx279133/config-6.18" || {
+			echo "::error::$sym missing from config-6.18 (SR1010 would not boot)" >&2
+			exit 1
+		}
+	done
+
 	# mtd-rw：2021 年的老模块，用内核私有 API，在 6.18 外部内核树上编译失败；
 	# 本固件无任何包依赖它。build cache 恢复可能带回旧的 =y 残留，这里强制清掉。
 	if grep -q '^CONFIG_PACKAGE_kmod-mtd-rw=y$' "$source_root/.config"; then
@@ -464,6 +494,13 @@ verify-image() {
 		echo "::warning::image exceeds the 41 MiB slot (0x2900000) — vendor U-Boot will reject it" >&2
 		exit 1
 	fi
+
+	# 内核内容闸门：配置文件里有符号 ≠ 内核里真有驱动（Kconfig 依赖不满足会静默丢弃），
+	# 所以对成品镜像做一次实测——解 AES、拆 FIT、解 lzma，确认三个启动必需驱动在位。
+	python3 "$ci_root/Scripts/verify-sr1010-kernel.py" "$img" || {
+		echo "::error::SR1010 kernel lacks boot-critical drivers; refusing to publish this image" >&2
+		exit 1
+	}
 }
 
 package() {
